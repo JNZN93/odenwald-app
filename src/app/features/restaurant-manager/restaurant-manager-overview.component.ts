@@ -1,0 +1,675 @@
+import { Component, OnInit, inject, OnDestroy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { Subscription, interval, of } from 'rxjs';
+
+@Component({
+  selector: 'app-restaurant-manager-overview',
+  standalone: true,
+  imports: [CommonModule, FormsModule, RouterModule],
+  template: `
+    <div class="overview-container">
+      <!-- Welcome Section -->
+      <div class="welcome-section">
+        <h1>Willkommen zurück!</h1>
+        <p class="subtitle">Hier ist der aktuelle Status deines Restaurants</p>
+      </div>
+
+      <!-- Key Metrics Grid -->
+      <div class="metrics-grid">
+        <div class="metric-card primary">
+          <div class="metric-icon">
+            <i class="fa-solid fa-shopping-cart"></i>
+          </div>
+          <div class="metric-content">
+            <h3>{{ currentStats?.total_orders_today || 0 }}</h3>
+            <p>Bestellungen heute</p>
+            <span class="change positive">+12% vs gestern</span>
+          </div>
+        </div>
+
+        <div class="metric-card secondary">
+          <div class="metric-icon">
+            <i class="fa-solid fa-euro-sign"></i>
+          </div>
+          <div class="metric-content">
+            <h3>€{{ currentStats?.total_revenue_today?.toFixed(2) || '0.00' }}</h3>
+            <p>Umsatz heute</p>
+            <span class="change positive">+8% vs gestern</span>
+          </div>
+        </div>
+
+        <div class="metric-card accent">
+          <div class="metric-icon">
+            <i class="fa-solid fa-clock"></i>
+          </div>
+          <div class="metric-content">
+            <h3>{{ pendingOrdersCount }}</h3>
+            <p>Ausstehende Bestellungen</p>
+            <span class="change neutral">Aktualisiert</span>
+          </div>
+        </div>
+
+        <div class="metric-card success">
+          <div class="metric-icon">
+            <i class="fa-solid fa-star"></i>
+          </div>
+          <div class="metric-content">
+            <h3>4.8</h3>
+            <p>Durchschnittliche Bewertung</p>
+            <span class="change positive">+0.2 diese Woche</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Content Grid -->
+      <div class="content-grid">
+        <!-- Recent Orders -->
+        <div class="content-card">
+          <div class="card-header">
+            <h2>Letzte Bestellungen</h2>
+            <a [routerLink]="['/restaurant-manager/orders']" class="view-all-link">Alle anzeigen</a>
+          </div>
+          <div class="orders-list">
+            <div *ngFor="let order of recentOrders" class="order-item">
+              <div class="order-info">
+                <div class="order-number">#{{ order.id.slice(-6) }}</div>
+                <div class="order-customer">{{ order.customer_name }}</div>
+                <div class="order-time">{{ formatOrderTime(order.order_time) }}</div>
+              </div>
+              <div class="order-status">
+                <span [ngClass]="getOrderStatusClass(order.status)" class="status-badge">
+                  {{ getOrderStatusText(order.status) }}
+                </span>
+              </div>
+              <div class="order-amount">€{{ order.total.toFixed(2) }}</div>
+            </div>
+            <div *ngIf="recentOrders.length === 0" class="empty-state">
+              <i class="fa-solid fa-shopping-cart"></i>
+              <p>Keine Bestellungen vorhanden</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Popular Items -->
+        <div class="content-card">
+          <div class="card-header">
+            <h2>Beliebteste Gerichte</h2>
+            <a [routerLink]="['/restaurant-manager/menu']" class="view-all-link">Menu bearbeiten</a>
+          </div>
+          <div class="popular-items-list">
+            <div *ngFor="let item of currentStats?.popular_items || []; let i = index" class="popular-item">
+              <div class="item-rank">#{{ i + 1 }}</div>
+              <div class="item-info">
+                <div class="item-name">{{ item.name }}</div>
+                <div class="item-orders">{{ item.order_count }} Bestellungen</div>
+              </div>
+              <div class="item-trend">
+                <span class="trend-indicator positive">
+                  <i class="fa-solid fa-arrow-up"></i>
+                </span>
+              </div>
+            </div>
+            <div *ngIf="!currentStats?.popular_items || currentStats.popular_items.length === 0" class="empty-state">
+              <i class="fa-solid fa-utensils"></i>
+              <p>Keine Daten verfügbar</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <h2>Schnellaktionen</h2>
+        <div class="actions-grid">
+          <button [routerLink]="['/restaurant-manager/menu']" class="action-button primary">
+            <i class="fa-solid fa-plus"></i>
+            <span>Neues Gericht hinzufügen</span>
+          </button>
+          <button [routerLink]="['/restaurant-manager/orders']" class="action-button secondary">
+            <i class="fa-solid fa-list-check"></i>
+            <span>Bestellungen verwalten</span>
+          </button>
+          <button [routerLink]="['/restaurant-manager/analytics']" class="action-button accent">
+            <i class="fa-solid fa-chart-pie"></i>
+            <span>Berichte anzeigen</span>
+          </button>
+          <button [routerLink]="['/restaurant-manager/settings']" class="action-button neutral">
+            <i class="fa-solid fa-cog"></i>
+            <span>Einstellungen</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  `,
+  styles: [`
+    .overview-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--space-6) 0;
+    }
+
+    .welcome-section {
+      margin-bottom: var(--space-8);
+      text-align: center;
+    }
+
+    .welcome-section h1 {
+      font-size: var(--text-3xl);
+      font-weight: 700;
+      color: var(--color-text);
+      margin-bottom: var(--space-2);
+    }
+
+    .subtitle {
+      font-size: var(--text-lg);
+      color: var(--color-muted);
+    }
+
+    /* Metrics Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--space-6);
+      margin-bottom: var(--space-8);
+    }
+
+    .metric-card {
+      background: white;
+      padding: var(--space-6);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      transition: all var(--transition);
+    }
+
+    .metric-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .metric-card.primary {
+      border-left: 4px solid var(--color-primary-500);
+    }
+
+    .metric-card.secondary {
+      border-left: 4px solid var(--color-secondary-500);
+    }
+
+    .metric-card.accent {
+      border-left: 4px solid var(--color-accent-500);
+    }
+
+    .metric-card.success {
+      border-left: 4px solid var(--color-success);
+    }
+
+    .metric-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+
+    .metric-card.primary .metric-icon {
+      background: var(--color-primary-50);
+      color: var(--color-primary-600);
+    }
+
+    .metric-card.secondary .metric-icon {
+      background: var(--color-secondary-50);
+      color: var(--color-secondary-600);
+    }
+
+    .metric-card.accent .metric-icon {
+      background: var(--color-accent-50);
+      color: var(--color-accent-600);
+    }
+
+    .metric-card.success .metric-icon {
+      background: var(--color-success-50);
+      color: var(--color-success);
+    }
+
+    .metric-content h3 {
+      font-size: var(--text-3xl);
+      font-weight: 700;
+      color: var(--color-text);
+      margin: 0 0 var(--space-1) 0;
+    }
+
+    .metric-content p {
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+      margin: 0 0 var(--space-2) 0;
+    }
+
+    .change {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-sm);
+    }
+
+    .change.positive {
+      background: var(--color-success-50);
+      color: var(--color-success);
+    }
+
+    .change.negative {
+      background: var(--color-danger-50);
+      color: var(--color-danger);
+    }
+
+    .change.neutral {
+      background: var(--color-muted-50);
+      color: var(--color-muted);
+    }
+
+    /* Content Grid */
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-6);
+      margin-bottom: var(--space-8);
+    }
+
+    .content-card {
+      background: white;
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: var(--space-6);
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-header h2 {
+      font-size: var(--text-xl);
+      font-weight: 600;
+      color: var(--color-text);
+      margin: 0;
+    }
+
+    .view-all-link {
+      font-size: var(--text-sm);
+      color: var(--color-primary-600);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .view-all-link:hover {
+      text-decoration: underline;
+    }
+
+    /* Orders List */
+    .orders-list {
+      padding: 0;
+    }
+
+    .order-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-4) var(--space-6);
+      border-bottom: 1px solid var(--color-border);
+      transition: background-color var(--transition);
+    }
+
+    .order-item:hover {
+      background: var(--bg-light-green);
+    }
+
+    .order-item:last-child {
+      border-bottom: none;
+    }
+
+    .order-info {
+      flex: 1;
+    }
+
+    .order-number {
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: var(--space-1);
+    }
+
+    .order-customer {
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+      margin-bottom: var(--space-1);
+    }
+
+    .order-time {
+      font-size: var(--text-xs);
+      color: var(--color-muted-600);
+    }
+
+    .status-badge {
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-badge.pending {
+      background: var(--color-warning-50);
+      color: var(--color-warning);
+    }
+
+    .status-badge.confirmed {
+      background: var(--color-info-50);
+      color: var(--color-info);
+    }
+
+    .status-badge.preparing {
+      background: var(--color-primary-50);
+      color: var(--color-primary-600);
+    }
+
+    .status-badge.ready {
+      background: var(--color-success-50);
+      color: var(--color-success);
+    }
+
+    .status-badge.delivered {
+      background: var(--color-success-50);
+      color: var(--color-success);
+    }
+
+    .status-badge.cancelled {
+      background: var(--color-danger-50);
+      color: var(--color-danger);
+    }
+
+    .order-amount {
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    /* Popular Items */
+    .popular-items-list {
+      padding: 0;
+    }
+
+    .popular-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-4) var(--space-6);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .popular-item:last-child {
+      border-bottom: none;
+    }
+
+    .item-rank {
+      font-size: var(--text-lg);
+      font-weight: 700;
+      color: var(--color-primary-600);
+      min-width: 30px;
+    }
+
+    .item-info {
+      flex: 1;
+    }
+
+    .item-name {
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: var(--space-1);
+    }
+
+    .item-orders {
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+    }
+
+    .trend-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: var(--radius-full);
+    }
+
+    .trend-indicator.positive {
+      background: var(--color-success-50);
+      color: var(--color-success);
+    }
+
+    /* Empty State */
+    .empty-state {
+      padding: var(--space-8) var(--space-6);
+      text-align: center;
+      color: var(--color-muted);
+    }
+
+    .empty-state i {
+      font-size: 3rem;
+      margin-bottom: var(--space-4);
+      opacity: 0.5;
+    }
+
+    .empty-state p {
+      margin: 0;
+      font-size: var(--text-sm);
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+      background: white;
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-sm);
+      padding: var(--space-6);
+    }
+
+    .quick-actions h2 {
+      font-size: var(--text-xl);
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: var(--space-6);
+    }
+
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--space-4);
+    }
+
+    .action-button {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-4);
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      background: white;
+      color: var(--color-text);
+      text-decoration: none;
+      font-weight: 500;
+      transition: all var(--transition);
+      cursor: pointer;
+    }
+
+    .action-button:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .action-button.primary {
+      border-color: var(--color-primary-500);
+      color: var(--color-primary-600);
+    }
+
+    .action-button.primary:hover {
+      background: var(--color-primary-50);
+    }
+
+    .action-button.secondary {
+      border-color: var(--color-secondary-500);
+      color: var(--color-secondary-600);
+    }
+
+    .action-button.secondary:hover {
+      background: var(--color-secondary-50);
+    }
+
+    .action-button.accent {
+      border-color: var(--color-accent-500);
+      color: var(--color-accent-600);
+    }
+
+    .action-button.accent:hover {
+      background: var(--color-accent-50);
+    }
+
+    .action-button.neutral {
+      border-color: var(--color-muted-300);
+      color: var(--color-muted-600);
+    }
+
+    .action-button.neutral:hover {
+      background: var(--color-muted-50);
+    }
+
+    .action-button i {
+      font-size: 1.25rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .overview-container {
+        padding: var(--space-4) 0;
+      }
+
+      .metrics-grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-4);
+      }
+
+      .metric-card {
+        padding: var(--space-4);
+      }
+
+      .actions-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .quick-actions {
+        padding: var(--space-4);
+      }
+    }
+  `]
+})
+export class RestaurantManagerOverviewComponent implements OnInit, OnDestroy {
+  currentStats: any = {
+    total_orders_today: 12,
+    total_revenue_today: 245.50,
+    average_order_value: 20.46,
+    popular_items: [
+      { name: 'Pizza Margherita', order_count: 8 },
+      { name: 'Pasta Carbonara', order_count: 6 },
+      { name: 'Bruschetta', order_count: 4 }
+    ]
+  };
+
+  recentOrders: any[] = [
+    {
+      id: '001',
+      customer_name: 'Max Mustermann',
+      order_time: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+      status: 'confirmed',
+      total: 25.90
+    },
+    {
+      id: '002',
+      customer_name: 'Anna Schmidt',
+      order_time: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+      status: 'preparing',
+      total: 18.50
+    }
+  ];
+
+  pendingOrdersCount: number = 3;
+  private refreshSubscription?: Subscription;
+
+  ngOnInit() {
+    // Auto-refresh every 5 minutes
+    this.refreshSubscription = interval(300000).subscribe(() => {
+      this.refreshData();
+    });
+  }
+
+  ngOnDestroy() {
+    if (this.refreshSubscription) {
+      this.refreshSubscription.unsubscribe();
+    }
+  }
+
+  refreshData() {
+    // Mock refresh - in real implementation this would call services
+    console.log('Refreshing dashboard data...');
+  }
+
+  formatOrderTime(orderTime: string): string {
+    const date = new Date(orderTime);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+
+    if (diffInMinutes < 60) {
+      return `vor ${diffInMinutes} Min.`;
+    } else if (diffInMinutes < 1440) { // 24 hours
+      return `vor ${Math.floor(diffInMinutes / 60)} Std.`;
+    } else {
+      return date.toLocaleDateString('de-DE');
+    }
+  }
+
+  getOrderStatusClass(status: string): string {
+    switch (status) {
+      case 'pending': return 'pending';
+      case 'confirmed': return 'confirmed';
+      case 'preparing': return 'preparing';
+      case 'ready': return 'ready';
+      case 'delivered': return 'delivered';
+      case 'cancelled': return 'cancelled';
+      default: return 'pending';
+    }
+  }
+
+  getOrderStatusText(status: string): string {
+    switch (status) {
+      case 'pending': return 'Ausstehend';
+      case 'confirmed': return 'Bestätigt';
+      case 'preparing': return 'Wird zubereitet';
+      case 'ready': return 'Bereit zur Abholung';
+      case 'delivered': return 'Geliefert';
+      case 'cancelled': return 'Storniert';
+      default: return 'Unbekannt';
+    }
+  }
+}
