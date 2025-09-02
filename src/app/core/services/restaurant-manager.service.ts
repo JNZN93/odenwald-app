@@ -75,6 +75,17 @@ export class RestaurantManagerService {
     );
   }
 
+  // Get recent orders for restaurant manager overview
+  getRecentOrders(restaurantId: string, limit: number = 5): Observable<any[]> {
+    return this.http.get<{ orders: any[] }>(`${environment.apiUrl}/orders/restaurant/${restaurantId}/recent?limit=${limit}`).pipe(
+      map(response => response.orders),
+      catchError(error => {
+        console.error('Error fetching recent orders:', error);
+        return of([]);
+      })
+    );
+  }
+
   // Check if current user is manager of restaurant
   isManagerOfRestaurant(restaurantId: string): Observable<boolean> {
     return this.http.get<{ is_manager: boolean }>(`${this.baseUrl}/restaurant/${restaurantId}/is-manager`).pipe(

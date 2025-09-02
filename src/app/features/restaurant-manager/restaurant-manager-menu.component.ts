@@ -179,9 +179,74 @@ interface CategoryFormData {
               </select>
             </div>
 
+            <!-- Image Upload Section -->
             <div class="form-group">
-              <label for="itemImage">Bild URL</label>
-              <input id="itemImage" type="url" [(ngModel)]="currentItem.image_url" name="imageUrl">
+              <label for="itemImage">Bild</label>
+
+              <!-- Image Source Toggle -->
+              <div class="image-source-toggle">
+                <button
+                  type="button"
+                  class="toggle-btn"
+                  [class.active]="imageSource === 'url'"
+                  (click)="setImageSource('url')">
+                  <i class="fa-solid fa-link"></i>
+                  Bild-URL
+                </button>
+                <button
+                  type="button"
+                  class="toggle-btn"
+                  [class.active]="imageSource === 'upload'"
+                  (click)="setImageSource('upload')">
+                  <i class="fa-solid fa-upload"></i>
+                  Datei hochladen
+                </button>
+              </div>
+
+              <!-- URL Input -->
+              <div *ngIf="imageSource === 'url'" class="url-input-container">
+                <input
+                  id="itemImage"
+                  type="url"
+                  [(ngModel)]="currentItem.image_url"
+                  name="imageUrl"
+                  placeholder="https://beispiel.com/bild.jpg"
+                  class="url-input">
+                <small class="input-help">Geben Sie eine URL zu einem Bild ein</small>
+              </div>
+
+              <!-- File Upload -->
+              <div *ngIf="imageSource === 'upload'" class="upload-container">
+                <div class="current-image-preview" *ngIf="currentItem.image_url">
+                  <img [src]="currentItem.image_url" [alt]="currentItem.name" class="preview-thumbnail">
+                  <button type="button" class="remove-image-btn" (click)="removeCurrentImage()">
+                    <i class="fa-solid fa-times"></i>
+                  </button>
+                </div>
+
+                <div class="upload-area" [class.has-image]="currentItem.image_url">
+                  <input
+                    type="file"
+                    #imageFileInput
+                    (change)="onImageFileSelected($event)"
+                    accept="image/*"
+                    style="display: none;">
+                  <div class="upload-content" (click)="imageFileInput.click()">
+                    <i class="fa-solid fa-cloud-upload-alt upload-icon"></i>
+                    <div class="upload-text">
+                      <strong>Bild auswählen</strong>
+                      <span>JPEG, PNG, GIF oder WebP (max. 3MB)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="upload-progress" *ngIf="isUploadingImage">
+                  <div class="progress-bar">
+                    <div class="progress-fill" [style.width.%]="uploadProgress"></div>
+                  </div>
+                  <span>Hochladen... {{ uploadProgress }}%</span>
+                </div>
+              </div>
             </div>
 
             <div class="checkbox-group">
@@ -276,7 +341,7 @@ interface CategoryFormData {
       gap: var(--space-3);
     }
 
-    .btn-primary, .btn-secondary, .btn-sm {
+    .btn-primary, .btn-secondary {
       display: flex;
       align-items: center;
       gap: var(--space-2);
@@ -286,6 +351,7 @@ interface CategoryFormData {
       cursor: pointer;
       font-weight: 500;
       transition: all var(--transition);
+      font-size: var(--text-base);
     }
 
     .btn-primary {
@@ -624,6 +690,36 @@ interface CategoryFormData {
       box-shadow: var(--shadow-sm);
     }
 
+    .checkbox-label input[type="checkbox"] {
+      display: none;
+    }
+
+    .checkmark {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      position: relative;
+      transition: all var(--transition);
+      flex-shrink: 0;
+    }
+
+    .checkbox-label input[type="checkbox"]:checked + .checkmark {
+      background: var(--color-primary-500);
+      border-color: var(--color-primary-500);
+    }
+
+    .checkbox-label input[type="checkbox"]:checked + .checkmark::after {
+      content: '✓';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
     .modal-form {
       padding: var(--space-8);
     }
@@ -691,6 +787,167 @@ interface CategoryFormData {
       background: var(--color-danger-500);
     }
 
+    /* Image Upload Styles */
+    .image-source-toggle {
+      display: flex;
+      gap: var(--space-2);
+      margin-bottom: var(--space-4);
+    }
+
+    .toggle-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      background: var(--color-muted-100);
+      color: var(--color-muted-700);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      font-size: var(--text-sm);
+      transition: all var(--transition);
+    }
+
+    .toggle-btn:hover {
+      background: var(--color-muted-200);
+    }
+
+    .toggle-btn.active {
+      background: var(--color-primary-500);
+      color: white;
+      border-color: var(--color-primary-500);
+    }
+
+    .url-input-container {
+      margin-bottom: var(--space-4);
+    }
+
+    .url-input {
+      width: 100%;
+      padding: var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      font-size: var(--text-base);
+      transition: all var(--transition);
+    }
+
+    .url-input:focus {
+      outline: none;
+      border-color: var(--color-primary-500);
+      box-shadow: 0 0 0 3px var(--color-primary-100);
+    }
+
+    .input-help {
+      display: block;
+      margin-top: var(--space-2);
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+    }
+
+    .upload-container {
+      margin-bottom: var(--space-4);
+    }
+
+    .current-image-preview {
+      position: relative;
+      display: inline-block;
+      margin-bottom: var(--space-4);
+    }
+
+    .preview-thumbnail {
+      max-width: 150px;
+      max-height: 100px;
+      border-radius: var(--radius-md);
+      border: 2px solid var(--color-border);
+      object-fit: cover;
+    }
+
+    .remove-image-btn {
+      position: absolute;
+      top: var(--space-1);
+      right: var(--space-1);
+      background: rgba(239, 68, 68, 0.9);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all var(--transition);
+    }
+
+    .remove-image-btn:hover {
+      background: var(--color-danger);
+      transform: scale(1.1);
+    }
+
+    .upload-area {
+      border: 2px dashed var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      text-align: center;
+      background: var(--bg-light);
+      transition: all var(--transition);
+      cursor: pointer;
+    }
+
+    .upload-area:hover {
+      border-color: var(--color-primary);
+      background: color-mix(in oklab, var(--color-primary) 5%, var(--bg-light));
+    }
+
+    .upload-area.has-image {
+      border-color: var(--color-success);
+      background: color-mix(in oklab, var(--color-success) 5%, var(--bg-light));
+    }
+
+    .upload-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .upload-icon {
+      font-size: 2rem;
+      color: var(--color-primary);
+    }
+
+    .upload-text strong {
+      display: block;
+      color: var(--color-text);
+      margin-bottom: var(--space-1);
+    }
+
+    .upload-text span {
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+    }
+
+    .upload-progress {
+      margin-top: var(--space-4);
+      text-align: center;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: var(--color-muted-200);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: var(--space-2);
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--color-primary-500);
+      transition: width var(--transition);
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
       .menu-container {
@@ -720,6 +977,23 @@ interface CategoryFormData {
       .checkbox-group {
         grid-template-columns: 1fr;
       }
+
+      .image-source-toggle {
+        flex-direction: column;
+      }
+
+      .toggle-btn {
+        justify-content: center;
+      }
+
+      .upload-area {
+        padding: var(--space-4);
+      }
+
+      .preview-thumbnail {
+        max-width: 120px;
+        max-height: 80px;
+      }
     }
   `]
 })
@@ -735,6 +1009,11 @@ export class RestaurantManagerMenuComponent implements OnInit {
   showAddCategoryModal: boolean = false;
   editingItem: any = null;
   editingCategory: CategoryFormData | null = null;
+
+  // Image upload properties
+  imageSource: 'url' | 'upload' = 'upload'; // Default to upload
+  isUploadingImage: boolean = false;
+  uploadProgress: number = 0;
 
   currentItem: any = {
     name: '',
@@ -870,6 +1149,10 @@ export class RestaurantManagerMenuComponent implements OnInit {
       // Ensure category_id is a string for proper form binding
       category_id: item.category_id ? String(item.category_id) : undefined
     };
+
+    // Set image source based on whether item has an image URL
+    this.imageSource = item.image_url && item.image_url.trim() ? 'upload' : 'upload'; // Default to upload for editing
+
     // console.log('Editing item:', item.name, 'original category_id:', item.category_id, 'form category_id:', this.currentItem.category_id);
     this.showAddItemModal = true;
   }
@@ -1081,6 +1364,28 @@ export class RestaurantManagerMenuComponent implements OnInit {
           preparation_time_minutes: (created as any).preparation_time_minutes ?? this.currentItem.preparation_time_minutes ?? 15
         };
 
+        // If we have a temporary image file to upload, do it now
+        if (this.tempImageFile && this.managedRestaurantId) {
+          const formData = new FormData();
+          formData.append('image', this.tempImageFile);
+
+          this.restaurantsService.uploadMenuItemImage(this.managedRestaurantId, normalized.id, formData).subscribe({
+            next: (uploadResponse: any) => {
+              normalized.image_url = uploadResponse.image_url;
+              // Update the item in the array with the new image URL
+              const index = this.menuItems.findIndex(item => item.id === normalized.id);
+              if (index !== -1) {
+                this.menuItems[index] = { ...normalized };
+                this.menuItems = [...this.menuItems]; // Trigger change detection
+              }
+            },
+            error: (uploadError) => {
+              console.error('Image upload failed after item creation:', uploadError);
+              // Don't show error alert here, item was created successfully
+            }
+          });
+        }
+
         // Create new array reference to trigger Angular change detection
         this.menuItems = [...this.menuItems, normalized];
 
@@ -1181,10 +1486,102 @@ export class RestaurantManagerMenuComponent implements OnInit {
       is_vegan: false,
       is_gluten_free: false,
       allergens: [],
-      preparation_time_minutes: 15
+      preparation_time_minutes: 15,
+      image_url: ''
     };
     this.editingItem = null;
+    this.imageSource = 'upload'; // Reset to default
+    this.isUploadingImage = false;
+    this.uploadProgress = 0;
   }
+
+  // Image upload methods
+  setImageSource(source: 'url' | 'upload') {
+    this.imageSource = source;
+    if (source === 'url') {
+      // Clear any existing uploaded image URL when switching to URL mode
+      this.currentItem.image_url = '';
+    }
+  }
+
+  onImageFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      this.uploadImageFile(file);
+    }
+  }
+
+  uploadImageFile(file: File) {
+    if (!this.managedRestaurantId) {
+      alert('Fehler: Kein Restaurant gefunden.');
+      return;
+    }
+
+    // Validate file size (3MB)
+    if (file.size > 3 * 1024 * 1024) {
+      alert('Datei ist zu groß. Maximale Größe ist 3MB.');
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Ungültiger Dateityp. Erlaubt: JPEG, PNG, GIF, WebP.');
+      return;
+    }
+
+    this.isUploadingImage = true;
+    this.uploadProgress = 0;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    // If we have an existing item, upload to that item
+    if (this.editingItem) {
+      this.restaurantsService.uploadMenuItemImage(this.managedRestaurantId, this.editingItem.id, formData).subscribe({
+        next: (response: any) => {
+          this.currentItem.image_url = response.image_url;
+          this.isUploadingImage = false;
+          this.uploadProgress = 100;
+          alert('Bild erfolgreich hochgeladen!');
+        },
+        error: (error) => {
+          console.error('Upload failed:', error);
+          this.isUploadingImage = false;
+          this.uploadProgress = 0;
+          alert('Fehler beim Hochladen des Bildes. Bitte versuchen Sie es erneut.');
+        }
+      });
+    } else {
+      // For new items, we'll upload after creating the item
+      // Store the file temporarily and upload it after item creation
+      this.tempImageFile = file;
+      this.uploadProgress = 100;
+      this.isUploadingImage = false;
+      alert('Bild ausgewählt. Es wird nach dem Speichern des Gerichts hochgeladen.');
+    }
+  }
+
+  removeCurrentImage() {
+    if (this.editingItem && this.managedRestaurantId) {
+      // Remove image from existing item
+      this.restaurantsService.deleteMenuItemImage(this.managedRestaurantId, this.editingItem.id).subscribe({
+        next: () => {
+          this.currentItem.image_url = '';
+          alert('Bild erfolgreich entfernt.');
+        },
+        error: (error) => {
+          console.error('Remove image failed:', error);
+          alert('Fehler beim Entfernen des Bildes.');
+        }
+      });
+    } else {
+      // Just clear the URL for new items
+      this.currentItem.image_url = '';
+    }
+  }
+
+  private tempImageFile: File | null = null;
 
   resetCategoryForm() {
     this.currentCategory = {

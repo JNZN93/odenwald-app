@@ -60,8 +60,8 @@ export const routes: Routes = [
   { path: 'dashboard', loadComponent: () => import('./features/customer/dashboard/customer-dashboard.component').then(m => m.CustomerDashboardComponent), canActivate: [authGuard, roleGuard(['customer'])] },
   { path: 'restaurant/:id', component: RestaurantDetailComponent },
   { path: 'restaurants', component: RestaurantsComponent },
-  { path: 'checkout', loadComponent: () => import('./features/checkout/checkout.component').then(m => m.CheckoutComponent), canActivate: [authGuard, roleGuard(['customer'])] },
-  { path: 'order-confirmation/:id', loadComponent: () => import('./features/order-confirmation/order-confirmation.component').then(m => m.OrderConfirmationComponent), canActivate: [authGuard, roleGuard(['customer'])] },
+  { path: 'checkout', loadComponent: () => import('./features/checkout/checkout.component').then(m => m.CheckoutComponent), canActivate: [authGuard, roleGuard(['customer', 'manager'])] },
+  { path: 'order-confirmation/:id', loadComponent: () => import('./features/order-confirmation/order-confirmation.component').then(m => m.OrderConfirmationComponent), canActivate: [authGuard, roleGuard(['customer', 'manager'])] },
   { path: 'driver-dashboard', loadComponent: () => import('./features/driver/driver-dashboard.component').then(m => m.DriverDashboardComponent), canActivate: [authGuard, roleGuard(['driver'])] },
   {
     path: 'admin',
@@ -90,7 +90,9 @@ export const routes: Routes = [
       { path: 'orders', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-orders.component').then(m => m.RestaurantManagerOrdersComponent) },
       { path: 'menu', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-menu.component').then(m => m.RestaurantManagerMenuComponent) },
       { path: 'analytics', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-analytics.component').then(m => m.RestaurantManagerAnalyticsComponent) },
+      { path: 'customers', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-customers.component').then(m => m.RestaurantManagerCustomersComponent) },
       { path: 'settings', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-settings.component').then(m => m.RestaurantManagerSettingsComponent) },
+      { path: 'payment-methods', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-payment-methods.component').then(m => m.RestaurantManagerPaymentMethodsComponent) },
       { path: 'wholesale', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-wholesale.component').then(m => m.RestaurantManagerWholesaleComponent) }
     ]
   }

@@ -272,8 +272,11 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
   deliveryTimeFilter = '';
   ratingFilter = '';
 
-  // All restaurants (unfiltered)
-  private allRestaurants$: Observable<RestaurantDTO[]> = this.restaurantsService.list();
+  // All restaurants (only verified ones)
+  private allRestaurants$: Observable<RestaurantDTO[]> = this.restaurantsService.listWithFilters({
+    is_verified: true,
+    is_active: true
+  });
 
   // Filtered restaurants (will be set up in ngOnInit for reactivity)
   restaurants$!: Observable<RestaurantDTO[]>;

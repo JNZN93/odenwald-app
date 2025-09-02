@@ -2,14 +2,16 @@ import { Component, OnInit, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { Subscription, interval, of } from 'rxjs';
+import { Subscription, interval, forkJoin } from 'rxjs';
+import { RestaurantManagerService } from '../../core/services/restaurant-manager.service';
+import { RestaurantsService } from '../../core/services/restaurants.service';
 
 @Component({
   selector: 'app-restaurant-manager-overview',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
   template: `
-    <div class="overview-container">
+    <div class="overview-container" *ngIf="!isLoading; else loadingTemplate">
       <!-- Welcome Section -->
       <div class="welcome-section">
         <h1>Willkommen zurück!</h1>
@@ -23,7 +25,7 @@ import { Subscription, interval, of } from 'rxjs';
             <i class="fa-solid fa-shopping-cart"></i>
           </div>
           <div class="metric-content">
-            <h3>{{ currentStats?.total_orders_today || 0 }}</h3>
+            <h3>{{ getTotalOrdersToday() }}</h3>
             <p>Bestellungen heute</p>
             <span class="change positive">+12% vs gestern</span>
           </div>
@@ -34,7 +36,7 @@ import { Subscription, interval, of } from 'rxjs';
             <i class="fa-solid fa-euro-sign"></i>
           </div>
           <div class="metric-content">
-            <h3>€{{ currentStats?.total_revenue_today?.toFixed(2) || '0.00' }}</h3>
+            <h3>{{ getTotalRevenueToday() }}</h3>
             <p>Umsatz heute</p>
             <span class="change positive">+8% vs gestern</span>
           </div>
@@ -45,7 +47,7 @@ import { Subscription, interval, of } from 'rxjs';
             <i class="fa-solid fa-clock"></i>
           </div>
           <div class="metric-content">
-            <h3>{{ pendingOrdersCount }}</h3>
+            <h3>{{ getPendingOrdersCount() }}</h3>
             <p>Ausstehende Bestellungen</p>
             <span class="change neutral">Aktualisiert</span>
           </div>
@@ -56,9 +58,9 @@ import { Subscription, interval, of } from 'rxjs';
             <i class="fa-solid fa-star"></i>
           </div>
           <div class="metric-content">
-            <h3>4.8</h3>
+            <h3>{{ getRatingDisplay() }}</h3>
             <p>Durchschnittliche Bewertung</p>
-            <span class="change positive">+0.2 diese Woche</span>
+            <span class="change neutral">{{ getReviewCountDisplay() }}</span>
           </div>
         </div>
       </div>
@@ -72,10 +74,10 @@ import { Subscription, interval, of } from 'rxjs';
             <a [routerLink]="['/restaurant-manager/orders']" class="view-all-link">Alle anzeigen</a>
           </div>
           <div class="orders-list">
-            <div *ngFor="let order of recentOrders" class="order-item">
+            <div *ngFor="let order of recentOrders; trackBy: trackByOrderId" class="order-item">
               <div class="order-info">
-                <div class="order-number">#{{ order.id.slice(-6) }}</div>
-                <div class="order-customer">{{ order.customer_name }}</div>
+                <div class="order-number">#{{ getOrderIdDisplay(order.id) }}</div>
+                <div class="order-customer">{{ order.customer_name || 'Unbekannter Kunde' }}</div>
                 <div class="order-time">{{ formatOrderTime(order.order_time) }}</div>
               </div>
               <div class="order-status">
@@ -83,9 +85,9 @@ import { Subscription, interval, of } from 'rxjs';
                   {{ getOrderStatusText(order.status) }}
                 </span>
               </div>
-              <div class="order-amount">€{{ order.total.toFixed(2) }}</div>
+              <div class="order-amount">{{ getOrderAmountDisplay(order.total) }}</div>
             </div>
-            <div *ngIf="recentOrders.length === 0" class="empty-state">
+            <div *ngIf="!recentOrders || recentOrders.length === 0" class="empty-state">
               <i class="fa-solid fa-shopping-cart"></i>
               <p>Keine Bestellungen vorhanden</p>
             </div>
@@ -99,7 +101,7 @@ import { Subscription, interval, of } from 'rxjs';
             <a [routerLink]="['/restaurant-manager/menu']" class="view-all-link">Menu bearbeiten</a>
           </div>
           <div class="popular-items-list">
-            <div *ngFor="let item of currentStats?.popular_items || []; let i = index" class="popular-item">
+            <div *ngFor="let item of getPopularItems(); let i = index" class="popular-item">
               <div class="item-rank">#{{ i + 1 }}</div>
               <div class="item-info">
                 <div class="item-name">{{ item.name }}</div>
@@ -111,7 +113,7 @@ import { Subscription, interval, of } from 'rxjs';
                 </span>
               </div>
             </div>
-            <div *ngIf="!currentStats?.popular_items || currentStats.popular_items.length === 0" class="empty-state">
+            <div *ngIf="getPopularItems().length === 0" class="empty-state">
               <i class="fa-solid fa-utensils"></i>
               <p>Keine Daten verfügbar</p>
             </div>
@@ -142,6 +144,16 @@ import { Subscription, interval, of } from 'rxjs';
         </div>
       </div>
     </div>
+
+    <!-- Loading Template -->
+    <ng-template #loadingTemplate>
+      <div class="loading-container">
+        <div class="loading-spinner">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+        </div>
+        <p>Daten werden geladen...</p>
+      </div>
+    </ng-template>
   `,
   styles: [`
     .overview-container {
@@ -583,44 +595,50 @@ import { Subscription, interval, of } from 'rxjs';
         padding: var(--space-4);
       }
     }
+
+    /* Loading Styles */
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 400px;
+      padding: var(--space-8);
+    }
+
+    .loading-spinner {
+      font-size: 2rem;
+      color: var(--color-primary-600);
+      margin-bottom: var(--space-4);
+    }
+
+    .loading-container p {
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+    }
   `]
 })
 export class RestaurantManagerOverviewComponent implements OnInit, OnDestroy {
+  private restaurantManagerService = inject(RestaurantManagerService);
+  private restaurantsService = inject(RestaurantsService);
+
   currentStats: any = {
-    total_orders_today: 12,
-    total_revenue_today: 245.50,
-    average_order_value: 20.46,
-    popular_items: [
-      { name: 'Pizza Margherita', order_count: 8 },
-      { name: 'Pasta Carbonara', order_count: 6 },
-      { name: 'Bruschetta', order_count: 4 }
-    ]
+    total_orders_today: 0,
+    total_revenue_today: 0,
+    average_order_value: 0,
+    popular_items: []
   };
 
-  recentOrders: any[] = [
-    {
-      id: '001',
-      customer_name: 'Max Mustermann',
-      order_time: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-      status: 'confirmed',
-      total: 25.90
-    },
-    {
-      id: '002',
-      customer_name: 'Anna Schmidt',
-      order_time: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-      status: 'preparing',
-      total: 18.50
-    }
-  ];
-
-  pendingOrdersCount: number = 3;
+  recentOrders: any[] = [];
+  currentRestaurant: any = null;
+  isLoading: boolean = true;
   private refreshSubscription?: Subscription;
 
   ngOnInit() {
+    this.loadDashboardData();
     // Auto-refresh every 5 minutes
     this.refreshSubscription = interval(300000).subscribe(() => {
-      this.refreshData();
+      this.loadDashboardData();
     });
   }
 
@@ -630,18 +648,160 @@ export class RestaurantManagerOverviewComponent implements OnInit, OnDestroy {
     }
   }
 
+  private loadDashboardData() {
+    this.isLoading = true;
+
+    // First get the managed restaurants for current user
+    this.restaurantManagerService.getManagedRestaurants().subscribe({
+      next: (restaurants: any[]) => {
+        if (restaurants.length > 0) {
+          const restaurantId = restaurants[0].restaurant_id; // Use first managed restaurant
+          this.loadRestaurantData(restaurantId);
+        } else {
+          this.isLoading = false;
+          console.warn('No managed restaurants found');
+        }
+      },
+      error: (error: any) => {
+        console.error('Error loading managed restaurants:', error);
+        this.isLoading = false;
+      }
+    });
+  }
+
+  private loadRestaurantData(restaurantId: string) {
+    // Load restaurant details, stats, and recent orders in parallel
+    const restaurant$ = this.restaurantsService.getRestaurantById(restaurantId);
+    const stats$ = this.restaurantManagerService.getRestaurantStats(restaurantId, 'today');
+    const recentOrders$ = this.restaurantManagerService.getRecentOrders(restaurantId, 5);
+
+    forkJoin([restaurant$, stats$, recentOrders$]).subscribe({
+      next: (results: any[]) => {
+        const [restaurant, stats, orders] = results;
+        this.currentRestaurant = restaurant;
+        this.currentStats = {
+          total_orders_today: stats?.total_orders_today || 0,
+          total_revenue_today: stats?.total_revenue_today || 0,
+          average_order_value: stats?.average_order_value || 0,
+          popular_items: stats?.popular_items?.slice(0, 3) || [] // Show top 3 popular items
+        };
+
+        // Transform recent orders to match component format
+        this.recentOrders = orders?.map((order: any) => ({
+          id: order.id,
+          customer_name: order.customer_name || 'Unbekannter Kunde',
+          order_time: order.created_at,
+          status: order.status,
+          total: order.total_price
+        })) || [];
+
+        // pendingOrdersCount is now calculated in getPendingOrdersCount() method
+
+        this.isLoading = false;
+      },
+      error: (error: any) => {
+        console.error('Error loading restaurant data:', error);
+        this.isLoading = false;
+      }
+    });
+  }
+
   refreshData() {
-    // Mock refresh - in real implementation this would call services
-    console.log('Refreshing dashboard data...');
+    if (this.currentRestaurant?.id) {
+      this.loadRestaurantData(this.currentRestaurant.id);
+    } else {
+      this.loadDashboardData();
+    }
+  }
+
+  getRatingDisplay(): string {
+    if (!this.currentRestaurant?.rating) {
+      return '0.0';
+    }
+
+    const rating = typeof this.currentRestaurant.rating === 'number'
+      ? this.currentRestaurant.rating
+      : parseFloat(this.currentRestaurant.rating);
+
+    if (isNaN(rating)) {
+      return '0.0';
+    }
+
+    return rating.toFixed(1);
+  }
+
+  getReviewCountDisplay(): string {
+    const count = this.currentRestaurant?.total_reviews || 0;
+    return `${count} Bewertungen`;
+  }
+
+  getTotalOrdersToday(): number {
+    return this.currentStats?.total_orders_today || 0;
+  }
+
+  getTotalRevenueToday(): string {
+    const revenue = this.currentStats?.total_revenue_today || 0;
+    if (typeof revenue === 'number') {
+      return `€${revenue.toFixed(2)}`;
+    }
+    return '€0.00';
+  }
+
+  getPopularItems(): any[] {
+    return this.currentStats?.popular_items?.slice(0, 3) || [];
+  }
+
+  getPendingOrdersCount(): number {
+    if (!this.recentOrders || !Array.isArray(this.recentOrders)) {
+      return 0;
+    }
+
+    return this.recentOrders.filter(order =>
+      ['pending', 'confirmed', 'preparing'].includes(order?.status)
+    ).length;
+  }
+
+  getOrderIdDisplay(orderId: any): string {
+    if (!orderId || typeof orderId !== 'string') {
+      return '#000000';
+    }
+    return `#${orderId.slice(-6)}`;
+  }
+
+  getOrderAmountDisplay(total: any): string {
+    if (total === null || total === undefined) {
+      return '€0.00';
+    }
+
+    const numTotal = typeof total === 'number' ? total : parseFloat(total);
+
+    if (isNaN(numTotal)) {
+      return '€0.00';
+    }
+
+    return `€${numTotal.toFixed(2)}`;
+  }
+
+  trackByOrderId(index: number, order: any): string {
+    if (!order) return index.toString();
+    return (order.id && typeof order.id === 'string') ? order.id : index.toString();
   }
 
   formatOrderTime(orderTime: string): string {
+    if (!orderTime || typeof orderTime !== 'string') {
+      return 'Unbekannt';
+    }
+
     const date = new Date(orderTime);
+    if (isNaN(date.getTime())) {
+      return 'Ungültig';
+    }
+
     const now = new Date();
     const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
 
     if (diffInMinutes < 60) {
-      return `vor ${diffInMinutes} Min.`;
+      return `vor ${Math.max(1, diffInMinutes)} Min.`;
     } else if (diffInMinutes < 1440) { // 24 hours
       return `vor ${Math.floor(diffInMinutes / 60)} Std.`;
     } else {
@@ -650,11 +810,16 @@ export class RestaurantManagerOverviewComponent implements OnInit, OnDestroy {
   }
 
   getOrderStatusClass(status: string): string {
-    switch (status) {
+    if (!status || typeof status !== 'string') {
+      return 'pending';
+    }
+
+    switch (status.toLowerCase()) {
       case 'pending': return 'pending';
       case 'confirmed': return 'confirmed';
       case 'preparing': return 'preparing';
       case 'ready': return 'ready';
+      case 'picked_up': return 'ready';
       case 'delivered': return 'delivered';
       case 'cancelled': return 'cancelled';
       default: return 'pending';
@@ -662,11 +827,16 @@ export class RestaurantManagerOverviewComponent implements OnInit, OnDestroy {
   }
 
   getOrderStatusText(status: string): string {
-    switch (status) {
+    if (!status || typeof status !== 'string') {
+      return 'Unbekannt';
+    }
+
+    switch (status.toLowerCase()) {
       case 'pending': return 'Ausstehend';
       case 'confirmed': return 'Bestätigt';
       case 'preparing': return 'Wird zubereitet';
       case 'ready': return 'Bereit zur Abholung';
+      case 'picked_up': return 'Abgeholt';
       case 'delivered': return 'Geliefert';
       case 'cancelled': return 'Storniert';
       default: return 'Unbekannt';

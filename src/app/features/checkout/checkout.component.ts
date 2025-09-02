@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CartService, Cart, CartItem } from '../../core/services/supplier.service';
 import { OrdersService } from '../../core/services/orders.service';
+import { AuthService } from '../../core/auth/auth.service';
 import { ImageFallbackDirective } from '../../core/image-fallback.directive';
 import { Observable, map } from 'rxjs';
 
@@ -12,6 +13,12 @@ interface DeliveryAddress {
   city: string;
   postal_code: string;
   instructions?: string;
+}
+
+interface CustomerInfo {
+  name: string;
+  email: string;
+  phone?: string;
 }
 
 @Component({
@@ -183,6 +190,49 @@ interface DeliveryAddress {
               </div>
             </div>
           </div>
+
+          <!-- Customer Information (only for guest orders) -->
+          <div class="customer-info-section" *ngIf="!isAuthenticated">
+            <h2>Kontaktdaten</h2>
+
+            <div class="customer-info-form">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="customer_name">Vollständiger Name</label>
+                  <input
+                    id="customer_name"
+                    type="text"
+                    [(ngModel)]="customerInfo.name"
+                    placeholder="Max Mustermann"
+                    required
+                  >
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="customer_email">E-Mail-Adresse</label>
+                  <input
+                    id="customer_email"
+                    type="email"
+                    [(ngModel)]="customerInfo.email"
+                    placeholder="max.mustermann@email.com"
+                    required
+                  >
+                </div>
+
+                <div class="form-group">
+                  <label for="customer_phone">Telefonnummer (optional)</label>
+                  <input
+                    id="customer_phone"
+                    type="tel"
+                    [(ngModel)]="customerInfo.phone"
+                    placeholder="+49 123 4567890"
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Order Summary Sidebar -->
@@ -303,14 +353,14 @@ interface DeliveryAddress {
       gap: var(--space-8);
     }
 
-    .cart-section, .delivery-section, .payment-section {
+    .cart-section, .delivery-section, .payment-section, .customer-info-section {
       background: var(--color-surface);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-2xl);
       padding: var(--space-6);
     }
 
-    .cart-section h2, .delivery-section h2, .payment-section h2 {
+    .cart-section h2, .delivery-section h2, .payment-section h2, .customer-info-section h2 {
       font-size: var(--text-2xl);
       font-weight: 600;
       color: var(--color-heading);
@@ -697,6 +747,7 @@ interface DeliveryAddress {
 export class CheckoutComponent implements OnInit {
   private cartService = inject(CartService);
   private ordersService = inject(OrdersService);
+  private authService = inject(AuthService);
   private router = inject(Router);
 
   cart$ = this.cartService.cart$;
@@ -709,7 +760,14 @@ export class CheckoutComponent implements OnInit {
     instructions: ''
   };
 
+  customerInfo: CustomerInfo = {
+    name: '',
+    email: '',
+    phone: ''
+  };
+
   selectedPaymentMethod = 'cash';
+  isAuthenticated = false;
 
   ngOnInit() {
     // Check if cart is empty and redirect if needed
@@ -717,6 +775,14 @@ export class CheckoutComponent implements OnInit {
       if (!cart || cart.items.length === 0) {
         // Cart is empty, but we'll show the empty state
       }
+    });
+
+    // Check authentication status immediately first
+    this.isAuthenticated = this.authService.isAuthenticated();
+
+    // Also listen for changes
+    this.authService.currentUser$.subscribe(user => {
+      this.isAuthenticated = !!(user && user.is_active);
     });
   }
 
@@ -729,12 +795,19 @@ export class CheckoutComponent implements OnInit {
   }
 
   isFormValid(): boolean {
-    return !!(
+    const deliveryValid = !!(
       this.deliveryAddress.street.trim() &&
       this.deliveryAddress.city.trim() &&
       this.deliveryAddress.postal_code.trim() &&
       this.selectedPaymentMethod
     );
+
+    const customerInfoValid = this.isAuthenticated || (
+      !!this.customerInfo.name.trim() &&
+      !!this.customerInfo.email.trim()
+    );
+
+    return deliveryValid && customerInfoValid;
   }
 
   isMinimumOrderMet(cart: Cart): boolean {
@@ -748,7 +821,14 @@ export class CheckoutComponent implements OnInit {
 
     const fullAddress = `${this.deliveryAddress.street}, ${this.deliveryAddress.postal_code} ${this.deliveryAddress.city}`;
 
-    this.cartService.createOrder(fullAddress, this.deliveryAddress.instructions)
+    // Prepare customer info for guest orders
+    const customerInfo = this.isAuthenticated ? undefined : {
+      name: this.customerInfo.name.trim(),
+      email: this.customerInfo.email.trim(),
+      phone: this.customerInfo.phone?.trim() || undefined
+    };
+
+    this.cartService.createOrder(fullAddress, this.deliveryAddress.instructions, this.selectedPaymentMethod, customerInfo)
       .subscribe({
         next: (response) => {
           this.loading = false;

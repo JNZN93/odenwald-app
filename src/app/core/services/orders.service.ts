@@ -130,6 +130,7 @@ export class OrdersService {
     restaurant_id: string;
     delivery_address: string;
     delivery_instructions?: string;
+    payment_method?: string;
     items: Array<{
       menu_item_id: string;
       quantity: number;

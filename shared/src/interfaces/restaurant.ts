@@ -39,6 +39,11 @@ export interface Restaurant {
     banner?: string;
     gallery: string[];
   };
+  payment_methods: {
+    cash: boolean;
+    card: boolean;
+    paypal: boolean;
+  };
   rating: number;
   total_reviews: number;
   is_active: boolean;
@@ -77,6 +82,7 @@ export interface UpdateRestaurantRequest {
   opening_hours?: Restaurant['opening_hours'];
   delivery_info?: Partial<Restaurant['delivery_info']>;
   images?: Partial<Restaurant['images']>;
+  payment_methods?: Partial<Restaurant['payment_methods']>;
   is_active?: boolean;
   is_verified?: boolean;
 }

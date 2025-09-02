@@ -3,6 +3,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Subscription, interval } from 'rxjs';
+import { RestaurantManagerService, RestaurantStats } from '../../core/services/restaurant-manager.service';
+import { AuthService } from '../../core/auth/auth.service';
+import { LoadingService } from '../../core/services/loading.service';
+import { ToastService } from '../../core/services/toast.service';
 
 @Component({
   selector: 'app-restaurant-manager-analytics',
@@ -14,27 +18,44 @@ import { Subscription, interval } from 'rxjs';
       <div class="analytics-header">
         <h1>Analytics & Berichte</h1>
         <div class="header-actions">
+          <select *ngIf="managedRestaurants.length > 1" [(ngModel)]="selectedRestaurantId" (change)="loadAnalytics()" class="period-select">
+            <option *ngFor="let restaurant of managedRestaurants" [value]="restaurant.restaurant_id">
+              {{ restaurant.restaurant_name }}
+            </option>
+          </select>
           <select [(ngModel)]="selectedPeriod" (change)="loadAnalytics()" class="period-select">
             <option value="today">Heute</option>
             <option value="week">Diese Woche</option>
             <option value="month">Dieser Monat</option>
           </select>
-          <button class="btn-secondary" (click)="exportData()">
+          <button class="btn-secondary" (click)="exportData()" [disabled]="isLoading">
             <i class="fa-solid fa-download"></i>
             Export
           </button>
         </div>
       </div>
 
+      <!-- Loading/Error States -->
+      <div *ngIf="isLoading" class="loading-state">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        <p>Analytics-Daten werden geladen...</p>
+      </div>
+
+      <div *ngIf="error && !isLoading" class="error-state">
+        <i class="fa-solid fa-exclamation-triangle"></i>
+        <p>{{ error }}</p>
+        <button class="btn-primary" (click)="loadAnalytics()">Erneut versuchen</button>
+      </div>
+
       <!-- Key Metrics -->
-      <div class="metrics-grid" *ngIf="currentStats">
+      <div class="metrics-grid" *ngIf="currentStats && !isLoading && !error">
         <div class="metric-card">
           <div class="metric-icon">
             <i class="fa-solid fa-shopping-cart"></i>
           </div>
           <div class="metric-content">
-            <h3>{{ currentStats.total_orders_today }}</h3>
-            <p>Bestellungen heute</p>
+            <h3>{{ getCurrentPeriodOrders() }}</h3>
+            <p>Bestellungen {{ getPeriodLabel() }}</p>
             <span class="change positive">+12.5%</span>
           </div>
         </div>
@@ -44,8 +65,8 @@ import { Subscription, interval } from 'rxjs';
             <i class="fa-solid fa-euro-sign"></i>
           </div>
           <div class="metric-content">
-            <h3>€{{ currentStats.total_revenue_today.toFixed(2) }}</h3>
-            <p>Umsatz heute</p>
+            <h3>€{{ getCurrentPeriodRevenue().toFixed(2) }}</h3>
+            <p>Umsatz {{ getPeriodLabel() }}</p>
             <span class="change positive">+8.2%</span>
           </div>
         </div>
@@ -600,6 +621,41 @@ import { Subscription, interval } from 'rxjs';
       background: var(--color-primary-600);
     }
 
+    /* Loading and Error States */
+    .loading-state, .error-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-12);
+      text-align: center;
+      background: white;
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: var(--space-6);
+    }
+
+    .loading-state i, .error-state i {
+      font-size: 3rem;
+      margin-bottom: var(--space-4);
+      opacity: 0.7;
+    }
+
+    .loading-state i {
+      color: var(--color-primary-500);
+    }
+
+    .error-state i {
+      color: var(--color-danger);
+    }
+
+    .loading-state p, .error-state p {
+      margin: 0 0 var(--space-4) 0;
+      color: var(--color-muted);
+      font-size: var(--text-lg);
+    }
+
     /* Responsive */
     @media (max-width: 1024px) {
       .charts-grid {
@@ -643,26 +699,34 @@ import { Subscription, interval } from 'rxjs';
   `]
 })
 export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
-  currentStats: any = {
-    total_orders_today: 12,
-    total_revenue_today: 245.50,
-    average_order_value: 20.46,
-    popular_items: [
-      { name: 'Pizza Margherita', order_count: 8 },
-      { name: 'Pasta Carbonara', order_count: 6 },
-      { name: 'Caesar Salad', order_count: 4 },
-      { name: 'Tiramisu', order_count: 3 },
-      { name: 'Mineralwasser', order_count: 2 }
-    ]
+  private restaurantManagerService = inject(RestaurantManagerService);
+  private authService = inject(AuthService);
+  private loadingService = inject(LoadingService);
+  private toastService = inject(ToastService);
+
+  currentStats: RestaurantStats = {
+    total_orders_today: 0,
+    total_revenue_today: 0,
+    total_orders_this_week: 0,
+    total_revenue_this_week: 0,
+    total_orders_this_month: 0,
+    total_revenue_this_month: 0,
+    average_order_value: 0,
+    popular_items: []
   };
 
   selectedPeriod: string = 'today';
   revenueChartPeriod: string = '7d';
   ordersChartPeriod: string = '7d';
-  totalCustomers: number = 34;
+  totalCustomers: number = 0;
 
   startDate: string = '';
   endDate: string = '';
+
+  isLoading: boolean = true;
+  error: string | null = null;
+  selectedRestaurantId: string | null = null;
+  managedRestaurants: any[] = [];
 
   peakHours = [
     { hour: 11, orders: 12, percentage: 60 },
@@ -679,6 +743,7 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.initializeDates();
+    this.loadManagedRestaurants();
 
     // Auto-refresh every 5 minutes
     this.refreshSubscription = interval(300000).subscribe(() => {
@@ -700,14 +765,56 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
     this.endDate = today.toISOString().split('T')[0];
   }
 
+  loadManagedRestaurants() {
+    this.isLoading = true;
+    this.restaurantManagerService.getManagedRestaurants().subscribe({
+      next: (restaurants: any[]) => {
+        this.managedRestaurants = restaurants;
+        if (restaurants.length > 0) {
+          this.selectedRestaurantId = restaurants[0].restaurant_id;
+          this.loadAnalytics();
+        } else {
+          this.isLoading = false;
+          this.error = 'Keine Restaurants gefunden, die Sie verwalten.';
+        }
+      },
+      error: (error: any) => {
+        console.error('Error loading managed restaurants:', error);
+        this.isLoading = false;
+        this.error = 'Fehler beim Laden der Restaurants.';
+        this.toastService.error('Fehler', 'Fehler beim Laden der Restaurants');
+      }
+    });
+  }
+
   loadAnalytics() {
-    // Mock analytics loading
-    console.log('Loading analytics for period:', this.selectedPeriod);
+    if (!this.selectedRestaurantId) {
+      return;
+    }
+
+    this.isLoading = true;
+    this.error = null;
+
+    this.restaurantManagerService.getRestaurantStats(this.selectedRestaurantId, this.selectedPeriod as any).subscribe({
+      next: (stats: RestaurantStats) => {
+        this.currentStats = stats;
+        this.totalCustomers = stats.total_orders_today; // Approximation for now
+        this.isLoading = false;
+        console.log('Analytics loaded:', stats);
+      },
+      error: (error: any) => {
+        console.error('Error loading analytics:', error);
+        this.isLoading = false;
+        this.error = 'Fehler beim Laden der Analytics-Daten.';
+        this.toastService.error('Fehler', 'Fehler beim Laden der Analytics-Daten');
+      }
+    });
   }
 
   refreshData() {
-    // Mock data refresh
-    console.log('Refreshing analytics data...');
+    if (this.selectedRestaurantId) {
+      this.loadAnalytics();
+    }
   }
 
   getItemPercentage(orderCount: number): number {
@@ -741,8 +848,51 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
     alert(`Daten für Zeitraum ${this.startDate} bis ${this.endDate} werden geladen (Mock-Funktionalität)`);
   }
 
+  getCurrentPeriodOrders(): number {
+    switch (this.selectedPeriod) {
+      case 'today':
+        return this.currentStats.total_orders_today;
+      case 'week':
+        return this.currentStats.total_orders_this_week;
+      case 'month':
+        return this.currentStats.total_orders_this_month;
+      default:
+        return this.currentStats.total_orders_today;
+    }
+  }
+
+  getCurrentPeriodRevenue(): number {
+    switch (this.selectedPeriod) {
+      case 'today':
+        return this.currentStats.total_revenue_today;
+      case 'week':
+        return this.currentStats.total_revenue_this_week;
+      case 'month':
+        return this.currentStats.total_revenue_this_month;
+      default:
+        return this.currentStats.total_revenue_today;
+    }
+  }
+
+  getPeriodLabel(): string {
+    switch (this.selectedPeriod) {
+      case 'today':
+        return 'heute';
+      case 'week':
+        return 'diese Woche';
+      case 'month':
+        return 'dieser Monat';
+      default:
+        return 'heute';
+    }
+  }
+
   exportData() {
+    if (!this.currentStats || this.isLoading) {
+      return;
+    }
+
     console.log('Exporting data...');
-    alert('Daten werden exportiert (Mock-Funktionalität)');
+    this.toastService.info('Info', 'Export-Funktionalität wird bald verfügbar sein');
   }
 }

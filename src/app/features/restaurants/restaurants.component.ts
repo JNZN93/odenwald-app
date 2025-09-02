@@ -81,6 +81,13 @@ import { Observable } from 'rxjs';
                   </svg>
                   <span>Min. {{ r.delivery_info.minimum_order_amount }}€</span>
                 </div>
+                <div class="meta-item">
+                  <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 7V5a2 2 0 0 1 2-2h2l2 4h10l2-4h2a2 2 0 0 1 2 2v2l-3 6H6L3 7z"/>
+                    <circle cx="12" cy="15" r="2"/>
+                  </svg>
+                  <span>{{ r.delivery_info.delivery_radius_km }} km Radius</span>
+                </div>
               </div>
 
               <div class="restaurant-actions">

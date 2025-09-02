@@ -183,22 +183,28 @@ export class CartService {
   }
 
   // Order creation
-  createOrder(deliveryAddress: string, deliveryInstructions?: string): Observable<any> {
+  createOrder(deliveryAddress: string, deliveryInstructions?: string, paymentMethod?: string, customerInfo?: any): Observable<any> {
     const cart = this.getCurrentCart();
     if (!cart || cart.items.length === 0) {
       throw new Error('Warenkorb ist leer');
     }
 
-    const orderData = {
+    const orderData: any = {
       restaurant_id: cart.restaurant_id,
       delivery_address: deliveryAddress,
       delivery_instructions: deliveryInstructions || '',
+      payment_method: paymentMethod || 'cash',
       items: cart.items.map(item => ({
         menu_item_id: item.menu_item_id,
         quantity: item.quantity,
         unit_price: item.unit_price
       }))
     };
+
+    // Add customer_info for guest orders
+    if (customerInfo) {
+      orderData.customer_info = customerInfo;
+    }
 
     return this.http.post(`${environment.apiUrl}/orders`, orderData).pipe(
       map((response: any) => {

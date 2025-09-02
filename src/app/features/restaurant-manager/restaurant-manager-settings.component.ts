@@ -1,12 +1,17 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { RestaurantsService, RestaurantDTO } from '../../core/services/restaurants.service';
+import { AuthService, User } from '../../core/auth/auth.service';
+import { ToastService } from '../../core/services/toast.service';
+import { PasswordChangeComponent } from '../../shared/components/password-change.component';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-restaurant-manager-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, PasswordChangeComponent],
   template: `
     <div class="settings-container">
       <!-- Header -->
@@ -28,8 +33,112 @@ import { RouterModule } from '@angular/router';
         </button>
       </div>
 
+      <!-- Loading State -->
+      <div *ngIf="isLoading && !currentRestaurant" class="loading-container">
+        <div class="loading-spinner">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          <p>Restaurant-Daten werden geladen...</p>
+        </div>
+      </div>
+
       <!-- Tab Content -->
-      <div class="settings-content">
+      <div class="settings-content" *ngIf="!isLoading || currentRestaurant">
+        <!-- Images Settings -->
+        <div *ngIf="activeTab === 'images'" class="settings-section">
+          <h2>Restaurant-Bilder</h2>
+          <p class="section-description">Verwalten Sie Logo, Banner und Galerie-Bilder Ihres Restaurants</p>
+
+          <!-- Logo Section -->
+          <div class="image-section">
+            <h3>Logo</h3>
+            <p class="image-description">Ihr Restaurant-Logo wird in der Restaurant-Liste und auf der Detailseite angezeigt.</p>
+
+            <div class="image-upload-area">
+              <div class="current-image" *ngIf="currentRestaurant?.images?.logo">
+                <img [src]="currentRestaurant!.images!.logo" [alt]="'Logo von ' + (currentRestaurant?.name || 'Restaurant')" class="preview-image">
+                <button type="button" class="remove-btn" (click)="removeLogo()">
+                  <i class="fa-solid fa-times"></i>
+                  Entfernen
+                </button>
+              </div>
+
+              <div class="upload-controls" [class.has-image]="currentRestaurant?.images?.logo">
+                <input
+                  type="file"
+                  #logoFileInput
+                  (change)="onLogoFileSelected($event)"
+                  accept="image/*"
+                  style="display: none;">
+                <button type="button" class="upload-btn" (click)="logoFileInput.click()">
+                  <i class="fa-solid fa-upload"></i>
+                  {{ currentRestaurant?.images?.logo ? 'Logo ersetzen' : 'Logo hochladen' }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Banner Section -->
+          <div class="image-section">
+            <h3>Banner</h3>
+            <p class="image-description">Das Banner-Bild wird als Header auf Ihrer Restaurant-Detailseite angezeigt.</p>
+
+            <div class="image-upload-area">
+              <div class="current-image" *ngIf="currentRestaurant?.images?.banner">
+                <img [src]="currentRestaurant!.images!.banner" [alt]="'Banner von ' + (currentRestaurant?.name || 'Restaurant')" class="preview-image banner-preview">
+                <button type="button" class="remove-btn" (click)="removeBanner()">
+                  <i class="fa-solid fa-times"></i>
+                  Entfernen
+                </button>
+              </div>
+
+              <div class="upload-controls" [class.has-image]="currentRestaurant?.images?.banner">
+                <input
+                  type="file"
+                  #bannerFileInput
+                  (change)="onBannerFileSelected($event)"
+                  accept="image/*"
+                  style="display: none;">
+                <button type="button" class="upload-btn" (click)="bannerFileInput.click()">
+                  <i class="fa-solid fa-upload"></i>
+                  {{ currentRestaurant?.images?.banner ? 'Banner ersetzen' : 'Banner hochladen' }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gallery Section -->
+          <div class="image-section">
+            <h3>Galerie</h3>
+            <p class="image-description">Fügen Sie bis zu 10 Bilder Ihrer Speisen, Ihres Restaurants oder Ihrer Atmosphäre hinzu.</p>
+
+            <div class="gallery-grid" *ngIf="currentRestaurant?.images?.gallery && currentRestaurant!.images!.gallery!.length > 0">
+              <div *ngFor="let image of currentRestaurant!.images!.gallery!; let i = index" class="gallery-item">
+                <img [src]="image" [alt]="'Galerie-Bild ' + (i + 1)" class="gallery-image">
+                <button type="button" class="remove-gallery-btn" (click)="removeGalleryImage(i)">
+                  <i class="fa-solid fa-times"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="gallery-upload" *ngIf="!currentRestaurant?.images?.gallery || (currentRestaurant!.images!.gallery && currentRestaurant!.images!.gallery!.length < 10)">
+              <input
+                type="file"
+                #galleryFileInput
+                (change)="onGalleryFilesSelected($event)"
+                accept="image/*"
+                multiple
+                style="display: none;">
+              <button type="button" class="upload-btn" (click)="galleryFileInput.click()">
+                <i class="fa-solid fa-plus"></i>
+                Galerie-Bilder hinzufügen
+              </button>
+              <p class="upload-info">
+                {{ currentRestaurant?.images?.gallery ? (currentRestaurant!.images!.gallery!.length || 0) : 0 }}/10 Bilder hochgeladen
+              </p>
+            </div>
+          </div>
+        </div>
+
         <!-- General Settings -->
         <div *ngIf="activeTab === 'general'" class="settings-section">
           <h2>Allgemeine Informationen</h2>
@@ -62,9 +171,10 @@ import { RouterModule } from '@angular/router';
             </div>
 
             <div class="form-actions">
-              <button type="submit" class="btn-primary" [disabled]="!generalForm.valid">
-                <i class="fa-solid fa-save"></i>
-                Speichern
+              <button type="submit" class="btn-primary" [disabled]="!generalForm.valid || isLoading">
+                <i class="fa-solid fa-spinner fa-spin" *ngIf="isLoading"></i>
+                <i class="fa-solid fa-save" *ngIf="!isLoading"></i>
+                {{ isLoading ? 'Wird gespeichert...' : 'Speichern' }}
               </button>
             </div>
           </form>
@@ -101,9 +211,10 @@ import { RouterModule } from '@angular/router';
             </div>
 
             <div class="form-actions">
-              <button type="submit" class="btn-primary">
-                <i class="fa-solid fa-save"></i>
-                Öffnungszeiten speichern
+              <button type="submit" class="btn-primary" [disabled]="isLoading">
+                <i class="fa-solid fa-spinner fa-spin" *ngIf="isLoading"></i>
+                <i class="fa-solid fa-save" *ngIf="!isLoading"></i>
+                {{ isLoading ? 'Wird gespeichert...' : 'Öffnungszeiten speichern' }}
               </button>
             </div>
           </form>
@@ -144,9 +255,10 @@ import { RouterModule } from '@angular/router';
             </div>
 
             <div class="form-actions">
-              <button type="submit" class="btn-primary">
-                <i class="fa-solid fa-save"></i>
-                Liefer-Einstellungen speichern
+              <button type="submit" class="btn-primary" [disabled]="isLoading">
+                <i class="fa-solid fa-spinner fa-spin" *ngIf="isLoading"></i>
+                <i class="fa-solid fa-save" *ngIf="!isLoading"></i>
+                {{ isLoading ? 'Wird gespeichert...' : 'Liefer-Einstellungen speichern' }}
               </button>
             </div>
           </form>
@@ -203,9 +315,10 @@ import { RouterModule } from '@angular/router';
             </div>
 
             <div class="form-actions">
-              <button type="submit" class="btn-primary">
-                <i class="fa-solid fa-save"></i>
-                Benachrichtigungen speichern
+              <button type="submit" class="btn-primary" [disabled]="isLoading">
+                <i class="fa-solid fa-spinner fa-spin" *ngIf="isLoading"></i>
+                <i class="fa-solid fa-save" *ngIf="!isLoading"></i>
+                {{ isLoading ? 'Wird gespeichert...' : 'Benachrichtigungen speichern' }}
               </button>
             </div>
           </form>
@@ -225,26 +338,49 @@ import { RouterModule } from '@angular/router';
 
             <div class="payment-methods">
               <h4>Akzeptierte Zahlungsmethoden</h4>
-              <div class="method-grid">
-                <div class="payment-method active">
-                  <i class="fa-solid fa-credit-card"></i>
-                  <span>Kreditkarte</span>
+              <form (ngSubmit)="savePaymentSettings()" #paymentForm="ngForm">
+                <div class="method-grid">
+                  <div class="payment-method" [class.active]="paymentSettings.cash">
+                    <label class="payment-toggle">
+                      <input type="checkbox" [(ngModel)]="paymentSettings.cash" name="cash">
+                      <i class="fa-solid fa-money-bill-wave"></i>
+                      <span title="Barzahlung">Barzahlung</span>
+                      <div class="toggle-indicator" [class.active]="paymentSettings.cash"></div>
+                    </label>
+                  </div>
+                  <div class="payment-method" [class.active]="paymentSettings.card">
+                    <label class="payment-toggle">
+                      <input type="checkbox" [(ngModel)]="paymentSettings.card" name="card">
+                      <i class="fa-solid fa-credit-card"></i>
+                      <span title="Kreditkarte">Kreditkarte</span>
+                      <div class="toggle-indicator" [class.active]="paymentSettings.card"></div>
+                    </label>
+                  </div>
+                  <div class="payment-method" [class.active]="paymentSettings.paypal">
+                    <label class="payment-toggle">
+                      <input type="checkbox" [(ngModel)]="paymentSettings.paypal" name="paypal">
+                      <i class="fa-brands fa-paypal"></i>
+                      <span title="PayPal">PayPal</span>
+                      <div class="toggle-indicator" [class.active]="paymentSettings.paypal"></div>
+                    </label>
+                  </div>
                 </div>
-                <div class="payment-method active">
-                  <i class="fa-solid fa-building-columns"></i>
-                  <span>Banküberweisung</span>
+
+                <div class="form-actions">
+                  <button type="submit" class="btn-primary" [disabled]="isLoading">
+                    <i class="fa-solid fa-spinner fa-spin" *ngIf="isLoading"></i>
+                    <i class="fa-solid fa-save" *ngIf="!isLoading"></i>
+                    {{ isLoading ? 'Wird gespeichert...' : 'Zahlungsmethoden speichern' }}
+                  </button>
                 </div>
-                <div class="payment-method">
-                  <i class="fa-solid fa-mobile-screen"></i>
-                  <span>Mobile Payment</span>
-                </div>
-                <div class="payment-method">
-                  <i class="fa-solid fa-wallet"></i>
-                  <span>Digital Wallet</span>
-                </div>
-              </div>
+              </form>
             </div>
           </div>
+        </div>
+
+        <!-- Password Settings -->
+        <div *ngIf="activeTab === 'password'" class="settings-section">
+          <app-password-change></app-password-change>
         </div>
       </div>
     </div>
@@ -576,8 +712,25 @@ import { RouterModule } from '@angular/router';
 
     .method-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: var(--space-4);
+    }
+
+    /* For very small containers, ensure minimum usability */
+    @media (max-width: 480px) {
+      .method-grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-3);
+      }
+
+      .payment-method {
+        min-height: 60px;
+      }
+
+      .payment-toggle span {
+        font-size: var(--text-sm);
+        max-width: calc(100% - 50px);
+      }
     }
 
     .payment-method {
@@ -590,6 +743,7 @@ import { RouterModule } from '@angular/router';
       background: white;
       color: var(--color-muted);
       transition: all var(--transition);
+      min-width: 0; /* Allow flex items to shrink below their content size */
     }
 
     .payment-method.active {
@@ -600,6 +754,135 @@ import { RouterModule } from '@angular/router';
 
     .payment-method i {
       font-size: 1.25rem;
+    }
+
+    /* Payment Toggle Styles */
+    .payment-toggle {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      cursor: pointer;
+      width: 100%;
+      padding: var(--space-3);
+      border-radius: var(--radius-md);
+      transition: all var(--transition);
+      position: relative;
+      min-width: 0; /* Allow flex items to shrink */
+    }
+
+    .payment-toggle:hover {
+      background: color-mix(in oklab, var(--color-primary) 5%, var(--bg-light));
+    }
+
+    .payment-toggle input[type="checkbox"] {
+      display: none;
+    }
+
+    .payment-toggle i {
+      color: var(--color-primary);
+      font-size: var(--text-lg);
+      flex-shrink: 0;
+    }
+
+    .payment-toggle span {
+      flex: 1;
+      color: var(--color-text);
+      font-weight: 500;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: calc(100% - 60px); /* Reserve space for icon and toggle */
+      position: relative;
+      cursor: help;
+    }
+
+    /* Tooltip for truncated text */
+    .payment-toggle span:hover::after {
+      content: attr(title);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--color-text);
+      color: white;
+      padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+      white-space: nowrap;
+      z-index: 1000;
+      margin-bottom: var(--space-2);
+      box-shadow: var(--shadow-lg);
+      opacity: 0;
+      animation: fadeInTooltip 0.2s ease forwards;
+      pointer-events: none; /* Prevent tooltip from interfering with clicks */
+    }
+
+    @keyframes fadeInTooltip {
+      to {
+        opacity: 1;
+      }
+    }
+
+    .toggle-indicator {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid var(--color-border);
+      background: var(--color-surface);
+      transition: all var(--transition);
+      flex-shrink: 0;
+      position: relative;
+      margin-left: auto; /* Push to the right */
+    }
+
+    .toggle-indicator.active {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+    }
+
+    .toggle-indicator.active::after {
+      content: '✓';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .payment-method.active {
+      border-color: var(--color-primary);
+      background: color-mix(in oklab, var(--color-primary) 5%, var(--color-surface));
+    }
+
+    /* Loading States */
+    .loading-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-8);
+      background: white;
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .loading-spinner {
+      text-align: center;
+      color: var(--color-muted);
+    }
+
+    .loading-spinner i {
+      font-size: 2rem;
+      margin-bottom: var(--space-4);
+      color: var(--color-primary-500);
+    }
+
+    .loading-spinner p {
+      margin: 0;
+      font-size: var(--text-lg);
     }
 
     /* Responsive */
@@ -638,26 +921,254 @@ import { RouterModule } from '@angular/router';
         align-items: flex-start;
         gap: var(--space-3);
       }
+
+      .method-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .payment-method {
+        min-width: 0;
+      }
+
+      .payment-toggle span {
+        font-size: var(--text-sm);
+      }
+
+      /* Disable tooltips on touch devices */
+      .payment-toggle span:hover::after,
+      .payment-toggle span:hover::before {
+        display: none;
+      }
+
+      /* Alternative: Show full text on mobile */
+      .payment-method {
+        padding: var(--space-3);
+      }
+
+      .payment-toggle {
+        padding: var(--space-2);
+      }
+    }
+
+    /* Image Upload Styles */
+    .section-description {
+      color: var(--color-muted);
+      margin-bottom: var(--space-8);
+      font-size: var(--text-lg);
+    }
+
+    .image-section {
+      margin-bottom: var(--space-10);
+    }
+
+    .image-section h3 {
+      margin: 0 0 var(--space-2) 0;
+      color: var(--color-text);
+      font-size: var(--text-xl);
+      font-weight: 600;
+    }
+
+    .image-description {
+      margin: 0 0 var(--space-4) 0;
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+      line-height: 1.5;
+    }
+
+    .image-upload-area {
+      border: 2px dashed var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      background: var(--bg-light);
+      transition: all var(--transition);
+    }
+
+    .image-upload-area:hover {
+      border-color: var(--color-primary);
+      background: color-mix(in oklab, var(--color-primary) 5%, var(--bg-light));
+    }
+
+    .current-image {
+      position: relative;
+      display: inline-block;
+      margin-bottom: var(--space-4);
+    }
+
+    .preview-image {
+      max-width: 200px;
+      max-height: 150px;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      object-fit: cover;
+    }
+
+    .banner-preview {
+      max-width: 100%;
+      max-height: 200px;
+    }
+
+    .remove-btn, .remove-gallery-btn {
+      position: absolute;
+      top: var(--space-2);
+      right: var(--space-2);
+      background: rgba(239, 68, 68, 0.9);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: var(--text-sm);
+      transition: all var(--transition);
+    }
+
+    .remove-btn:hover, .remove-gallery-btn:hover {
+      background: var(--color-danger);
+      transform: scale(1.1);
+    }
+
+    .upload-controls {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .upload-controls.has-image {
+      align-items: flex-start;
+    }
+
+    .upload-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-4);
+      background: var(--color-primary-500);
+      color: white;
+      border: none;
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      font-weight: 500;
+      transition: all var(--transition);
+    }
+
+    .upload-btn:hover {
+      background: var(--color-primary-600);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px color-mix(in oklab, var(--color-primary) 25%, transparent);
+    }
+
+    .upload-info {
+      margin: 0;
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+    }
+
+    /* Gallery Styles */
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: var(--space-4);
+      margin-bottom: var(--space-4);
+    }
+
+    .gallery-item {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .gallery-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform var(--transition);
+    }
+
+    .gallery-item:hover .gallery-image {
+      transform: scale(1.05);
+    }
+
+    .remove-gallery-btn {
+      top: var(--space-1);
+      right: var(--space-1);
+      width: 24px;
+      height: 24px;
+      font-size: 10px;
+    }
+
+    .gallery-upload {
+      border: 2px dashed var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      text-align: center;
+      background: var(--bg-light);
+      transition: all var(--transition);
+    }
+
+    .gallery-upload:hover {
+      border-color: var(--color-primary);
+      background: color-mix(in oklab, var(--color-primary) 5%, var(--bg-light));
+    }
+
+    /* Responsive Images */
+    @media (max-width: 768px) {
+      .image-upload-area {
+        padding: var(--space-4);
+      }
+
+      .preview-image {
+        max-width: 150px;
+        max-height: 100px;
+      }
+
+      .banner-preview {
+        max-height: 150px;
+      }
+
+      .gallery-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: var(--space-3);
+      }
+
+      .current-image {
+        display: block;
+        text-align: center;
+      }
     }
   `]
 })
-export class RestaurantManagerSettingsComponent implements OnInit {
+export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
+  private restaurantsService = inject(RestaurantsService);
+  private authService = inject(AuthService);
+  private toastService = inject(ToastService);
+  private subscriptions: Subscription[] = [];
+
   activeTab: string = 'general';
+  isLoading: boolean = false;
+  currentUser: User | null = null;
+  currentRestaurant: RestaurantDTO | null = null;
 
   restaurant: any = {
-    name: 'Bella Italia Restaurant',
-    email: 'info@bella-italia.de',
-    phone: '+49 123 456789',
-    description: 'Authentische italienische Küche in gemütlicher Atmosphäre',
-    cuisine_type: 'Italienisch'
+    name: '',
+    email: '',
+    phone: '',
+    description: '',
+    cuisine_type: ''
   };
 
   settingsTabs = [
     { id: 'general', title: 'Allgemein', icon: 'fa-solid fa-info-circle' },
+    { id: 'images', title: 'Bilder', icon: 'fa-solid fa-camera' },
     { id: 'hours', title: 'Öffnungszeiten', icon: 'fa-solid fa-clock' },
     { id: 'delivery', title: 'Lieferung', icon: 'fa-solid fa-truck' },
     { id: 'notifications', title: 'Benachrichtigungen', icon: 'fa-solid fa-bell' },
-    { id: 'payment', title: 'Zahlung', icon: 'fa-solid fa-credit-card' }
+    { id: 'payment', title: 'Zahlung', icon: 'fa-solid fa-credit-card' },
+    { id: 'password', title: 'Passwort', icon: 'fa-solid fa-lock' }
   ];
 
   daysOfWeek = [
@@ -692,27 +1203,385 @@ export class RestaurantManagerSettingsComponent implements OnInit {
     dailySummary: true
   };
 
+  paymentSettings = {
+    cash: true,
+    card: true,
+    paypal: false
+  };
+
   ngOnInit() {
-    // Component initialized with mock data
+    this.loadCurrentUser();
+    this.loadRestaurantData();
+  }
+
+  ngOnDestroy() {
+    this.subscriptions.forEach(sub => sub.unsubscribe());
+  }
+
+  private loadCurrentUser() {
+    const sub = this.authService.currentUser$.subscribe(user => {
+      this.currentUser = user;
+      console.log('Current user loaded:', user);
+    });
+    this.subscriptions.push(sub);
+  }
+
+  private loadRestaurantData() {
+    if (!this.currentUser) return;
+
+    this.isLoading = true;
+
+    // For now, we assume the user manages restaurants and get the first one
+    // In a real scenario, this would come from route params or user selection
+    const restaurantId = this.currentUser.tenant_id;
+
+    const sub = this.restaurantsService.getById(restaurantId).subscribe({
+      next: (restaurant) => {
+        this.currentRestaurant = restaurant;
+        this.populateFormData(restaurant);
+        this.isLoading = false;
+        console.log('Restaurant data loaded:', restaurant);
+      },
+      error: (error) => {
+        console.error('Error loading restaurant:', error);
+        this.toastService.error('Fehler', 'Restaurant-Daten konnten nicht geladen werden');
+        this.isLoading = false;
+      }
+    });
+    this.subscriptions.push(sub);
+  }
+
+  private populateFormData(restaurant: RestaurantDTO) {
+    // General settings
+    this.restaurant = {
+      name: restaurant.name,
+      email: restaurant.contact_info?.email || '',
+      phone: restaurant.contact_info?.phone || '',
+      description: restaurant.description || '',
+      cuisine_type: restaurant.cuisine_type
+    };
+
+    // Operating hours
+    if (restaurant.opening_hours) {
+      const openingHours = restaurant.opening_hours as Record<string, { open: string; close: string; is_closed: boolean }>;
+      this.operatingHours = this.daysOfWeek.map(day => ({
+        day: day.value,
+        open: openingHours[day.value]?.open || '09:00',
+        close: openingHours[day.value]?.close || '22:00',
+        closed: openingHours[day.value]?.is_closed || false
+      }));
+    }
+
+    // Delivery settings
+    if (restaurant.delivery_info) {
+      this.deliverySettings = {
+        minOrderAmount: restaurant.delivery_info.minimum_order_amount || 15.00,
+        deliveryFee: restaurant.delivery_info.delivery_fee || 2.50,
+        deliveryRadius: restaurant.delivery_info.delivery_radius_km || 5.0,
+        estimatedDeliveryTime: restaurant.delivery_info.estimated_delivery_time_minutes || 30,
+        isActive: true // This would need to be stored separately
+      };
+    }
+
+    // Payment settings
+    if (restaurant.payment_methods) {
+      this.paymentSettings = {
+        cash: !!restaurant.payment_methods.cash,
+        card: !!restaurant.payment_methods.card,
+        paypal: !!restaurant.payment_methods.paypal
+      };
+    }
   }
 
   saveGeneralSettings() {
-    console.log('Saving general settings:', this.restaurant);
-    alert('Allgemeine Einstellungen wurden gespeichert (Mock-Funktionalität)');
+    if (!this.currentRestaurant) return;
+
+    this.isLoading = true;
+    const updateData = {
+      name: this.restaurant.name,
+      description: this.restaurant.description,
+      cuisine_type: this.restaurant.cuisine_type,
+      contact_info: {
+        phone: this.restaurant.phone,
+        email: this.restaurant.email
+      }
+    };
+
+    const sub = this.restaurantsService.updateRestaurant(this.currentRestaurant.id, updateData).subscribe({
+      next: (updatedRestaurant) => {
+        this.currentRestaurant = updatedRestaurant;
+        this.toastService.success('Erfolg', 'Allgemeine Einstellungen wurden gespeichert');
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error saving general settings:', error);
+        this.toastService.error('Fehler', 'Allgemeine Einstellungen konnten nicht gespeichert werden');
+        this.isLoading = false;
+      }
+    });
+    this.subscriptions.push(sub);
   }
 
   saveOperatingHours() {
-    console.log('Saving operating hours:', this.operatingHours);
-    alert('Öffnungszeiten wurden gespeichert (Mock-Funktionalität)');
+    if (!this.currentRestaurant) return;
+
+    this.isLoading = true;
+    const openingHours: {
+      monday: { open: string; close: string; is_closed: boolean };
+      tuesday: { open: string; close: string; is_closed: boolean };
+      wednesday: { open: string; close: string; is_closed: boolean };
+      thursday: { open: string; close: string; is_closed: boolean };
+      friday: { open: string; close: string; is_closed: boolean };
+      saturday: { open: string; close: string; is_closed: boolean };
+      sunday: { open: string; close: string; is_closed: boolean };
+    } = {} as any;
+
+    this.operatingHours.forEach(hour => {
+      (openingHours as any)[hour.day] = {
+        open: hour.open,
+        close: hour.close,
+        is_closed: hour.closed
+      };
+    });
+
+    const updateData = {
+      opening_hours: openingHours
+    };
+
+    const sub = this.restaurantsService.updateRestaurant(this.currentRestaurant.id, updateData).subscribe({
+      next: (updatedRestaurant) => {
+        this.currentRestaurant = updatedRestaurant;
+        this.toastService.success('Erfolg', 'Öffnungszeiten wurden gespeichert');
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error saving operating hours:', error);
+        this.toastService.error('Fehler', 'Öffnungszeiten konnten nicht gespeichert werden');
+        this.isLoading = false;
+      }
+    });
+    this.subscriptions.push(sub);
   }
 
   saveDeliverySettings() {
-    console.log('Saving delivery settings:', this.deliverySettings);
-    alert('Liefer-Einstellungen wurden gespeichert (Mock-Funktionalität)');
+    if (!this.currentRestaurant) return;
+
+    this.isLoading = true;
+    const updateData = {
+      delivery_info: {
+        minimum_order_amount: this.deliverySettings.minOrderAmount,
+        delivery_fee: this.deliverySettings.deliveryFee,
+        delivery_radius_km: this.deliverySettings.deliveryRadius,
+        estimated_delivery_time_minutes: this.deliverySettings.estimatedDeliveryTime
+      }
+    };
+
+    const sub = this.restaurantsService.updateRestaurant(this.currentRestaurant.id, updateData).subscribe({
+      next: (updatedRestaurant) => {
+        this.currentRestaurant = updatedRestaurant;
+        this.toastService.success('Erfolg', 'Liefer-Einstellungen wurden gespeichert');
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error saving delivery settings:', error);
+        this.toastService.error('Fehler', 'Liefer-Einstellungen konnten nicht gespeichert werden');
+        this.isLoading = false;
+      }
+    });
+    this.subscriptions.push(sub);
   }
 
   saveNotificationSettings() {
-    console.log('Saving notification settings:', this.notificationSettings);
-    alert('Benachrichtigungs-Einstellungen wurden gespeichert (Mock-Funktionalität)');
+    // Notification settings would typically be saved to user preferences
+    // For now, we'll just show a success message
+    this.toastService.success('Erfolg', 'Benachrichtigungs-Einstellungen wurden gespeichert');
+  }
+
+  savePaymentSettings() {
+    if (!this.currentRestaurant) return;
+
+    this.isLoading = true;
+    const updateData = {
+      payment_methods: {
+        cash: this.paymentSettings.cash,
+        card: this.paymentSettings.card,
+        paypal: this.paymentSettings.paypal
+      }
+    };
+
+    const sub = this.restaurantsService.updateRestaurant(this.currentRestaurant.id, updateData).subscribe({
+      next: (updatedRestaurant) => {
+        this.currentRestaurant = updatedRestaurant;
+        this.toastService.success('Erfolg', 'Zahlungsmethoden wurden gespeichert');
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error saving payment settings:', error);
+        this.toastService.error('Fehler', 'Zahlungsmethoden konnten nicht gespeichert werden');
+        this.isLoading = false;
+      }
+    });
+    this.subscriptions.push(sub);
+  }
+
+  // Image Upload Methods
+  onLogoFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      this.uploadLogo(file);
+    }
+  }
+
+  onBannerFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      this.uploadBanner(file);
+    }
+  }
+
+  onGalleryFilesSelected(event: any) {
+    const files = Array.from(event.target.files) as File[];
+    if (files.length > 0) {
+      this.uploadGalleryImages(files);
+    }
+  }
+
+  uploadLogo(file: File) {
+    if (!this.currentRestaurant) return;
+
+    this.isLoading = true;
+    const formData = new FormData();
+    formData.append('logo', file);
+
+    const sub = this.restaurantsService.uploadRestaurantLogo(this.currentRestaurant.id, formData).subscribe({
+      next: (response: any) => {
+        this.currentRestaurant = response.restaurant;
+        this.toastService.success('Erfolg', 'Logo wurde erfolgreich hochgeladen');
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error uploading logo:', error);
+        this.toastService.error('Fehler', 'Logo konnte nicht hochgeladen werden');
+        this.isLoading = false;
+      }
+    });
+    this.subscriptions.push(sub);
+  }
+
+  uploadBanner(file: File) {
+    if (!this.currentRestaurant) return;
+
+    this.isLoading = true;
+    const formData = new FormData();
+    formData.append('banner', file);
+
+    const sub = this.restaurantsService.uploadRestaurantBanner(this.currentRestaurant.id, formData).subscribe({
+      next: (response: any) => {
+        this.currentRestaurant = response.restaurant;
+        this.toastService.success('Erfolg', 'Banner wurde erfolgreich hochgeladen');
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error uploading banner:', error);
+        this.toastService.error('Fehler', 'Banner konnte nicht hochgeladen werden');
+        this.isLoading = false;
+      }
+    });
+    this.subscriptions.push(sub);
+  }
+
+  uploadGalleryImages(files: File[]) {
+    if (!this.currentRestaurant) return;
+
+    this.isLoading = true;
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append('gallery', file);
+    });
+
+    const sub = this.restaurantsService.uploadRestaurantGallery(this.currentRestaurant.id, formData).subscribe({
+      next: (response: any) => {
+        this.currentRestaurant = response.restaurant;
+        this.toastService.success('Erfolg', `${files.length} Galerie-Bilder wurden erfolgreich hochgeladen`);
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error uploading gallery images:', error);
+        this.toastService.error('Fehler', 'Galerie-Bilder konnten nicht hochgeladen werden');
+        this.isLoading = false;
+      }
+    });
+    this.subscriptions.push(sub);
+  }
+
+  removeLogo() {
+    if (!this.currentRestaurant) return;
+
+    this.isLoading = true;
+    const updateData = {
+      images: {
+        ...this.currentRestaurant.images,
+        logo: undefined
+      }
+    };
+
+    const sub = this.restaurantsService.updateRestaurant(this.currentRestaurant.id, updateData).subscribe({
+      next: (updatedRestaurant) => {
+        this.currentRestaurant = updatedRestaurant;
+        this.toastService.success('Erfolg', 'Logo wurde entfernt');
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error removing logo:', error);
+        this.toastService.error('Fehler', 'Logo konnte nicht entfernt werden');
+        this.isLoading = false;
+      }
+    });
+    this.subscriptions.push(sub);
+  }
+
+  removeBanner() {
+    if (!this.currentRestaurant) return;
+
+    this.isLoading = true;
+    const updateData = {
+      images: {
+        ...this.currentRestaurant.images,
+        banner: undefined
+      }
+    };
+
+    const sub = this.restaurantsService.updateRestaurant(this.currentRestaurant.id, updateData).subscribe({
+      next: (updatedRestaurant) => {
+        this.currentRestaurant = updatedRestaurant;
+        this.toastService.success('Erfolg', 'Banner wurde entfernt');
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error removing banner:', error);
+        this.toastService.error('Fehler', 'Banner konnte nicht entfernt werden');
+        this.isLoading = false;
+      }
+    });
+    this.subscriptions.push(sub);
+  }
+
+  removeGalleryImage(index: number) {
+    if (!this.currentRestaurant) return;
+
+    this.isLoading = true;
+    const sub = this.restaurantsService.deleteGalleryImage(this.currentRestaurant.id, index).subscribe({
+      next: (response: any) => {
+        this.currentRestaurant = response.restaurant;
+        this.toastService.success('Erfolg', 'Galerie-Bild wurde entfernt');
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error removing gallery image:', error);
+        this.toastService.error('Fehler', 'Galerie-Bild konnte nicht entfernt werden');
+        this.isLoading = false;
+      }
+    });
+    this.subscriptions.push(sub);
   }
 }

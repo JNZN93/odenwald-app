@@ -1,7 +1,11 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, RouterOutlet } from '@angular/router';
+import { RestaurantManagerService } from '../../core/services/restaurant-manager.service';
+import { AuthService, User } from '../../core/auth/auth.service';
+import { ToastService } from '../../core/services/toast.service';
+import { Subscription } from 'rxjs';
 
 
 export interface ManagerMenuItem {
@@ -53,6 +57,13 @@ export interface ManagerMenuItem {
                 <path d="M3 3v18h18"></path>
                 <path d="M18.7 8l-5.1 5.1-2.8-2.7L7 14.3"></path>
               </g>
+              <!-- Customers Icon -->
+              <g *ngIf="menuItem.icon === 'customers-icon'">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M16 11a6 6 0 0 1 6 6v2"></path>
+                <circle cx="21" cy="7" r="4"></circle>
+              </g>
               <!-- Settings Icon -->
               <g *ngIf="menuItem.icon === 'settings-icon'">
                 <circle cx="12" cy="12" r="3"></circle>
@@ -84,7 +95,7 @@ export interface ManagerMenuItem {
       </div>
 
       <!-- Quick Stats Bar -->
-      <div class="quick-stats-bar" *ngIf="currentStats">
+      <div class="quick-stats-bar" *ngIf="currentStats && !isLoadingStats">
         <div class="stat-card">
           <div class="stat-label">Heutige Bestellungen</div>
           <div class="stat-value">{{ currentStats.total_orders_today }}</div>
@@ -92,18 +103,62 @@ export interface ManagerMenuItem {
         </div>
         <div class="stat-card">
           <div class="stat-label">Umsatz heute</div>
-          <div class="stat-value">€{{ currentStats.total_revenue_today.toFixed(2) }}</div>
+          <div class="stat-value">€{{ currentStats.total_revenue_today?.toFixed(2) || '0.00' }}</div>
           <div class="stat-change">+8% vs gestern</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Ø Bestellwert</div>
-          <div class="stat-value">€{{ currentStats.average_order_value.toFixed(2) }}</div>
+          <div class="stat-value">€{{ currentStats.average_order_value?.toFixed(2) || '0.00' }}</div>
           <div class="stat-change">+5% vs gestern</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Bestellungen diese Woche</div>
-          <div class="stat-value">{{ currentStats.total_orders_this_week }}</div>
+          <div class="stat-value">{{ currentStats.total_orders_this_week || 0 }}</div>
           <div class="stat-change">+15% vs letzte Woche</div>
+        </div>
+      </div>
+
+      <!-- Loading Stats Bar -->
+      <div class="quick-stats-bar" *ngIf="isLoadingStats">
+        <div class="stat-card loading">
+          <div class="loading-skeleton"></div>
+          <div class="loading-skeleton short"></div>
+        </div>
+        <div class="stat-card loading">
+          <div class="loading-skeleton"></div>
+          <div class="loading-skeleton short"></div>
+        </div>
+        <div class="stat-card loading">
+          <div class="loading-skeleton"></div>
+          <div class="loading-skeleton short"></div>
+        </div>
+        <div class="stat-card loading">
+          <div class="loading-skeleton"></div>
+          <div class="loading-skeleton short"></div>
+        </div>
+      </div>
+
+      <!-- Quick Stats Bar (Fallback when no data) -->
+      <div class="quick-stats-bar" *ngIf="!currentStats && !isLoadingStats">
+        <div class="stat-card">
+          <div class="stat-label">Heutige Bestellungen</div>
+          <div class="stat-value">0</div>
+          <div class="stat-change">Keine Daten verfügbar</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Umsatz heute</div>
+          <div class="stat-value">€0.00</div>
+          <div class="stat-change">Keine Daten verfügbar</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Ø Bestellwert</div>
+          <div class="stat-value">€0.00</div>
+          <div class="stat-change">Keine Daten verfügbar</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Bestellungen diese Woche</div>
+          <div class="stat-value">0</div>
+          <div class="stat-change">Keine Daten verfügbar</div>
         </div>
       </div>
 
@@ -240,6 +295,37 @@ export interface ManagerMenuItem {
       margin: 0 auto;
     }
 
+    /* Loading States */
+    .stat-card.loading {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .loading-skeleton {
+      background: var(--bg-light-green);
+      border-radius: var(--radius-md);
+      animation: pulse 1.5s ease-in-out infinite alternate;
+    }
+
+    .loading-skeleton:not(.short) {
+      height: 24px;
+    }
+
+    .loading-skeleton.short {
+      height: 16px;
+      width: 60%;
+    }
+
+    @keyframes pulse {
+      from {
+        opacity: 1;
+      }
+      to {
+        opacity: 0.5;
+      }
+    }
+
     /* Responsive */
     @media (max-width: 1024px) {
       .manager-nav-header {
@@ -287,38 +373,88 @@ export interface ManagerMenuItem {
     }
   `]
 })
-export class RestaurantManagerDashboardComponent implements OnInit {
-  managedRestaurants: any[] = [
-    {
-      restaurant_id: '1',
-      restaurant_name: 'Bella Italia Restaurant',
-      role: 'manager'
-    }
-  ];
+export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
+  private restaurantManagerService = inject(RestaurantManagerService);
+  private authService = inject(AuthService);
+  private toastService = inject(ToastService);
+  private subscriptions: Subscription[] = [];
 
-  selectedRestaurantId: string = '1';
-
-  currentStats: any = {
-    total_orders_today: 12,
-    total_revenue_today: 245.50,
-    total_orders_this_week: 87,
-    total_revenue_this_week: 1850.30,
-    total_orders_this_month: 342,
-    total_revenue_this_month: 7280.90,
-    average_order_value: 21.29,
-    popular_items: [
-      { name: 'Pizza Margherita', order_count: 45 },
-      { name: 'Pasta Carbonara', order_count: 38 },
-      { name: 'Caesar Salad', order_count: 29 }
-    ]
-  };
+  managedRestaurants: any[] = [];
+  selectedRestaurantId: string = '';
+  currentStats: any = null;
+  currentUser: User | null = null;
+  isLoadingStats: boolean = false;
 
   managerMenuItems: ManagerMenuItem[] = [];
 
   ngOnInit() {
     this.setupManagerMenu();
-    if (this.managedRestaurants.length > 0) {
-      this.selectedRestaurantId = this.managedRestaurants[0].restaurant_id;
+    this.loadCurrentUser();
+    this.loadManagedRestaurants();
+  }
+
+  ngOnDestroy() {
+    this.subscriptions.forEach(sub => sub.unsubscribe());
+  }
+
+  private loadCurrentUser() {
+    const sub = this.authService.currentUser$.subscribe(user => {
+      this.currentUser = user;
+      console.log('Dashboard: Current user loaded:', user);
+    });
+    this.subscriptions.push(sub);
+  }
+
+  private loadManagedRestaurants() {
+    const sub = this.restaurantManagerService.getManagedRestaurants().subscribe({
+      next: (restaurants) => {
+        this.managedRestaurants = restaurants;
+        console.log('Managed restaurants loaded:', restaurants);
+
+        if (this.managedRestaurants.length > 0) {
+          this.selectedRestaurantId = this.managedRestaurants[0].restaurant_id;
+          this.loadRestaurantStats(this.selectedRestaurantId);
+        }
+      },
+      error: (error) => {
+        console.error('Error loading managed restaurants:', error);
+        this.toastService.error('Fehler', 'Restaurants konnten nicht geladen werden');
+      }
+    });
+    this.subscriptions.push(sub);
+  }
+
+  private loadRestaurantStats(restaurantId: string) {
+    this.isLoadingStats = true;
+    const sub = this.restaurantManagerService.getRestaurantStats(restaurantId, 'today').subscribe({
+      next: (stats) => {
+        this.currentStats = stats;
+        this.isLoadingStats = false;
+        console.log('Restaurant stats loaded:', stats);
+      },
+      error: (error) => {
+        console.error('Error loading restaurant stats:', error);
+        this.toastService.error('Fehler', 'Restaurant-Statistiken konnten nicht geladen werden');
+        this.isLoadingStats = false;
+        // Set fallback stats
+        this.currentStats = {
+          total_orders_today: 0,
+          total_revenue_today: 0,
+          total_orders_this_week: 0,
+          total_revenue_this_week: 0,
+          total_orders_this_month: 0,
+          total_revenue_this_month: 0,
+          average_order_value: 0,
+          popular_items: []
+        };
+      }
+    });
+    this.subscriptions.push(sub);
+  }
+
+  onRestaurantChange() {
+    if (this.selectedRestaurantId) {
+      this.loadRestaurantStats(this.selectedRestaurantId);
     }
   }
 
@@ -357,6 +493,14 @@ export class RestaurantManagerDashboardComponent implements OnInit {
         color: '#ef4444'
       },
       {
+        id: 'customers',
+        title: 'Kunden',
+        description: 'Kunden verwalten',
+        icon: 'customers-icon',
+        route: '/restaurant-manager/customers',
+        color: '#ec4899'
+      },
+      {
         id: 'settings',
         title: 'Einstellungen',
         description: 'Restaurant-Einstellungen',
@@ -376,8 +520,4 @@ export class RestaurantManagerDashboardComponent implements OnInit {
     ];
   }
 
-  onRestaurantChange() {
-    // Mock restaurant change
-    console.log('Restaurant changed to:', this.selectedRestaurantId);
-  }
 }

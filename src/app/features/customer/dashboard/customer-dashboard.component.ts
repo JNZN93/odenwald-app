@@ -5,12 +5,13 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { OrdersService, Order } from '../../../core/services/orders.service';
 import { CartService } from '../../../core/services/supplier.service';
 import { ImageFallbackDirective } from '../../../core/image-fallback.directive';
+import { PasswordChangeComponent } from '../../../shared/components/password-change.component';
 import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
 
 @Component({
   selector: 'app-customer-dashboard',
   standalone: true,
-  imports: [CommonModule, ImageFallbackDirective],
+  imports: [CommonModule, ImageFallbackDirective, PasswordChangeComponent],
   template: `
     <div class="customer-dashboard">
       <div class="dashboard-header">
@@ -159,6 +160,28 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
               <p>Bestell- und Marketing-Benachrichtigungen</p>
               <button class="btn-ghost" (click)="manageNotifications()">Einstellungen</button>
             </div>
+
+            <div class="setting-card">
+              <i class="fa-solid fa-lock"></i>
+              <h4>Passwort ändern</h4>
+              <p>Sichern Sie Ihr Konto mit einem neuen Passwort</p>
+              <button class="btn-ghost" (click)="openPasswordChangeModal()">Ändern</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Password Change Modal -->
+      <div *ngIf="showPasswordChangeModal" class="modal-overlay" (click)="closePasswordChangeModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>Passwort ändern</h3>
+            <button class="close-btn" (click)="closePasswordChangeModal()">
+              <i class="fa-solid fa-times"></i>
+            </button>
+          </div>
+          <div class="modal-body">
+            <app-password-change (passwordChanged)="onPasswordChanged()"></app-password-change>
           </div>
         </div>
       </div>
@@ -548,6 +571,65 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
       to { transform: rotate(360deg); }
     }
 
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: var(--space-4);
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: var(--radius-xl);
+      max-width: 600px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-xl);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-6);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      color: var(--color-heading);
+      font-size: var(--text-xl);
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: var(--text-xl);
+      color: var(--color-muted);
+      cursor: pointer;
+      padding: var(--space-2);
+      border-radius: var(--radius-md);
+      transition: all var(--transition);
+    }
+
+    .close-btn:hover {
+      background: var(--bg-light);
+      color: var(--color-text);
+    }
+
+    .modal-body {
+      padding: var(--space-6);
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
       .customer-dashboard {
@@ -599,6 +681,7 @@ export class CustomerDashboardComponent implements OnInit {
 
   isLoadingOrders = false;
   ordersError: string | null = null;
+  showPasswordChangeModal = false;
 
   // Mock featured restaurants - in real app, this would come from API
   featuredRestaurants = [
@@ -760,5 +843,18 @@ export class CustomerDashboardComponent implements OnInit {
   manageNotifications() {
     // TODO: Implement notification settings
     console.log('Manage notifications');
+  }
+
+  openPasswordChangeModal() {
+    this.showPasswordChangeModal = true;
+  }
+
+  closePasswordChangeModal() {
+    this.showPasswordChangeModal = false;
+  }
+
+  onPasswordChanged() {
+    // Password was successfully changed, close modal
+    this.closePasswordChangeModal();
   }
 }
