@@ -9,6 +9,11 @@
   color: white;
   padding: 1rem 0;
   box-shadow: var(--shadow-md);
+  transition: all 0.3s ease;
+}
+
+.app-header.hidden {
+  display: none;
 }
 
 /* Ensure all text in header is white */
@@ -105,6 +110,7 @@
 .header-right {
   display: flex;
   align-items: center;
+  gap: 1rem;
 }
 
 .user-section {
@@ -140,6 +146,58 @@
   color: white !important;
 }
 
+/* Restaurant Name Section */
+.restaurant-name-section {
+  display: flex;
+  align-items: center;
+}
+
+.restaurant-name-display {
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 25px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.restaurant-name-display:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.24);
+  transform: translateY(-1px);
+}
+
+.restaurant-name {
+  color: white;
+}
+
+.user-role {
+  color: #fbbf24;
+  font-size: 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  margin-left: 0.25rem;
+}
+
+.restaurant-name-display.showing-role {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.restaurant-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+
 .login-btn {
   background: rgba(255, 255, 255, 0.2);
   color: white !important;
@@ -169,6 +227,11 @@
 .app-main {
   flex: 1;
   padding: var(--space-8) 0;
+  transition: padding 0.3s ease;
+}
+
+.wholesaler-route .app-main {
+  padding: 0;
 }
 
 /* Global Loading Overlay */

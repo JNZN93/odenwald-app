@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
-import { AuthService } from './core/auth/auth.service';
+import { AuthService, User } from './core/auth/auth.service';
+import { RestaurantManagerService } from './core/services/restaurant-manager.service';
 import { CommonModule } from '@angular/common';
 import { ToastContainerComponent } from './shared/components/toast-container.component';
 import { ConfirmationDialogComponent } from './shared/components/confirmation-dialog.component';
@@ -24,8 +25,23 @@ import { LoadingService } from './core/services/loading.service';
 })
 export class AppComponent {
   private authService = inject(AuthService);
+  private restaurantManagerService = inject(RestaurantManagerService);
   private router = inject(Router);
   private loadingService = inject(LoadingService);
+
+  constructor() {
+    // Lade gespeichertes Restaurant aus localStorage
+    const savedRestaurant = localStorage.getItem('selectedRestaurant');
+    if (savedRestaurant) {
+      try {
+        const restaurant = JSON.parse(savedRestaurant);
+        this.restaurantManagerService.setSelectedRestaurant(restaurant);
+      } catch (error) {
+        console.error('Error parsing saved restaurant:', error);
+        localStorage.removeItem('selectedRestaurant');
+      }
+    }
+  }
 
   get currentUser$() {
     return this.authService.currentUser$;
@@ -55,8 +71,40 @@ export class AppComponent {
     return this.authService.hasRole('driver');
   }
 
+  get hasWholesalerRole() {
+    return this.authService.hasRole('wholesaler');
+  }
+
+  get isWholesalerRoute() {
+    return this.router.url.startsWith('/wholesaler');
+  }
+
   get isGlobalLoading$() {
     return this.loadingService.globalLoading$;
+  }
+
+  // Restaurant Manager specific properties
+  showRole: boolean = false;
+
+  toggleRoleDisplay() {
+    this.showRole = !this.showRole;
+  }
+
+  getCurrentUserRole(): string {
+    const user = this.authService.currentUserSubject.value;
+    if (!user) return '';
+    switch (user.role) {
+      case 'app_admin': return 'App Admin';
+      case 'admin': return 'Admin';
+      case 'manager': return 'Restaurant Manager';
+      case 'driver': return 'Fahrer';
+      case 'customer': return 'Kunde';
+      default: return 'Unbekannt';
+    }
+  }
+
+  getSelectedRestaurantName(): string {
+    return this.restaurantManagerService.getSelectedRestaurantName();
   }
 
   logout() {

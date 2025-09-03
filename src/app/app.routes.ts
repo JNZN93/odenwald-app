@@ -15,6 +15,8 @@ import { LoginComponent } from './features/auth/login.component';
 import { RegistrationComponent } from './features/auth/registration.component';
 import { authGuard, roleGuard, guestGuard } from './core/auth/auth.guard';
 import { RestaurantManagerDashboardComponent } from './features/restaurant-manager/restaurant-manager-dashboard.component';
+import { WholesalerDashboardComponent } from './features/wholesaler/wholesaler-dashboard.component';
+import { WholesalerOverviewComponent } from './features/wholesaler/wholesaler-overview.component';
 import { Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from './core/auth/auth.service';
@@ -37,6 +39,8 @@ class RootRedirectComponent implements OnInit {
           this.router.navigate(['/admin'], { replaceUrl: true });
         } else if (user.role === 'manager') {
           this.router.navigate(['/restaurant-manager'], { replaceUrl: true });
+        } else if (user.role === 'wholesaler') {
+          this.router.navigate(['/wholesaler'], { replaceUrl: true });
         } else if (user.role === 'driver') {
           this.router.navigate(['/driver-dashboard'], { replaceUrl: true });
         } else {
@@ -55,6 +59,7 @@ export const routes: Routes = [
   { path: 'auth/login', component: LoginComponent },
   { path: 'auth/register', component: RegistrationComponent },
   { path: 'auth/register-restaurant', loadComponent: () => import('./features/auth/restaurant-owner-registration.component').then(m => m.RestaurantOwnerRegistrationComponent) },
+  { path: 'auth/register-wholesaler', loadComponent: () => import('./features/auth/wholesaler-registration.component').then(m => m.WholesalerRegistrationComponent) },
   { path: 'restaurant-registration', loadComponent: () => import('./features/restaurant-registration/restaurant-registration.component').then(m => m.RestaurantRegistrationComponent), canActivate: [authGuard, roleGuard(['manager'])] },
   { path: 'customer', component: CustomerRestaurantsComponent },
   { path: 'dashboard', loadComponent: () => import('./features/customer/dashboard/customer-dashboard.component').then(m => m.CustomerDashboardComponent), canActivate: [authGuard, roleGuard(['customer'])] },
@@ -74,6 +79,7 @@ export const routes: Routes = [
       { path: 'restaurants', component: RestaurantManagementComponent },
       { path: 'restaurant-dashboard', component: RestaurantDashboardComponent },
       { path: 'restaurant-registrations', loadComponent: () => import('./features/admin/admin-restaurant-registrations.component').then(m => m.AdminRestaurantRegistrationsComponent), canActivate: [roleGuard(['app_admin'])] },
+      { path: 'wholesaler-registrations', loadComponent: () => import('./features/admin/admin-wholesaler-registrations.component').then(m => m.AdminWholesalerRegistrationsComponent), canActivate: [roleGuard(['app_admin'])] },
       { path: 'orders', component: OrdersAdminComponent },
       { path: 'drivers', component: DriversAdminComponent },
       { path: 'payments', component: PaymentsAdminComponent },
@@ -94,6 +100,20 @@ export const routes: Routes = [
       { path: 'settings', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-settings.component').then(m => m.RestaurantManagerSettingsComponent) },
       { path: 'payment-methods', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-payment-methods.component').then(m => m.RestaurantManagerPaymentMethodsComponent) },
       { path: 'wholesale', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-wholesale.component').then(m => m.RestaurantManagerWholesaleComponent) }
+    ]
+  },
+  {
+    path: 'wholesaler',
+    component: WholesalerDashboardComponent,
+    canActivate: [authGuard, roleGuard(['wholesaler'])],
+    children: [
+      { path: '', redirectTo: 'overview', pathMatch: 'full' },
+      { path: 'overview', component: WholesalerOverviewComponent },
+      { path: 'products', loadComponent: () => import('./features/wholesaler/wholesaler-products.component').then(m => m.WholesalerProductsComponent) },
+      { path: 'orders', loadComponent: () => import('./features/wholesaler/wholesaler-orders.component').then(m => m.WholesalerOrdersComponent) },
+      { path: 'analytics', loadComponent: () => import('./features/wholesaler/wholesaler-analytics.component').then(m => m.WholesalerAnalyticsComponent) },
+      { path: 'profile', loadComponent: () => import('./features/wholesaler/wholesaler-profile.component').then(m => m.WholesalerProfileComponent) },
+      { path: 'settings', loadComponent: () => import('./features/wholesaler/wholesaler-settings.component').then(m => m.WholesalerSettingsComponent) }
     ]
   }
 ];

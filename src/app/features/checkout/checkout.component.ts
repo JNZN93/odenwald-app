@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CartService, Cart, CartItem } from '../../core/services/supplier.service';
 import { OrdersService } from '../../core/services/orders.service';
+import { PaymentsService } from '../../core/services/payments.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { ImageFallbackDirective } from '../../core/image-fallback.directive';
 import { Observable, map } from 'rxjs';
@@ -155,7 +156,7 @@ interface CustomerInfo {
                 </label>
               </div>
 
-              <div class="payment-method" [class.selected]="selectedPaymentMethod === 'card'">
+              <div class="payment-method" [class.selected]="selectedPaymentMethod === 'card'" (click)="selectCard()">
                 <input
                   type="radio"
                   id="card"
@@ -747,6 +748,7 @@ interface CustomerInfo {
 export class CheckoutComponent implements OnInit {
   private cartService = inject(CartService);
   private ordersService = inject(OrdersService);
+  private paymentsService = inject(PaymentsService);
   private authService = inject(AuthService);
   private router = inject(Router);
 
@@ -828,14 +830,41 @@ export class CheckoutComponent implements OnInit {
       phone: this.customerInfo.phone?.trim() || undefined
     };
 
+    // Disallow card payments for guests (Stripe requires email ownership). Prompt login.
+    if (!this.isAuthenticated && this.selectedPaymentMethod === 'card') {
+      alert('Bitte melden Sie sich an, um mit Karte zu bezahlen.');
+      return;
+    }
+
     this.cartService.createOrder(fullAddress, this.deliveryAddress.instructions, this.selectedPaymentMethod, customerInfo)
       .subscribe({
         next: (response) => {
           this.loading = false;
           console.log('Order placed successfully:', response);
-
-          // Navigate to order confirmation or order tracking
-          this.router.navigate(['/order-confirmation', response.order.id]);
+          const orderId = response.order.id;
+          if (this.selectedPaymentMethod === 'card') {
+            // Create Stripe checkout session and redirect
+            const successUrl = window.location.origin + '/order-confirmation/' + orderId;
+            const cancelUrl = window.location.origin + '/checkout';
+            this.paymentsService.createStripeCheckoutSession(orderId, successUrl, cancelUrl).subscribe({
+              next: (data) => {
+                if (data.url) {
+                  window.location.href = data.url;
+                } else {
+                  // Fallback: go to confirmation and let webhook update status
+                  this.router.navigate(['/order-confirmation', orderId]);
+                }
+              },
+              error: (err) => {
+                console.error('Failed to create checkout session:', err);
+                alert('Zahlung konnte nicht gestartet werden. Bitte versuchen Sie es erneut.');
+                this.router.navigate(['/order-confirmation', orderId]);
+              }
+            });
+          } else {
+            // Navigate to order confirmation or order tracking
+            this.router.navigate(['/order-confirmation', orderId]);
+          }
         },
         error: (error) => {
           this.loading = false;
@@ -843,6 +872,14 @@ export class CheckoutComponent implements OnInit {
           alert('Bestellung konnte nicht aufgegeben werden. Bitte versuchen Sie es erneut.');
         }
       });
+  }
+
+  selectCard() {
+    if (!this.isAuthenticated) {
+      alert('Bitte melden Sie sich an, um mit Karte zu bezahlen.');
+      return;
+    }
+    this.selectedPaymentMethod = 'card';
   }
 
   goBack() {

@@ -218,6 +218,14 @@ export class AdminDashboardComponent implements OnInit {
         color: '#f97316'
       },
       {
+        id: 'wholesaler-registrations',
+        title: 'Großhändler',
+        description: 'Großhändler-Registrierungen',
+        icon: 'fa-solid fa-warehouse',
+        route: '/admin/wholesaler-registrations',
+        color: '#f59e0b'
+      },
+      {
         id: 'orders',
         title: 'Bestellungen',
         description: 'Bestellverwaltung',
@@ -257,6 +265,10 @@ export class AdminDashboardComponent implements OnInit {
       
       // Only app_admin can see restaurant registrations
       if (item.id === 'restaurant-registrations') {
+        return userRole === 'app_admin';
+      }
+      // Only app_admin can see wholesaler registrations
+      if (item.id === 'wholesaler-registrations') {
         return userRole === 'app_admin';
       }
       

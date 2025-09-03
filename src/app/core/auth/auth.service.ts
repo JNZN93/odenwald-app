@@ -7,7 +7,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'app_admin' | 'admin' | 'manager' | 'driver' | 'customer';
+  role: 'app_admin' | 'admin' | 'manager' | 'driver' | 'customer' | 'wholesaler';
   tenant_id: string; // 'public' für Kunden, spezifischer Tenant für Business-User
   is_active: boolean;
 }
@@ -21,7 +21,7 @@ export interface RegisterRequest {
   email: string;
   password: string;
   name: string;
-  role?: 'app_admin' | 'admin' | 'manager' | 'driver' | 'customer';
+  role?: 'app_admin' | 'admin' | 'manager' | 'driver' | 'customer' | 'wholesaler';
   tenantId?: string; // Optional, nur für Business-User benötigt
 }
 

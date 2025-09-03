@@ -2,7 +2,7 @@ import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { OrdersService, Order } from '../../core/services/orders.service';
-import { Observable, interval, Subscription } from 'rxjs';
+import { Observable, interval, Subscription, BehaviorSubject } from 'rxjs';
 import { take } from 'rxjs/operators';
 
 @Component({
@@ -18,6 +18,23 @@ import { take } from 'rxjs/operators';
         <h1>Bestellung erfolgreich!</h1>
         <p class="confirmation-subtitle">Ihre Bestellung wurde aufgegeben und wird bald bearbeitet.</p>
       </div>
+
+      <ng-container *ngIf="order$ | async as order">
+        <div class="payment-banner" [ngClass]="{
+          'payment-pending': order.payment_status === 'pending',
+          'payment-paid': order.payment_status === 'paid',
+          'payment-failed': order.payment_status === 'failed'
+        }">
+          <i class="fa-solid" [ngClass]="{
+            'fa-spinner fa-spin': order.payment_status === 'pending',
+            'fa-check-circle': order.payment_status === 'paid',
+            'fa-triangle-exclamation': order.payment_status === 'failed'
+          }"></i>
+          <span *ngIf="order.payment_status === 'pending'">Zahlung ausstehend – wir aktualisieren den Status automatisch…</span>
+          <span *ngIf="order.payment_status === 'paid'">Zahlung erfolgreich – Ihre Bestellung wird bestätigt.</span>
+          <span *ngIf="order.payment_status === 'failed'">Zahlung fehlgeschlagen – bitte versuchen Sie es erneut.</span>
+        </div>
+      </ng-container>
 
       <div class="confirmation-content" *ngIf="order$ | async as order; else loading">
         <div class="order-details-card">
@@ -145,6 +162,21 @@ import { take } from 'rxjs/operators';
     .confirmation-content {
       width: 100%;
     }
+
+    .payment-banner {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-4);
+      border-radius: var(--radius-lg);
+      margin-bottom: var(--space-6);
+      border: 1px solid transparent;
+      font-weight: 600;
+    }
+
+    .payment-pending { background: color-mix(in oklab, #fbbf24 10%, white); color: #92400e; border-color: #f59e0b; }
+    .payment-paid { background: color-mix(in oklab, #10b981 10%, white); color: #065f46; border-color: #10b981; }
+    .payment-failed { background: color-mix(in oklab, #ef4444 10%, white); color: #7f1d1d; border-color: #ef4444; }
 
     .order-details-card {
       background: var(--color-surface);
@@ -447,14 +479,19 @@ export class OrderConfirmationComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private ordersService = inject(OrdersService);
 
-  order$: Observable<Order> | null = null;
+  private orderSubject = new BehaviorSubject<Order | null>(null);
+  order$: Observable<Order | null> = this.orderSubject.asObservable();
   countdown = 5;
   private countdownSubscription: Subscription | null = null;
+  private pollingSubscription: Subscription | null = null;
 
   ngOnInit() {
     const orderId = this.route.snapshot.paramMap.get('id');
     if (orderId) {
-      this.order$ = this.ordersService.getOrderById(orderId);
+      this.refreshOrder(orderId);
+      this.pollingSubscription = interval(2000)
+        .pipe(take(30))
+        .subscribe(() => this.refreshOrder(orderId, true));
       this.startCountdown();
     }
   }
@@ -462,6 +499,9 @@ export class OrderConfirmationComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     if (this.countdownSubscription) {
       this.countdownSubscription.unsubscribe();
+    }
+    if (this.pollingSubscription) {
+      this.pollingSubscription.unsubscribe();
     }
   }
 
@@ -513,5 +553,17 @@ export class OrderConfirmationComponent implements OnInit, OnDestroy {
 
   goToRestaurants() {
     this.router.navigate(['/customer']);
+  }
+
+  private refreshOrder(orderId: string, stopOnPaid = false) {
+    this.ordersService.getOrderById(orderId).subscribe(order => {
+      this.orderSubject.next(order);
+      if (stopOnPaid && (order.payment_status === 'paid' || order.payment_status === 'failed')) {
+        if (this.pollingSubscription) {
+          this.pollingSubscription.unsubscribe();
+          this.pollingSubscription = null;
+        }
+      }
+    });
   }
 }

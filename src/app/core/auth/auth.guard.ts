@@ -16,6 +16,8 @@ export const guestGuard: CanActivateFn = (route, state) => {
           router.navigate(['/admin']);
         } else if (user.role === 'manager') {
           router.navigate(['/restaurant-manager']);
+        } else if (user.role === 'wholesaler') {
+          router.navigate(['/wholesaler']);
         } else if (user.role === 'driver') {
           router.navigate(['/driver-dashboard']);
         } else {

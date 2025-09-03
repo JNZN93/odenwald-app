@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule, RouterOutlet } from '@angular/router';
+import { RouterModule, RouterOutlet, Router } from '@angular/router';
 import { RestaurantManagerService } from '../../core/services/restaurant-manager.service';
 import { AuthService, User } from '../../core/auth/auth.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -26,6 +26,7 @@ export interface ManagerMenuItem {
     <div class="manager-dashboard-container">
       <!-- Navigation Header -->
       <div class="manager-nav-header">
+
         <nav class="manager-nav">
           <a
             *ngFor="let menuItem of managerMenuItems"
@@ -33,7 +34,7 @@ export interface ManagerMenuItem {
             routerLinkActive="active"
             class="nav-item"
           >
-            <svg class="nav-icon" [class]="menuItem.icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg class="nav-icon" [class]="menuItem.icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" *ngIf="menuItem.icon !== 'overview-icon' && menuItem.icon !== 'orders-icon' && menuItem.icon !== 'menu-icon' && menuItem.icon !== 'analytics-icon' && menuItem.icon !== 'customers-icon' && menuItem.icon !== 'settings-icon' && menuItem.icon !== 'wholesale-icon'">
               <!-- Overview Icon -->
               <g *ngIf="menuItem.icon === 'overview-icon'">
                 <rect x="3" y="3" width="7" height="7"></rect>
@@ -95,7 +96,7 @@ export interface ManagerMenuItem {
       </div>
 
       <!-- Quick Stats Bar -->
-      <div class="quick-stats-bar" *ngIf="currentStats && !isLoadingStats">
+      <div class="quick-stats-bar" *ngIf="currentStats && !isLoadingStats && shouldShowQuickStatsBar()">
         <div class="stat-card">
           <div class="stat-label">Heutige Bestellungen</div>
           <div class="stat-value">{{ currentStats.total_orders_today }}</div>
@@ -119,7 +120,7 @@ export interface ManagerMenuItem {
       </div>
 
       <!-- Loading Stats Bar -->
-      <div class="quick-stats-bar" *ngIf="isLoadingStats">
+      <div class="quick-stats-bar" *ngIf="isLoadingStats && shouldShowQuickStatsBar()">
         <div class="stat-card loading">
           <div class="loading-skeleton"></div>
           <div class="loading-skeleton short"></div>
@@ -139,7 +140,7 @@ export interface ManagerMenuItem {
       </div>
 
       <!-- Quick Stats Bar (Fallback when no data) -->
-      <div class="quick-stats-bar" *ngIf="!currentStats && !isLoadingStats">
+      <div class="quick-stats-bar" *ngIf="!currentStats && !isLoadingStats && shouldShowQuickStatsBar()">
         <div class="stat-card">
           <div class="stat-label">Heutige Bestellungen</div>
           <div class="stat-value">0</div>
@@ -180,14 +181,14 @@ export interface ManagerMenuItem {
       border-bottom: 1px solid var(--color-border);
       padding: var(--space-4) var(--space-6);
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      justify-content: center;
       box-shadow: var(--shadow-sm);
       position: sticky;
       top: 0;
       z-index: 100;
-      gap: var(--space-4);
     }
+
+
 
 
 
@@ -238,6 +239,7 @@ export interface ManagerMenuItem {
 
     .restaurant-selector {
       display: flex;
+      justify-content: center;
       align-items: center;
       gap: var(--space-2);
     }
@@ -329,9 +331,21 @@ export interface ManagerMenuItem {
     /* Responsive */
     @media (max-width: 1024px) {
       .manager-nav-header {
-        flex-direction: column;
-        gap: var(--space-4);
         padding: var(--space-4);
+      }
+
+      .restaurant-brand-section {
+        margin: 0 var(--space-4) var(--space-3) var(--space-4);
+        padding: var(--space-2) var(--space-4);
+      }
+
+      .restaurant-name-display {
+        font-size: var(--text-lg);
+      }
+
+      .restaurant-icon {
+        width: 20px;
+        height: 20px;
       }
 
       .manager-nav {
@@ -377,6 +391,7 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
   private restaurantManagerService = inject(RestaurantManagerService);
   private authService = inject(AuthService);
   private toastService = inject(ToastService);
+  private router = inject(Router);
   private subscriptions: Subscription[] = [];
 
   managedRestaurants: any[] = [];
@@ -385,7 +400,23 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
   currentUser: User | null = null;
   isLoadingStats: boolean = false;
 
+
   managerMenuItems: ManagerMenuItem[] = [];
+
+  // Check if current route is overview
+  isOverviewRoute(): boolean {
+    return this.router.url.includes('/restaurant-manager/overview');
+  }
+
+  // Check if user has admin or manager role
+  isAdminOrManager(): boolean {
+    return this.authService.hasAnyRole(['admin', 'manager']);
+  }
+
+  // Check if quick stats bar should be visible
+  shouldShowQuickStatsBar(): boolean {
+    return this.isOverviewRoute() && this.isAdminOrManager();
+  }
 
   ngOnInit() {
     this.setupManagerMenu();
@@ -413,6 +444,8 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
 
         if (this.managedRestaurants.length > 0) {
           this.selectedRestaurantId = this.managedRestaurants[0].restaurant_id;
+          // Speichere das erste Restaurant im Service
+          this.restaurantManagerService.setSelectedRestaurant(this.managedRestaurants[0]);
           this.loadRestaurantStats(this.selectedRestaurantId);
         }
       },
@@ -454,9 +487,21 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
 
   onRestaurantChange() {
     if (this.selectedRestaurantId) {
+      // Finde das ausgewählte Restaurant und speichere es im Service
+      const selectedRestaurant = this.managedRestaurants.find(r => r.restaurant_id === this.selectedRestaurantId);
+      if (selectedRestaurant) {
+        this.restaurantManagerService.setSelectedRestaurant(selectedRestaurant);
+      }
       this.loadRestaurantStats(this.selectedRestaurantId);
     }
   }
+
+  getSelectedRestaurantName(): string {
+    const restaurant = this.managedRestaurants.find(r => r.restaurant_id === this.selectedRestaurantId);
+    return restaurant ? restaurant.restaurant_name : '';
+  }
+
+
 
   setupManagerMenu() {
     this.managerMenuItems = [

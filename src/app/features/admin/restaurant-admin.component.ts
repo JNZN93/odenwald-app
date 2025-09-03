@@ -42,6 +42,14 @@ export interface Statistic {
       <div class="dashboard-header">
         <h1><i class="fa-solid fa-utensils"></i> Restaurant Dashboard</h1>
         <p>Verwalte dein Restaurant, Bestellungen und Einkäufe</p>
+        <div class="restaurant-brand-section" *ngIf="currentRestaurantName">
+          <div class="restaurant-name-display">
+            <svg class="restaurant-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+            </svg>
+            {{ currentRestaurantName }}
+          </div>
+        </div>
       </div>
 
       <!-- Quick Stats -->
@@ -348,6 +356,38 @@ export interface Statistic {
     .dashboard-header p {
       color: var(--color-muted);
       font-size: var(--text-lg);
+      margin-bottom: var(--space-4);
+    }
+
+    .restaurant-brand-section {
+      text-align: center;
+      padding: var(--space-3) var(--space-6);
+      background: linear-gradient(135deg, #f39c12 0%, #f1c40f 100%);
+      border-radius: var(--radius-lg);
+      margin-top: var(--space-4);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-3);
+    }
+
+    .restaurant-name-display {
+      margin: 0;
+      color: white;
+      font-size: var(--text-lg);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .restaurant-icon {
+      width: 20px;
+      height: 20px;
+      opacity: 0.9;
+      flex-shrink: 0;
     }
 
     /* Stats Grid */
@@ -934,6 +974,19 @@ export interface Statistic {
     }
 
     @media (max-width: 768px) {
+      .restaurant-brand-section {
+        padding: var(--space-2) var(--space-4);
+        margin-top: var(--space-3);
+      }
+
+      .restaurant-name-display {
+        font-size: var(--text-md);
+      }
+
+      .restaurant-icon {
+        width: 18px;
+        height: 18px;
+      }
       .stats-grid {
         grid-template-columns: 1fr;
       }
@@ -1080,6 +1133,7 @@ export class RestaurantDashboardComponent implements OnInit {
   menuCategories: any[] = [];
 
   private http = inject(HttpClient);
+  currentRestaurantName: string = '';
 
   async loadMenuItems() {
     try {
@@ -1091,8 +1145,12 @@ export class RestaurantDashboardComponent implements OnInit {
 
       if (!restaurants || restaurants.length === 0) {
         console.log('No restaurants found');
+        this.currentRestaurantName = '';
         return;
       }
+
+      // Setze das erste Restaurant als aktuelles Restaurant
+      this.currentRestaurantName = restaurants[0].name;
 
       // Für jedes Restaurant die Menu-Items laden
       for (const restaurant of restaurants) {

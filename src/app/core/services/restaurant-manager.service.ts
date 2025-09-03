@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map, catchError, of } from 'rxjs';
+import { Observable, map, catchError, of, BehaviorSubject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface RestaurantManager {
@@ -32,6 +32,32 @@ export interface RestaurantStats {
 export class RestaurantManagerService {
   private http = inject(HttpClient);
   private baseUrl = `${environment.apiUrl}/restaurant-managers`;
+
+  // BehaviorSubject für aktuell ausgewähltes Restaurant
+  private selectedRestaurantSubject = new BehaviorSubject<RestaurantManager | null>(null);
+  public selectedRestaurant$ = this.selectedRestaurantSubject.asObservable();
+
+  // Aktuell ausgewähltes Restaurant setzen
+  setSelectedRestaurant(restaurant: RestaurantManager | null) {
+    this.selectedRestaurantSubject.next(restaurant);
+    // Optional: In localStorage speichern für Persistenz
+    if (restaurant) {
+      localStorage.setItem('selectedRestaurant', JSON.stringify(restaurant));
+    } else {
+      localStorage.removeItem('selectedRestaurant');
+    }
+  }
+
+  // Aktuell ausgewähltes Restaurant bekommen
+  getSelectedRestaurant(): RestaurantManager | null {
+    return this.selectedRestaurantSubject.value;
+  }
+
+  // Restaurant-Name bekommen
+  getSelectedRestaurantName(): string {
+    const restaurant = this.selectedRestaurantSubject.value;
+    return restaurant ? restaurant.restaurant_name : 'Restaurant';
+  }
 
   // Get restaurants managed by current user
   getManagedRestaurants(): Observable<RestaurantManager[]> {

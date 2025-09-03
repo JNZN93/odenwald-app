@@ -276,4 +276,3 @@ npx cypress run
 ---
 
 **Entwickelt mit Angular 18 für moderne Web-Anwendungen** 🚀
-# odenwald-app

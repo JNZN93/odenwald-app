@@ -358,6 +358,8 @@ export class LoginComponent {
               targetRoute = '/admin';
             } else if (user.role === 'manager') {
               targetRoute = '/restaurant-manager';
+            } else if (user.role === 'wholesaler') {
+              targetRoute = '/wholesaler';
             } else if (user.role === 'driver') {
               targetRoute = '/driver-dashboard';
             }
