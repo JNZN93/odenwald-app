@@ -8,8 +8,6 @@ import { ConfirmationDialogComponent } from './shared/components/confirmation-di
 import { LoadingSpinnerComponent } from './shared/components/loading-spinner.component';
 import { LoadingService } from './core/services/loading.service';
 
-// this is the main component of the app
-
 @Component({
   selector: 'app-root',
   standalone: true,

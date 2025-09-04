@@ -668,11 +668,15 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
   }
 
   applyFilters() {
+    // Ensure we always work with the most current orders data
     let filtered = [...this.orders];
 
     // Filter by status
     if (this.selectedStatus !== 'all') {
-      filtered = filtered.filter(order => this.canonicalStatus(order.status) === this.selectedStatus);
+      filtered = filtered.filter(order => {
+        const canonicalStatus = this.canonicalStatus(order.status);
+        return canonicalStatus === this.selectedStatus;
+      });
     }
 
     // Filter by search term
@@ -700,7 +704,17 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
       }
     });
 
-    this.filteredOrders = filtered;
+    // Ensure filteredOrders is always updated with a new reference for Angular change detection
+    this.filteredOrders = [...filtered];
+
+    // Debug logging to help identify issues
+    console.log(`Filtered ${this.orders.length} orders to ${this.filteredOrders.length} with status filter: ${this.selectedStatus}`);
+
+    // If no orders are shown but we have orders, there might be a filter issue
+    if (this.orders.length > 0 && this.filteredOrders.length === 0 && this.selectedStatus !== 'all') {
+      console.warn(`No orders shown with status filter "${this.selectedStatus}". Available statuses:`,
+        [...new Set(this.orders.map(o => this.canonicalStatus(o.status)))]);
+    }
   }
 
   private canonicalStatus(status: Order['status'] | 'open' | 'in_progress' | 'out_for_delivery'): CanonicalStatus {
@@ -712,15 +726,49 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
 
   updateOrderStatus(orderId: string, newStatus: Order['status']) {
     this.updatingOrderId = orderId;
+    console.log('Starting status update:', { orderId, newStatus });
 
     this.ordersService.updateOrderStatus(orderId, newStatus).subscribe({
       next: (response) => {
-        // Update local order
-        const index = this.orders.findIndex(o => o.id === orderId);
+        console.log('Status update response:', response);
+
+        // Update local order - make sure we have a deep copy
+        const index = this.orders.findIndex(o => String(o.id) === String(orderId));
         if (index !== -1) {
-          this.orders[index] = response.order;
-          this.applyFilters();
+          // Create a deep copy to ensure change detection works
+          this.orders[index] = { ...response.order, id: String(response.order.id) };
+          console.log('Updated local order:', this.orders[index]);
+        } else {
+          console.warn('Order not found in local array:', orderId);
+          console.log('Available orders:', this.orders.map(o => ({ id: o.id, type: typeof o.id })));
         }
+
+        // Force Angular change detection by creating new array reference
+        this.orders = [...this.orders];
+
+        // Force re-filtering with updated data
+        this.applyFilters();
+
+        // Check if updated order is visible
+        const updatedOrderVisible = this.filteredOrders.some(order => String(order.id) === String(orderId));
+        console.log('Order visibility after update:', {
+          orderId,
+          visible: updatedOrderVisible,
+          filteredCount: this.filteredOrders.length,
+          currentFilter: this.selectedStatus
+        });
+
+        // If the updated order is no longer visible due to filters, reset to show all
+        if (!updatedOrderVisible && this.selectedStatus !== 'all') {
+          console.log(`Order ${orderId} not visible after update, resetting status filter`);
+          this.selectedStatus = 'all';
+          this.applyFilters();
+
+          // Double-check after filter reset
+          const stillVisible = this.filteredOrders.some(order => String(order.id) === String(orderId));
+          console.log(`Order visibility after filter reset:`, { orderId, visible: stillVisible });
+        }
+
         this.toastService.success('Status aktualisiert', `Bestellung ${this.getOrderStatusText(newStatus)}`);
         this.updatingOrderId = null;
       },
@@ -738,11 +786,41 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
 
       this.ordersService.cancelOrder(orderId, 'Storniert durch Restaurant-Manager').subscribe({
         next: (response) => {
-          const index = this.orders.findIndex(o => o.id === orderId);
+          console.log('Cancel order response:', response);
+
+          const index = this.orders.findIndex(o => String(o.id) === String(orderId));
           if (index !== -1) {
-            this.orders[index] = response.order;
-            this.applyFilters();
+            this.orders[index] = { ...response.order, id: String(response.order.id) };
+            console.log('Updated cancelled order:', this.orders[index]);
+          } else {
+            console.warn('Cancelled order not found in local array:', orderId);
           }
+
+          // Force Angular change detection by creating new array reference
+          this.orders = [...this.orders];
+
+          // Force re-filtering with updated data
+          this.applyFilters();
+
+          // If the cancelled order is no longer visible due to filters, reset to show all
+          const cancelledOrderVisible = this.filteredOrders.some(order => String(order.id) === String(orderId));
+          console.log('Cancelled order visibility:', {
+            orderId,
+            visible: cancelledOrderVisible,
+            filteredCount: this.filteredOrders.length,
+            currentFilter: this.selectedStatus
+          });
+
+          if (!cancelledOrderVisible && this.selectedStatus !== 'all') {
+            console.log(`Cancelled order ${orderId} not visible after update, resetting status filter`);
+            this.selectedStatus = 'all';
+            this.applyFilters();
+
+            // Double-check after filter reset
+            const stillVisible = this.filteredOrders.some(order => String(order.id) === String(orderId));
+            console.log(`Cancelled order visibility after filter reset:`, { orderId, visible: stillVisible });
+          }
+
           this.toastService.success('Bestellung storniert', 'Die Bestellung wurde erfolgreich storniert');
           this.updatingOrderId = null;
         },

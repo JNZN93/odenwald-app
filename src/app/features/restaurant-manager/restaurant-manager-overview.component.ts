@@ -762,10 +762,18 @@ export class RestaurantManagerOverviewComponent implements OnInit, OnDestroy {
   }
 
   getOrderIdDisplay(orderId: any): string {
-    if (!orderId || typeof orderId !== 'string') {
+    if (!orderId) {
       return '#000000';
     }
-    return `#${orderId.slice(-6)}`;
+
+    // Convert to string if it's a number (database returns integers)
+    const idString = typeof orderId === 'number' ? orderId.toString() : orderId.toString();
+
+    if (idString.length <= 6) {
+      return `#${idString.padStart(6, '0')}`;
+    }
+
+    return `#${idString.slice(-6)}`;
   }
 
   getOrderAmountDisplay(total: any): string {

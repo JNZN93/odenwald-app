@@ -496,7 +496,10 @@ export class RestaurantsService {
     return this.http.get<{ stats: RestaurantCustomerStats }>(url).pipe(
       map(response => response.stats),
       catchError(error => {
-        console.error('Error fetching restaurant customer stats:', error);
+        // Don't log 404/403 errors as they are expected for non-existent restaurants
+        if (error.status !== 404 && error.status !== 403) {
+          console.error('Error fetching restaurant customer stats:', error);
+        }
         return of({
           total_customers: 0,
           active_customers: 0,

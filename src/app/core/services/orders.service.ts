@@ -51,6 +51,8 @@ export interface OrderStats {
 export interface OrderFilters {
   status?: string;
   restaurant_id?: string;
+  driver_id?: string;
+  manager_user_id?: string; // For restaurant manager filtering
   date_range?: {
     start: Date;
     end: Date;
@@ -106,6 +108,14 @@ export class OrdersService {
 
     if (filters?.restaurant_id) {
       params.restaurant_id = filters.restaurant_id;
+    }
+
+    if (filters?.driver_id) {
+      params.driver_id = filters.driver_id;
+    }
+
+    if (filters?.manager_user_id) {
+      params.manager_user_id = filters.manager_user_id;
     }
 
     if (filters?.date_range) {
@@ -195,6 +205,35 @@ export class OrdersService {
   // Get driver orders
   getDriverOrders(driverId: string): Observable<Order[]> {
     return this.http.get<{ count: number; orders: any[] }>(`${this.baseUrl}/driver/${driverId}`).pipe(
+      map(response => (response.orders || []).map(o => this.normalizeOrder(o)))
+    );
+  }
+
+  // Get current driver's orders (assigned + available)
+  getMyDriverOrders(): Observable<{
+    activeDelivery: Order | null;
+    activeDeliveries: Order[];
+    availableOrders: Order[];
+    count: number
+  }> {
+    return this.http.get<{
+      activeDelivery: any;
+      activeDeliveries: any[];
+      availableOrders: any[];
+      count: number
+    }>(`${this.baseUrl}/my-orders`).pipe(
+      map(response => ({
+        activeDelivery: response.activeDelivery ? this.normalizeOrder(response.activeDelivery) : null,
+        activeDeliveries: (response.activeDeliveries || []).map(o => this.normalizeOrder(o)),
+        availableOrders: (response.availableOrders || []).map(o => this.normalizeOrder(o)),
+        count: response.count
+      }))
+    );
+  }
+
+  // Get available orders for drivers
+  getAvailableOrders(): Observable<Order[]> {
+    return this.http.get<{ count: number; orders: any[] }>(`${this.baseUrl}/available`).pipe(
       map(response => (response.orders || []).map(o => this.normalizeOrder(o)))
     );
   }

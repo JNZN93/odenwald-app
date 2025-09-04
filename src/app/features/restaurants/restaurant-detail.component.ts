@@ -605,8 +605,41 @@ export class RestaurantDetailComponent implements OnInit {
   }
 
   isOpen(restaurant: RestaurantDTO): boolean {
-    // Simple check - in a real app you'd check current time against opening hours
-    return restaurant.is_active;
+    // Check if restaurant is active first
+    if (!restaurant.is_active) {
+      return false;
+    }
+
+    // Check current time against opening hours
+    const now = new Date();
+    const currentDay = this.getCurrentDayName(now.getDay());
+    const currentTime = this.formatTime(now);
+
+    const todayHours = restaurant.opening_hours[currentDay];
+
+    // If restaurant is closed today, return false
+    if (todayHours.is_closed) {
+      return false;
+    }
+
+    // Compare current time with opening hours
+    const openTime = todayHours.open;
+    const closeTime = todayHours.close;
+
+    return currentTime >= openTime && currentTime <= closeTime;
+  }
+
+  private getCurrentDayName(dayIndex: number): keyof RestaurantDTO['opening_hours'] {
+    const days: Array<keyof RestaurantDTO['opening_hours']> = [
+      'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'
+    ];
+    return days[dayIndex];
+  }
+
+  private formatTime(date: Date): string {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
   }
 
   addToCart(item: MenuItem, restaurant: RestaurantDTO) {

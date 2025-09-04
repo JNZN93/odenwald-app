@@ -365,7 +365,7 @@ interface RestaurantCustomerStats {
     .stat-icon {
       width: 50px;
       height: 50px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: var(--gradient-primary);
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -441,12 +441,12 @@ interface RestaurantCustomerStats {
 
     .orders-count {
       font-weight: 600;
-      color: #28a745;
+      color: var(--color-success);
     }
 
     .total-spent {
       font-weight: 600;
-      color: #007bff;
+      color: var(--color-primary-600);
     }
 
     .last-order {
@@ -473,13 +473,13 @@ interface RestaurantCustomerStats {
     }
 
     .status-badge.active {
-      background: #d4edda;
-      color: #155724;
+      background: var(--bg-light-green);
+      color: var(--color-success);
     }
 
     .status-badge.inactive {
-      background: #f8d7da;
-      color: #721c24;
+      background: var(--bg-light-green-2);
+      color: var(--color-muted);
     }
 
     .action-buttons {
@@ -661,7 +661,7 @@ interface RestaurantCustomerStats {
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: var(--gradient-primary);
       color: white;
     }
 
@@ -752,7 +752,17 @@ export class RestaurantManagerCustomersComponent implements OnInit {
         this.customerStats = stats;
       },
       error: (error) => {
-        console.error('Error loading customer stats:', error);
+        // Don't log expected errors (404/403) as they indicate missing restaurant or permissions
+        if (error.status !== 404 && error.status !== 403) {
+          console.error('Error loading customer stats:', error);
+        }
+        // Reset stats to default values
+        this.customerStats = {
+          total_customers: 0,
+          active_customers: 0,
+          new_customers_this_month: 0,
+          avg_orders_per_customer: 0
+        };
       }
     });
   }

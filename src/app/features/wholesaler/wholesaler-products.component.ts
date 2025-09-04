@@ -16,6 +16,8 @@ interface WholesalerProduct {
   stock_quantity: number;
   is_available: boolean;
   images: string[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 @Component({
@@ -240,6 +242,80 @@ interface WholesalerProduct {
                   />
                   Produkt verfügbar
                 </label>
+              </div>
+            </div>
+
+            <!-- Bilder Section -->
+            <div class="form-section">
+              <h3 class="section-title">Produktbilder</h3>
+
+              <!-- Bild-URL Eingabe -->
+              <div class="form-group">
+                <label for="image-url">Bild-URL hinzufügen</label>
+                <div class="url-input-group">
+                  <input
+                    id="image-url"
+                    type="url"
+                    [(ngModel)]="imageUrl"
+                    name="imageUrl"
+                    placeholder="https://example.com/image.jpg"
+                  />
+                  <button
+                    type="button"
+                    class="btn-secondary btn-sm"
+                    (click)="addImageUrl()"
+                    [disabled]="!imageUrl || addingImage"
+                  >
+                    <i class="fa-solid fa-plus" *ngIf="!addingImage"></i>
+                    <i class="fa-solid fa-spinner fa-spin" *ngIf="addingImage"></i>
+                    Hinzufügen
+                  </button>
+                </div>
+              </div>
+
+              <!-- Datei-Upload -->
+              <div class="form-group">
+                <label for="image-upload">Bilder hochladen</label>
+                <div class="file-upload-area"
+                     (dragover)="onDragOver($event)"
+                     (dragleave)="onDragLeave($event)"
+                     (drop)="onDrop($event)">
+                  <input
+                    id="image-upload"
+                    type="file"
+                    #fileInput
+                    (change)="onFileSelected($event)"
+                    accept="image/*"
+                    multiple
+                    style="display: none;"
+                  />
+                  <div class="upload-content">
+                    <i class="fa-solid fa-cloud-upload-alt upload-icon"></i>
+                    <p class="upload-text">
+                      Ziehen Sie Bilder hierher oder
+                      <button type="button" class="upload-link" (click)="fileInput.click()">wählen Sie welche aus</button>
+                    </p>
+                    <p class="upload-hint">Max. 5 Bilder, je 5MB</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bildvorschau -->
+              <div class="images-preview" *ngIf="productForm.images && productForm.images.length > 0">
+                <h4>Aktuelle Bilder ({{ productForm.images.length }}/10)</h4>
+                <div class="images-grid">
+                  <div class="image-item" *ngFor="let image of productForm.images; let i = index">
+                    <img [src]="image" [alt]="'Produktbild ' + (i + 1)" class="image-preview" />
+                    <button
+                      type="button"
+                      class="remove-image-btn"
+                      (click)="removeImage(i)"
+                      [disabled]="removingImage"
+                    >
+                      <i class="fa-solid fa-times"></i>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -568,6 +644,146 @@ interface WholesalerProduct {
       to { transform: rotate(360deg); }
     }
 
+    /* Bilder Section Styles */
+    .form-section {
+      margin-bottom: var(--space-6);
+      padding: var(--space-4);
+      background: var(--bg-light);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-border);
+    }
+
+    .section-title {
+      margin: 0 0 var(--space-4) 0;
+      font-size: var(--text-lg);
+      font-weight: 600;
+      color: var(--color-heading);
+    }
+
+    .url-input-group {
+      display: flex;
+      gap: var(--space-2);
+      align-items: stretch;
+    }
+
+    .url-input-group input {
+      flex: 1;
+    }
+
+    .file-upload-area {
+      border: 2px dashed var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      text-align: center;
+      background: white;
+      transition: all var(--transition);
+      cursor: pointer;
+    }
+
+    .file-upload-area:hover,
+    .file-upload-area.drag-over {
+      border-color: var(--color-primary);
+      background: var(--bg-light-green);
+    }
+
+    .upload-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .upload-icon {
+      font-size: var(--text-4xl);
+      color: var(--color-muted);
+    }
+
+    .upload-text {
+      margin: 0;
+      color: var(--color-text);
+      font-size: var(--text-sm);
+    }
+
+    .upload-link {
+      background: none;
+      border: none;
+      color: var(--color-primary);
+      text-decoration: underline;
+      cursor: pointer;
+      font-size: inherit;
+      padding: 0;
+    }
+
+    .upload-link:hover {
+      color: var(--color-primary-dark);
+    }
+
+    .upload-hint {
+      margin: 0;
+      color: var(--color-muted);
+      font-size: var(--text-xs);
+    }
+
+    .images-preview {
+      margin-top: var(--space-4);
+    }
+
+    .images-preview h4 {
+      margin: 0 0 var(--space-3) 0;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--color-heading);
+    }
+
+    .images-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: var(--space-3);
+    }
+
+    .image-item {
+      position: relative;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: white;
+      border: 1px solid var(--color-border);
+    }
+
+    .image-preview {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .remove-image-btn {
+      position: absolute;
+      top: var(--space-2);
+      right: var(--space-2);
+      background: rgba(239, 68, 68, 0.9);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: var(--text-xs);
+      transition: all var(--transition);
+    }
+
+    .remove-image-btn:hover:not(:disabled) {
+      background: rgba(239, 68, 68, 1);
+      transform: scale(1.1);
+    }
+
+    .remove-image-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
     @media (max-width: 768px) {
       .products-header {
         flex-direction: column;
@@ -581,6 +797,18 @@ interface WholesalerProduct {
 
       .modal-content {
         margin: var(--space-2);
+      }
+
+      .url-input-group {
+        flex-direction: column;
+      }
+
+      .images-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      }
+
+      .image-preview {
+        height: 100px;
       }
     }
   `]
@@ -605,6 +833,7 @@ export class WholesalerProductsComponent implements OnInit {
     stock_quantity: number;
     min_order_quantity: number;
     is_available: boolean;
+    images: string[];
   } = {
     name: '',
     description: '',
@@ -614,8 +843,15 @@ export class WholesalerProductsComponent implements OnInit {
     unit: 'piece',
     stock_quantity: 0,
     min_order_quantity: 1,
-    is_available: true
+    is_available: true,
+    images: []
   };
+
+  // Neue Properties für Bildfunktionen
+  imageUrl: string = '';
+  addingImage: boolean = false;
+  uploadingImages: boolean = false;
+  removingImage: boolean = false;
 
   ngOnInit() {
     this.loadProducts();
@@ -625,13 +861,14 @@ export class WholesalerProductsComponent implements OnInit {
     this.loading = true;
     this.http.get<{products: WholesalerProduct[]}>(`${environment.apiUrl}/wholesaler-products`).subscribe({
       next: (response) => {
-        // Transform products to ensure numeric fields are numbers
+        // Transform products to ensure numeric fields are numbers and images is an array
         this.products = response.products.map(product => ({
           ...product,
           price: Number(product.price),
           wholesale_price: product.wholesale_price ? Number(product.wholesale_price) : null,
           stock_quantity: Number(product.stock_quantity),
-          min_order_quantity: Number(product.min_order_quantity)
+          min_order_quantity: Number(product.min_order_quantity),
+          images: Array.isArray(product.images) ? product.images : []
         }));
         this.loading = false;
       },
@@ -660,7 +897,8 @@ export class WholesalerProductsComponent implements OnInit {
       unit: product.unit,
       stock_quantity: Number(product.stock_quantity),
       min_order_quantity: Number(product.min_order_quantity),
-      is_available: product.is_available
+      is_available: product.is_available,
+      images: Array.isArray(product.images) ? product.images : []
     };
     this.showProductModal = true;
   }
@@ -681,8 +919,10 @@ export class WholesalerProductsComponent implements OnInit {
       unit: 'piece',
       stock_quantity: 0,
       min_order_quantity: 1,
-      is_available: true
+      is_available: true,
+      images: []
     };
+    this.imageUrl = '';
   }
 
   saveProduct() {
@@ -701,7 +941,8 @@ export class WholesalerProductsComponent implements OnInit {
       unit: this.productForm.unit,
       stock_quantity: Number(this.productForm.stock_quantity),
       min_order_quantity: Number(this.productForm.min_order_quantity),
-      is_available: this.productForm.is_available
+      is_available: this.productForm.is_available,
+      images: Array.isArray(this.productForm.images) ? this.productForm.images : []
     };
 
     if (this.editingProduct) {
@@ -747,5 +988,144 @@ export class WholesalerProductsComponent implements OnInit {
         }
       });
     }
+  }
+
+  // Bild-Funktionen
+  addImageUrl() {
+    if (!this.imageUrl.trim()) return;
+
+    // Validierung der URL
+    try {
+      new URL(this.imageUrl);
+    } catch {
+      alert('Bitte geben Sie eine gültige URL ein.');
+      return;
+    }
+
+    // Prüfen ob bereits 10 Bilder vorhanden sind
+    if (this.productForm.images.length >= 10) {
+      alert('Maximal 10 Bilder pro Produkt erlaubt.');
+      return;
+    }
+
+    this.addingImage = true;
+
+    if (this.editingProduct) {
+      // Bild-URL zu bestehendem Produkt hinzufügen
+      this.http.post(`${environment.apiUrl}/wholesaler-products/${this.editingProduct.id}/images/url`, {
+        imageUrl: this.imageUrl
+      }).subscribe({
+        next: (response: any) => {
+          this.productForm.images = response.product.images || [];
+          this.imageUrl = '';
+          this.addingImage = false;
+        },
+        error: (error) => {
+          console.error('Failed to add image URL:', error);
+          alert('Fehler beim Hinzufügen der Bild-URL.');
+          this.addingImage = false;
+        }
+      });
+    } else {
+      // Bild-URL zur Form hinzufügen (für neues Produkt)
+      this.productForm.images.push(this.imageUrl);
+      this.imageUrl = '';
+      this.addingImage = false;
+    }
+  }
+
+  onFileSelected(event: any) {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      this.uploadImages(Array.from(files));
+    }
+  }
+
+  onDragOver(event: DragEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    (event.target as HTMLElement).classList.add('drag-over');
+  }
+
+  onDragLeave(event: DragEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    (event.target as HTMLElement).classList.remove('drag-over');
+  }
+
+  onDrop(event: DragEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    (event.target as HTMLElement).classList.remove('drag-over');
+
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+      this.uploadImages(Array.from(files));
+    }
+  }
+
+  uploadImages(files: File[]) {
+    // Validierung
+    if (this.productForm.images.length + files.length > 10) {
+      alert('Maximal 10 Bilder pro Produkt erlaubt.');
+      return;
+    }
+
+    const maxFileSize = 5 * 1024 * 1024; // 5MB
+    const invalidFiles = files.filter(file => file.size > maxFileSize);
+    if (invalidFiles.length > 0) {
+      alert('Einige Dateien sind zu groß. Maximale Dateigröße: 5MB');
+      return;
+    }
+
+    if (!this.editingProduct) {
+      alert('Bitte speichern Sie zuerst das Produkt, bevor Sie Bilder hochladen.');
+      return;
+    }
+
+    this.uploadingImages = true;
+    const formData = new FormData();
+
+    files.forEach(file => {
+      formData.append('images', file);
+    });
+
+    this.http.post(`${environment.apiUrl}/wholesaler-products/${this.editingProduct.id}/images/upload`, formData).subscribe({
+      next: (response: any) => {
+        this.productForm.images = response.product.images || [];
+        this.uploadingImages = false;
+      },
+      error: (error) => {
+        console.error('Failed to upload images:', error);
+        alert('Fehler beim Hochladen der Bilder.');
+        this.uploadingImages = false;
+      }
+    });
+  }
+
+  removeImage(index: number) {
+    const imageUrl = this.productForm.images[index];
+
+    if (!this.editingProduct) {
+      // Für neues Produkt einfach aus dem Array entfernen
+      this.productForm.images.splice(index, 1);
+      return;
+    }
+
+    this.removingImage = true;
+
+    this.http.delete(`${environment.apiUrl}/wholesaler-products/${this.editingProduct.id}/images`, {
+      body: { imageUrl }
+    }).subscribe({
+      next: (response: any) => {
+        this.productForm.images = response.product.images || [];
+        this.removingImage = false;
+      },
+      error: (error) => {
+        console.error('Failed to remove image:', error);
+        alert('Fehler beim Entfernen des Bildes.');
+        this.removingImage = false;
+      }
+    });
   }
 }

@@ -34,48 +34,15 @@ export interface ManagerMenuItem {
             routerLinkActive="active"
             class="nav-item"
           >
-            <svg class="nav-icon" [class]="menuItem.icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" *ngIf="menuItem.icon !== 'overview-icon' && menuItem.icon !== 'orders-icon' && menuItem.icon !== 'menu-icon' && menuItem.icon !== 'analytics-icon' && menuItem.icon !== 'customers-icon' && menuItem.icon !== 'settings-icon' && menuItem.icon !== 'wholesale-icon'">
-              <!-- Overview Icon -->
-              <g *ngIf="menuItem.icon === 'overview-icon'">
-                <rect x="3" y="3" width="7" height="7"></rect>
-                <rect x="14" y="3" width="7" height="7"></rect>
-                <rect x="14" y="14" width="7" height="7"></rect>
-                <rect x="3" y="14" width="7" height="7"></rect>
-              </g>
-              <!-- Orders Icon -->
-              <g *ngIf="menuItem.icon === 'orders-icon'">
-                <path d="M9 11l3 3l8-8"></path>
-                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-              </g>
-              <!-- Menu Icon -->
-              <g *ngIf="menuItem.icon === 'menu-icon'">
-                <path d="M3 3h18v18H3z"></path>
-                <path d="M3 9h18"></path>
-                <path d="M9 21V9"></path>
-              </g>
-              <!-- Analytics Icon -->
-              <g *ngIf="menuItem.icon === 'analytics-icon'">
-                <path d="M3 3v18h18"></path>
-                <path d="M18.7 8l-5.1 5.1-2.8-2.7L7 14.3"></path>
-              </g>
-              <!-- Customers Icon -->
-              <g *ngIf="menuItem.icon === 'customers-icon'">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-                <circle cx="9" cy="7" r="4"></circle>
-                <path d="M16 11a6 6 0 0 1 6 6v2"></path>
-                <circle cx="21" cy="7" r="4"></circle>
-              </g>
-              <!-- Settings Icon -->
-              <g *ngIf="menuItem.icon === 'settings-icon'">
-                <circle cx="12" cy="12" r="3"></circle>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-              </g>
-              <!-- Wholesale Icon -->
-              <g *ngIf="menuItem.icon === 'wholesale-icon'">
-                <rect x="3" y="7" width="18" height="13" rx="2" ry="2"></rect>
-                <path d="M16 3l-8 4"></path>
-              </g>
-            </svg>
+            <!-- Font Awesome Icons -->
+            <i *ngIf="menuItem.icon === 'overview-icon'" class="fas fa-th-large nav-icon"></i>
+            <i *ngIf="menuItem.icon === 'orders-icon'" class="fas fa-clipboard-check nav-icon"></i>
+            <i *ngIf="menuItem.icon === 'drivers-icon'" class="fas fa-truck nav-icon"></i>
+            <i *ngIf="menuItem.icon === 'menu-icon'" class="fas fa-list nav-icon"></i>
+            <i *ngIf="menuItem.icon === 'analytics-icon'" class="fas fa-chart-line nav-icon"></i>
+            <i *ngIf="menuItem.icon === 'customers-icon'" class="fas fa-address-book nav-icon"></i>
+            <i *ngIf="menuItem.icon === 'settings-icon'" class="fas fa-cog nav-icon"></i>
+            <i *ngIf="menuItem.icon === 'wholesale-icon'" class="fas fa-store nav-icon"></i>
             <span>{{ menuItem.title }}</span>
             <span *ngIf="menuItem.badge" class="badge">{{ menuItem.badge }}</span>
           </a>
@@ -215,16 +182,27 @@ export interface ManagerMenuItem {
       color: var(--color-text);
     }
 
+    .nav-item:hover .nav-icon {
+      color: var(--color-text);
+    }
+
     .nav-item.active {
       background: var(--color-primary-500);
       color: white;
     }
 
     .nav-icon {
-      width: 20px;
-      height: 20px;
-      opacity: 0.9;
+      font-size: 18px;
+      opacity: 1;
       flex-shrink: 0;
+      color: var(--color-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .nav-item.active .nav-icon {
+      color: white;
     }
 
     .badge {
@@ -351,15 +329,41 @@ export interface ManagerMenuItem {
       .manager-nav {
         flex-wrap: wrap;
         justify-content: center;
+        gap: var(--space-3);
       }
 
       .nav-item {
         padding: var(--space-2) var(--space-3);
         font-size: var(--text-sm);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-surface);
+        min-width: 48px;
+        justify-content: center;
+      }
+
+      .nav-item:hover {
+        background: var(--bg-light-green);
+        border-color: var(--color-primary-200);
+      }
+
+      .nav-item:hover .nav-icon {
+        color: var(--color-text);
+      }
+
+      .nav-item.active {
+        background: var(--color-primary-500);
+        color: white;
+        border-color: var(--color-primary-500);
       }
 
       .nav-item span:not(.badge) {
         display: none;
+      }
+
+      .nav-icon {
+        font-size: 16px;
+        color: var(--color-muted);
       }
 
       .quick-stats-bar {
@@ -375,6 +379,15 @@ export interface ManagerMenuItem {
 
       .nav-brand h1 {
         font-size: var(--text-lg);
+      }
+
+      .nav-item {
+        min-width: 44px;
+        padding: var(--space-2);
+      }
+
+      .nav-icon {
+        font-size: 14px;
       }
 
       .quick-stats-bar {
@@ -522,6 +535,14 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
         color: '#f59e0b'
       },
       {
+        id: 'drivers',
+        title: 'Fahrer',
+        description: 'Fahrer verwalten & zuweisen',
+        icon: 'drivers-icon',
+        route: '/restaurant-manager/drivers',
+        color: '#06b6d4'
+      },
+      {
         id: 'menu',
         title: 'Speisekarte',
         description: 'Menu bearbeiten',
@@ -552,8 +573,7 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
         icon: 'settings-icon',
         route: '/restaurant-manager/settings',
         color: '#8b5cf6'
-      }
-      ,
+      },
       {
         id: 'wholesale',
         title: 'Großhandel Einkauf',

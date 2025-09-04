@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { OrdersService, Order } from '../../core/services/orders.service';
-import { Observable, map, switchMap, of, interval } from 'rxjs';
+import { ToastService } from '../../core/services/toast.service';
+import { Observable, map, switchMap, of, interval, tap, catchError } from 'rxjs';
 
 interface DriverStats {
   totalDeliveries: number;
@@ -105,9 +106,9 @@ interface DriverStats {
       <!-- Active Delivery / Available Orders -->
       <div class="main-content">
         <!-- Active Delivery Section -->
-        <div class="active-delivery" *ngIf="activeDelivery$ | async as activeOrder; else availableOrders">
+        <div class="active-delivery" *ngIf="activeDeliveries$ | async as activeDeliveries; else availableOrders">
           <div class="delivery-header">
-            <h2><i class="fa-solid fa-truck"></i> Aktuelle Lieferung</h2>
+            <h2><i class="fa-solid fa-truck"></i> Aktuelle Lieferungen ({{ activeDeliveries.length }})</h2>
             <div class="delivery-status">
               <span class="status-badge status-delivery">
                 <i class="fa-solid fa-route"></i>
@@ -116,42 +117,45 @@ interface DriverStats {
             </div>
           </div>
 
-          <div class="delivery-details">
-            <div class="delivery-info">
-              <h3>Bestellung #{{ activeOrder.id }}</h3>
-              <p class="restaurant-name">{{ activeOrder.restaurant_name }}</p>
-              <p class="delivery-address">
-                <i class="fa-solid fa-map-marker-alt"></i>
-                {{ activeOrder.delivery_address }}
-              </p>
-              <p class="delivery-time">
-                <i class="fa-solid fa-clock"></i>
-                Geschätzte Ankunft: {{ activeOrder.estimated_delivery | date:'HH:mm' }}
-              </p>
-            </div>
+          <!-- Multiple deliveries -->
+          <div *ngFor="let delivery of activeDeliveries; let i = index" class="delivery-card" [class.primary-delivery]="i === 0">
+            <div class="delivery-details">
+              <div class="delivery-info">
+                <h3>Bestellung #{{ delivery.id }}</h3>
+                <p class="restaurant-name">{{ delivery.restaurant_name }}</p>
+                <p class="delivery-address">
+                  <i class="fa-solid fa-map-marker-alt"></i>
+                  {{ delivery.delivery_address }}
+                </p>
+                <p class="delivery-time">
+                  <i class="fa-solid fa-clock"></i>
+                  Geschätzte Ankunft: {{ delivery.estimated_delivery | date:'HH:mm' }}
+                </p>
+              </div>
 
-            <div class="delivery-actions">
-              <button class="btn btn-success" (click)="markAsDelivered(activeOrder)">
-                <i class="fa-solid fa-check"></i>
-                Als geliefert markieren
-              </button>
-              <button class="btn btn-warning" (click)="contactCustomer(activeOrder)">
-                <i class="fa-solid fa-phone"></i>
-                Kunde kontaktieren
-              </button>
-            </div>
-          </div>
-
-          <div class="delivery-items">
-            <h4>Bestellte Artikel</h4>
-            <div class="items-list">
-              <div *ngFor="let item of activeOrder.items" class="delivery-item">
-                <span>{{ item.name }} × {{ item.quantity }}</span>
-                <span>{{ item.total_price | currency:'EUR':'symbol':'1.2-2':'de' }}</span>
+              <div class="delivery-actions">
+                <button class="btn btn-success" (click)="markAsDelivered(delivery)">
+                  <i class="fa-solid fa-check"></i>
+                  Als geliefert markieren
+                </button>
+                <button class="btn btn-warning" (click)="contactCustomer(delivery)">
+                  <i class="fa-solid fa-phone"></i>
+                  Kunde kontaktieren
+                </button>
               </div>
             </div>
-            <div class="delivery-total">
-              <strong>Gesamt: {{ activeOrder.total | currency:'EUR':'symbol':'1.2-2':'de' }}</strong>
+
+            <div class="delivery-items">
+              <h4>Bestellte Artikel</h4>
+              <div class="items-list">
+                <div *ngFor="let item of delivery.items" class="delivery-item">
+                  <span>{{ item.name }} × {{ item.quantity }}</span>
+                  <span>{{ item.total_price | currency:'EUR':'symbol':'1.2-2':'de' }}</span>
+                </div>
+              </div>
+              <div class="delivery-total">
+                <strong>Gesamt: {{ delivery.total_price | currency:'EUR':'symbol':'1.2-2':'de' }}</strong>
+              </div>
             </div>
           </div>
         </div>
@@ -810,6 +814,33 @@ interface DriverStats {
       to { transform: rotate(360deg); }
     }
 
+    /* Delivery cards for multiple deliveries */
+    .delivery-card {
+      background: var(--bg-light);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      margin-bottom: var(--space-4);
+      transition: all var(--transition);
+    }
+
+    .delivery-card:hover {
+      box-shadow: var(--shadow-sm);
+    }
+
+    .delivery-card.primary-delivery {
+      border-left: 4px solid var(--color-primary);
+      background: color-mix(in oklab, var(--color-primary) 5%, var(--bg-light));
+    }
+
+    .delivery-card:not(.primary-delivery) {
+      opacity: 0.8;
+    }
+
+    .delivery-card:not(.primary-delivery) .delivery-header {
+      font-size: var(--text-sm);
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
       .dashboard-header {
@@ -851,11 +882,13 @@ interface DriverStats {
 export class DriverDashboardComponent implements OnInit {
   private authService = inject(AuthService);
   private ordersService = inject(OrdersService);
+  private toastService = inject(ToastService);
   private router = inject(Router);
 
   user$ = this.authService.currentUser$;
   availableOrders$ = of([] as any[]); // Will be populated from API
   activeDelivery$ = of(null as any); // Will be populated from API
+  activeDeliveries$ = of([] as any[]); // Multiple active deliveries
   recentDeliveries$ = of([] as any[]); // Will be populated from API
 
   togglingStatus = false;
@@ -887,14 +920,34 @@ export class DriverDashboardComponent implements OnInit {
 
   private loadDriverData() {
     // Load driver stats, active delivery, etc.
+    this.loadActiveDelivery();
     this.loadAvailableOrders();
     this.loadRecentDeliveries();
   }
 
+  private loadActiveDelivery() {
+    const orders$ = this.ordersService.getMyDriverOrders().pipe(
+      catchError(() => of({ activeDelivery: null, activeDeliveries: [], availableOrders: [], count: 0 }))
+    );
+
+    this.activeDelivery$ = orders$.pipe(
+      map(result => result.activeDelivery)
+    );
+
+    this.activeDeliveries$ = orders$.pipe(
+      map(result => result.activeDeliveries)
+    );
+  }
+
   private loadAvailableOrders() {
-    // In real app, this would call the orders service
-    // this.availableOrders$ = this.ordersService.getAvailableOrdersForDriver();
-    console.log('Loading available orders...');
+    this.refreshing = true;
+    this.availableOrders$ = this.ordersService.getAvailableOrders().pipe(
+      tap(() => this.refreshing = false),
+      catchError(() => {
+        this.refreshing = false;
+        return of([]);
+      })
+    );
   }
 
   private loadRecentDeliveries() {
@@ -937,12 +990,20 @@ export class DriverDashboardComponent implements OnInit {
   }
 
   markAsDelivered(order: Order) {
-    // In real app, this would call the orders service
     if (confirm('Möchten Sie diese Lieferung als abgeschlossen markieren?')) {
-      // Update order status to delivered
-      alert('Lieferung wurde als abgeschlossen markiert!');
-      // Clear active delivery
-      // this.activeDelivery$ = of(null);
+      this.ordersService.updateOrderStatus(order.id, 'delivered').subscribe({
+        next: (response) => {
+          this.toastService.success('Erfolg', 'Lieferung wurde als abgeschlossen markiert!');
+          // Reload driver data to update the dashboard
+          this.loadActiveDelivery();
+          this.loadAvailableOrders();
+        },
+        error: (error) => {
+          console.error('Error marking delivery as completed:', error);
+          const errorMessage = error.error?.error || 'Fehler beim Aktualisieren der Lieferung';
+          this.toastService.error('Fehler', errorMessage);
+        }
+      });
     }
   }
 

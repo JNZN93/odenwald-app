@@ -95,11 +95,13 @@ export const routes: Routes = [
       { path: 'overview', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-overview.component').then(m => m.RestaurantManagerOverviewComponent) },
       { path: 'orders', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-orders.component').then(m => m.RestaurantManagerOrdersComponent) },
       { path: 'menu', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-menu.component').then(m => m.RestaurantManagerMenuComponent) },
+      { path: 'drivers', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-drivers.component').then(m => m.RestaurantManagerDriversComponent) },
       { path: 'analytics', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-analytics.component').then(m => m.RestaurantManagerAnalyticsComponent) },
       { path: 'customers', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-customers.component').then(m => m.RestaurantManagerCustomersComponent) },
       { path: 'settings', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-settings.component').then(m => m.RestaurantManagerSettingsComponent) },
       { path: 'payment-methods', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-payment-methods.component').then(m => m.RestaurantManagerPaymentMethodsComponent) },
-      { path: 'wholesale', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-wholesale.component').then(m => m.RestaurantManagerWholesaleComponent) }
+      { path: 'wholesale', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-wholesale.component').then(m => m.RestaurantManagerWholesaleComponent) },
+      { path: 'wholesale/:id', loadComponent: () => import('./features/restaurant-manager/wholesaler-detail.component').then(m => m.WholesalerDetailComponent) }
     ]
   },
   {
