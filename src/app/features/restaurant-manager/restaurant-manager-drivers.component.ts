@@ -110,14 +110,31 @@ export interface Driver {
       <div class="main-content-grid">
         <!-- Drivers List -->
         <div class="drivers-section">
-          <h2>Meine Fahrer</h2>
+          <h2>1. Fahrer auswählen</h2>
+          <p class="section-description">Wählen Sie zuerst einen Fahrer aus, dem Sie Bestellungen zuweisen möchten. Verfügbare und beschäftigte Fahrer können ausgewählt werden.</p>
 
           <div class="drivers-list" *ngIf="drivers.length > 0; else noDrivers">
             <div
-              class="driver-card"
+              class="driver-card selectable"
               *ngFor="let driver of drivers"
               [class]="getDriverStatusClass(driver)"
+              [class.selected]="selectedDriver?.id === driver.id"
+              [class.disabled]="!isDriverAvailable(driver)"
+              (click)="selectDriverForAssignment(driver)"
             >
+              <div class="selection-indicator">
+                <i class="fa-solid fa-circle" *ngIf="!isDriverAvailable(driver)"></i>
+                <i class="fa-solid fa-circle-check" *ngIf="isDriverAvailable(driver) && selectedDriver?.id !== driver.id && driver.current_status === 'available'"></i>
+                <i class="fa-solid fa-clock" *ngIf="isDriverAvailable(driver) && selectedDriver?.id !== driver.id && driver.current_status !== 'available'"></i>
+                <i class="fa-solid fa-circle-dot" *ngIf="selectedDriver?.id === driver.id"></i>
+              </div>
+
+              <!-- Selection badge for selected driver -->
+              <div class="selection-badge" *ngIf="selectedDriver?.id === driver.id">
+                <i class="fa-solid fa-check"></i>
+                <span>Ausgewählt</span>
+              </div>
+
               <div class="driver-header">
                 <div class="driver-info">
                   <h4>{{ driver.name || 'Fahrer ' + driver.id }}</h4>
@@ -155,13 +172,6 @@ export interface Driver {
                 >
                   <i class="fa-solid fa-eye"></i>
                 </button>
-                <button
-                  class="btn btn-ghost btn-sm"
-                  (click)="contactDriver(driver)"
-                  title="Fahrer kontaktieren"
-                >
-                  <i class="fa-solid fa-phone"></i>
-                </button>
               </div>
             </div>
           </div>
@@ -175,12 +185,52 @@ export interface Driver {
           </ng-template>
         </div>
 
-        <!-- Pending Orders -->
+        <!-- Pending Orders with Checkboxes -->
         <div class="orders-section">
-          <h2>Ausstehende Aufträge</h2>
+          <div class="orders-header">
+            <h2>2. Bestellungen auswählen</h2>
+            <div class="bulk-actions" *ngIf="selectedDriver && pendingOrders.length > 0">
+              <button
+                class="btn btn-primary"
+                (click)="assignSelectedOrders()"
+                [disabled]="selectedOrders.length === 0 || isBulkAssigning"
+              >
+                <span *ngIf="!isBulkAssigning">
+                  <i class="fa-solid fa-check"></i>
+                  {{ selectedOrders.length }} Bestellung{{ selectedOrders.length !== 1 ? 'en' : '' }} zuweisen
+                </span>
+                <span *ngIf="isBulkAssigning">
+                  <i class="fa-solid fa-spinner fa-spin"></i>
+                  Zuweisen...
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <div class="assignment-info" *ngIf="selectedDriver">
+            <div class="info-card">
+              <i class="fa-solid fa-user-check"></i>
+              <div class="info-content">
+                <strong>{{ selectedDriver.name || 'Fahrer ' + selectedDriver.id }}</strong> ausgewählt
+                <br>
+                <small>Wählen Sie die Bestellungen aus, die zugewiesen werden sollen</small>
+              </div>
+            </div>
+          </div>
 
           <div class="orders-list" *ngIf="pendingOrders.length > 0; else noOrders">
-            <div class="order-card" *ngFor="let order of pendingOrders">
+            <div class="order-card selectable" *ngFor="let order of pendingOrders">
+              <div class="order-selection">
+                <input
+                  type="checkbox"
+                  [id]="'order-' + order.id"
+                  [checked]="isOrderSelected(order)"
+                  (change)="toggleOrderSelection(order)"
+                  [disabled]="!selectedDriver"
+                />
+                <label [for]="'order-' + order.id" class="checkbox-label"></label>
+              </div>
+
               <div class="order-header">
                 <h4>Bestellung #{{ order.id }}</h4>
                 <div class="order-value">€{{ order.total_price | number:'1.2-2' }}</div>
@@ -195,39 +245,10 @@ export interface Driver {
                   <i class="fa-solid fa-map-marker-alt"></i>
                   <span>{{ order.delivery_address }}</span>
                 </div>
-              </div>
-
-              <div class="order-actions">
-                <button
-                  class="btn btn-outline-primary"
-                  (click)="openManualAssignment(order)"
-                  [disabled]="isAssigning"
-                >
-                  <span *ngIf="!isAssigning">
-                    <i class="fa-solid fa-hand-pointer"></i>
-                    Manuell zuweisen
-                  </span>
-                  <span *ngIf="isAssigning">
-                    <i class="fa-solid fa-spinner fa-spin"></i>
-                    Lade...
-                  </span>
-                </button>
-                <div class="button-spacer"></div>
-                <button
-                  class="btn btn-ghost btn-sm"
-                  (click)="assignBestDriver(order)"
-                  [disabled]="isAssigning"
-                  title="Automatische Zuweisung"
-                >
-                  <span *ngIf="!isAssigning">
-                    <i class="fa-solid fa-magic"></i>
-                    Auto-Zuweisung
-                  </span>
-                  <span *ngIf="isAssigning">
-                    <i class="fa-solid fa-spinner fa-spin"></i>
-                    Zuweisen...
-                  </span>
-                </button>
+                <div class="detail-item">
+                  <i class="fa-solid fa-clock"></i>
+                  <span>{{ order.created_at | date:'short' }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -242,81 +263,10 @@ export interface Driver {
         </div>
       </div>
 
-      <!-- Assignment Modal -->
-      <div class="modal" *ngIf="showAssignmentModal" (click)="closeAssignmentModal()">
-        <div class="modal-content" (click)="$event.stopPropagation()">
-          <div class="modal-header">
-            <h3>Fahrer zuweisen</h3>
-            <button class="close-btn" (click)="closeAssignmentModal()">
-              <i class="fa-solid fa-times"></i>
-            </button>
-          </div>
-
-          <div class="modal-body" *ngIf="selectedOrder">
-            <div class="order-summary">
-              <h4>Bestellung #{{ selectedOrder.id }}</h4>
-              <p><strong>Kunde:</strong> {{ selectedOrder.customer_name || 'Unbekannt' }}</p>
-              <p><strong>Adresse:</strong> {{ selectedOrder.delivery_address }}</p>
-              <p><strong>Gesamt:</strong> €{{ selectedOrder.total_price | number:'1.2-2' }}</p>
-            </div>
-
-            <div class="available-drivers">
-              <h4>Verfügbare Fahrer</h4>
-              <div class="driver-selection" *ngIf="availableDrivers.length > 0; else noDriversAvailable">
-                <div
-                  class="driver-option"
-                  *ngFor="let driver of availableDrivers"
-                  [class.selected]="selectedDriver?.id === driver.id"
-                  (click)="selectDriver(driver)"
-                >
-                  <div class="driver-option-header">
-                    <span class="driver-name">{{ driver.name || 'Fahrer ' + driver.id }}</span>
-                    <div class="vehicle-badge" [class]="driver.vehicle_type">
-                      <i class="fa-solid" [ngClass]="getVehicleIcon(driver.vehicle_type)"></i>
-                      {{ getVehicleTypeLabel(driver.vehicle_type) }}
-                    </div>
-                  </div>
-                  <div class="driver-option-details">
-                    <span>Bewertung: {{ driver.rating }}/5</span>
-                    <span>{{ driver.total_deliveries }} Lieferungen</span>
-                  </div>
-                </div>
-              </div>
-              <ng-template #noDriversAvailable>
-                <div class="empty-state">
-                  <i class="fa-solid fa-user-slash"></i>
-                  <h4>Keine Fahrer verfügbar</h4>
-                  <p>Alle Fahrer sind derzeit beschäftigt oder offline.</p>
-                </div>
-              </ng-template>
-            </div>
-
-            <div class="modal-actions">
-              <button class="btn btn-ghost" (click)="closeAssignmentModal()">
-                Abbrechen
-              </button>
-              <button
-                class="btn btn-primary"
-                (click)="confirmAssignment()"
-                [disabled]="!selectedDriver || isConfirming"
-              >
-                <span *ngIf="!isConfirming">
-                  <i class="fa-solid fa-check"></i>
-                  Zuweisen
-                </span>
-                <span *ngIf="isConfirming">
-                  <i class="fa-solid fa-spinner fa-spin"></i>
-                  Zuweisen...
-                </span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <!-- Add Driver Modal -->
       <div class="modal" *ngIf="showAddDriverModal" (click)="closeAddDriverModal()">
-        <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-content add-driver-modal" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>Neuen Fahrer hinzufügen</h3>
             <button class="close-btn" (click)="closeAddDriverModal()">
@@ -456,6 +406,131 @@ export interface Driver {
           </div>
         </div>
       </div>
+
+      <!-- Driver Details Modal -->
+      <div class="modal" *ngIf="showDriverDetailsModal" (click)="closeDriverDetailsModal()">
+        <div class="modal-content driver-details-modal" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3><i class="fa-solid fa-user"></i> Fahrer-Details</h3>
+            <button class="close-btn" (click)="closeDriverDetailsModal()">
+              <i class="fa-solid fa-times"></i>
+            </button>
+          </div>
+
+          <div class="modal-body" *ngIf="selectedDriverForDetails">
+            <div class="driver-profile-section">
+              <div class="driver-profile-header">
+                <div class="driver-avatar">
+                  <i class="fa-solid fa-user-circle"></i>
+                </div>
+                <div class="driver-basic-info">
+                  <h4>{{ selectedDriverForDetails.name || 'Fahrer ' + selectedDriverForDetails.id }}</h4>
+                  <div class="driver-meta">
+                    <span class="driver-email">{{ selectedDriverForDetails.email }}</span>
+                    <span class="driver-phone" *ngIf="selectedDriverForDetails.phone">{{ selectedDriverForDetails.phone }}</span>
+                  </div>
+                </div>
+                <div class="driver-status-badge">
+                  <span class="status-dot" [class]="selectedDriverForDetails.current_status"></span>
+                  <span>{{ getStatusLabel(selectedDriverForDetails.current_status) }}</span>
+                </div>
+              </div>
+
+              <div class="driver-stats-grid">
+                <div class="stat-item">
+                  <i class="fa-solid fa-star"></i>
+                  <div class="stat-info">
+                    <span class="stat-value">{{ selectedDriverForDetails.rating }}/5</span>
+                    <span class="stat-label">Bewertung</span>
+                  </div>
+                </div>
+                <div class="stat-item">
+                  <i class="fa-solid fa-truck"></i>
+                  <div class="stat-info">
+                    <span class="stat-value">{{ selectedDriverForDetails.total_deliveries }}</span>
+                    <span class="stat-label">Lieferungen</span>
+                  </div>
+                </div>
+                <div class="stat-item">
+                  <i class="fa-solid fa-euro-sign"></i>
+                  <div class="stat-info">
+                    <span class="stat-value">€{{ selectedDriverForDetails.total_earnings | number:'1.2-2' }}</span>
+                    <span class="stat-label">Verdienst</span>
+                  </div>
+                </div>
+                <div class="stat-item">
+                  <i class="fa-solid fa-calendar"></i>
+                  <div class="stat-info">
+                    <span class="stat-value">{{ selectedDriverForDetails.joined_date | date:'shortDate' }}</span>
+                    <span class="stat-label">Beigetreten</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="driver-vehicle-info" *ngIf="selectedDriverForDetails.vehicle_info">
+                <h5><i class="fa-solid fa-car"></i> Fahrzeug</h5>
+                <div class="vehicle-details">
+                  <div class="vehicle-badge" [class]="selectedDriverForDetails.vehicle_type">
+                    <i class="fa-solid" [ngClass]="getVehicleIcon(selectedDriverForDetails.vehicle_type)"></i>
+                    {{ getVehicleTypeLabel(selectedDriverForDetails.vehicle_type) }}
+                  </div>
+                  <span class="vehicle-info-text">{{ selectedDriverForDetails.vehicle_info }}</span>
+                  <span class="license-plate" *ngIf="selectedDriverForDetails.license_plate">
+                    <i class="fa-solid fa-id-card"></i> {{ selectedDriverForDetails.license_plate }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="driver-orders-section">
+              <h5><i class="fa-solid fa-clipboard-list"></i> Zugewiesene Bestellungen</h5>
+
+              <div class="orders-loading" *ngIf="isLoadingDriverOrders">
+                <i class="fa-solid fa-spinner fa-spin"></i>
+                <span>Lade Bestellungen...</span>
+              </div>
+
+              <div class="driver-orders-list" *ngIf="!isLoadingDriverOrders">
+                <div class="order-item" *ngFor="let order of driverAssignedOrders">
+                  <div class="order-header">
+                    <span class="order-id">#{{ order.id }}</span>
+                    <span class="order-status" [class]="order.status">{{ getOrderStatusLabel(order.status) }}</span>
+                  </div>
+                  <div class="order-details">
+                    <div class="order-customer">
+                      <i class="fa-solid fa-user"></i>
+                      <span>{{ order.customer_name || 'Kunde' }}</span>
+                    </div>
+                    <div class="order-address">
+                      <i class="fa-solid fa-map-marker-alt"></i>
+                      <span>{{ order.delivery_address }}</span>
+                    </div>
+                    <div class="order-value">
+                      <i class="fa-solid fa-euro-sign"></i>
+                      <span>€{{ order.total_price | number:'1.2-2' }}</span>
+                    </div>
+                  </div>
+                  <div class="order-timing">
+                    <div class="order-created">
+                      <i class="fa-solid fa-calendar"></i>
+                      <span>{{ order.created_at | date:'short' }}</span>
+                    </div>
+                    <div class="order-assigned">
+                      <i class="fa-solid fa-clock"></i>
+                      <span>Zugewiesen: {{ order.created_at | date:'short' }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="no-orders" *ngIf="driverAssignedOrders.length === 0">
+                  <i class="fa-solid fa-inbox"></i>
+                  <span>Keine zugewiesenen Bestellungen</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `,
   styles: [`
@@ -537,6 +612,25 @@ export interface Driver {
       margin-bottom: var(--space-4);
     }
 
+    .section-description {
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+      margin-bottom: var(--space-4);
+      margin-top: -var(--space-2);
+    }
+
+    .orders-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-4);
+    }
+
+    .bulk-actions {
+      display: flex;
+      gap: var(--space-3);
+    }
+
     /* Drivers List */
     .drivers-list {
       display: flex;
@@ -550,12 +644,92 @@ export interface Driver {
       border-radius: var(--radius-lg);
       padding: var(--space-4);
       box-shadow: var(--shadow-sm);
-      transition: all var(--transition);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
     }
 
-    .driver-card:hover {
+    .driver-card.selectable {
+      cursor: pointer;
+    }
+
+    .driver-card.selectable:hover:not(.disabled):not(.selected) {
       transform: translateY(-2px);
       box-shadow: var(--shadow-md);
+      border-color: var(--color-primary);
+    }
+
+    .driver-card.selectable:hover:not(.disabled).selected {
+      transform: translateY(-2px);
+      box-shadow: 0 0 0 4px var(--color-primary), 0 6px 16px color-mix(in oklab, var(--color-primary) 30%, transparent);
+    }
+
+    .driver-card.selected {
+      border-color: var(--color-primary);
+      background: color-mix(in oklab, var(--color-primary) 5%, white);
+      box-shadow: 0 0 0 3px var(--color-primary), 0 4px 12px color-mix(in oklab, var(--color-primary) 25%, transparent);
+      border-left: 6px solid var(--color-primary);
+      transform: translateY(-2px);
+    }
+
+    .driver-card.disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      background: var(--color-surface-2);
+    }
+
+    .selection-indicator {
+      position: absolute;
+      top: var(--space-3);
+      right: var(--space-3);
+      font-size: var(--text-lg);
+      color: var(--color-muted);
+      z-index: 2;
+    }
+
+    .driver-card.selected .selection-indicator {
+      color: var(--color-primary);
+    }
+
+    .driver-card.disabled .selection-indicator {
+      color: var(--color-border);
+    }
+
+    .selection-badge {
+      position: absolute;
+      top: var(--space-3);
+      left: var(--space-3);
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      background: var(--color-primary);
+      color: white;
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-full);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+      box-shadow: 0 2px 8px color-mix(in oklab, var(--color-primary) 40%, transparent);
+      animation: selectionPulse 0.3s ease-out;
+      z-index: 3;
+    }
+
+    .selection-badge i {
+      font-size: var(--text-sm);
+    }
+
+    @keyframes selectionPulse {
+      0% {
+        transform: scale(0.8);
+        opacity: 0.8;
+      }
+      50% {
+        transform: scale(1.05);
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
     }
 
     .driver-card.available {
@@ -659,6 +833,67 @@ export interface Driver {
       border-radius: var(--radius-lg);
       padding: var(--space-4);
       box-shadow: var(--shadow-sm);
+      position: relative;
+    }
+
+    .order-card.selectable {
+      transition: all var(--transition);
+    }
+
+    .order-card.selectable:hover {
+      border-color: var(--color-primary-300);
+    }
+
+    .order-selection {
+      position: absolute;
+      top: var(--space-3);
+      right: var(--space-3);
+      display: flex;
+      align-items: center;
+    }
+
+    .order-selection input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .order-selection input[type="checkbox"]:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    .checkbox-label {
+      display: none;
+    }
+
+    .assignment-info {
+      margin-bottom: var(--space-4);
+    }
+
+    .info-card {
+      background: color-mix(in oklab, var(--color-primary) 5%, white);
+      border: 1px solid var(--color-primary-200);
+      border-radius: var(--radius-md);
+      padding: var(--space-3);
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .info-card i {
+      color: var(--color-primary);
+      font-size: var(--text-lg);
+    }
+
+    .info-content {
+      flex: 1;
+      font-size: var(--text-sm);
+    }
+
+    .info-content strong {
+      color: var(--color-heading);
     }
 
     .order-header {
@@ -709,124 +944,6 @@ export interface Driver {
       color: var(--color-heading);
     }
 
-    /* Modal */
-    .modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-
-    .modal-content {
-      background: var(--color-surface);
-      border-radius: var(--radius-lg);
-      width: 90%;
-      max-width: 600px;
-      max-height: 90vh;
-      overflow-y: auto;
-    }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: var(--space-6);
-      border-bottom: 1px solid var(--color-border);
-    }
-
-    .modal-header h3 {
-      margin: 0;
-      color: var(--color-heading);
-    }
-
-    .close-btn {
-      background: none;
-      border: none;
-      font-size: var(--text-xl);
-      cursor: pointer;
-      color: var(--color-muted);
-    }
-
-    .modal-body {
-      padding: var(--space-6);
-    }
-
-    .order-summary {
-      margin-bottom: var(--space-6);
-      padding: var(--space-4);
-      background: var(--bg-light);
-      border-radius: var(--radius-md);
-    }
-
-    .order-summary h4 {
-      margin: 0 0 var(--space-3) 0;
-      color: var(--color-heading);
-    }
-
-    .order-summary p {
-      margin: var(--space-1) 0;
-      color: var(--color-text);
-    }
-
-    .available-drivers h4 {
-      margin: 0 0 var(--space-3) 0;
-      color: var(--color-heading);
-    }
-
-    .driver-selection {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-2);
-      margin-bottom: var(--space-6);
-    }
-
-    .driver-option {
-      padding: var(--space-3);
-      border: 2px solid var(--color-border);
-      border-radius: var(--radius-md);
-      cursor: pointer;
-      transition: all var(--transition);
-    }
-
-    .driver-option:hover {
-      border-color: var(--color-primary);
-    }
-
-    .driver-option.selected {
-      border-color: var(--color-primary);
-      background: color-mix(in oklab, var(--color-primary) 5%, white);
-    }
-
-    .driver-option-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: var(--space-2);
-    }
-
-    .driver-name {
-      font-weight: 600;
-      color: var(--color-heading);
-    }
-
-    .driver-option-details {
-      display: flex;
-      gap: var(--space-4);
-      font-size: var(--text-sm);
-      color: var(--color-muted);
-    }
-
-    .modal-actions {
-      display: flex;
-      gap: var(--space-3);
-      justify-content: flex-end;
-    }
 
     /* Button spacing in order actions */
     .order-actions {
@@ -956,6 +1073,283 @@ export interface Driver {
         width: 95%;
         margin: var(--space-4);
       }
+
+      .driver-details-modal {
+        max-width: 800px;
+      }
+    }
+
+    /* Modal Styles */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-6);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      color: var(--color-heading);
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: var(--text-xl);
+      cursor: pointer;
+      color: var(--color-muted);
+    }
+
+    .modal-body {
+      padding: var(--space-6);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: var(--space-3);
+      justify-content: flex-end;
+      margin-top: var(--space-6);
+    }
+
+    /* Driver Details Modal Styles */
+    .driver-details-modal {
+      max-width: 900px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .driver-profile-section {
+      margin-bottom: var(--space-6);
+    }
+
+    .driver-profile-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+      padding: var(--space-4);
+      background: var(--bg-light);
+      border-radius: var(--radius-md);
+    }
+
+    .driver-avatar {
+      font-size: var(--text-4xl);
+      color: var(--color-primary);
+    }
+
+    .driver-basic-info h4 {
+      margin: 0 0 var(--space-2) 0;
+      color: var(--color-heading);
+      font-size: var(--text-lg);
+    }
+
+    .driver-meta {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+    }
+
+    .driver-status-badge {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      background: var(--color-surface);
+      border-radius: var(--radius-full);
+      font-size: var(--text-sm);
+    }
+
+    .driver-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-4);
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .stat-item i {
+      font-size: var(--text-xl);
+      color: var(--color-primary);
+    }
+
+    .stat-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-value {
+      font-size: var(--text-lg);
+      font-weight: 700;
+      color: var(--color-heading);
+      margin-bottom: var(--space-1);
+    }
+
+    .stat-label {
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+    }
+
+    .driver-vehicle-info h5 {
+      margin: 0 0 var(--space-3) 0;
+      color: var(--color-heading);
+      font-size: var(--text-base);
+    }
+
+    .vehicle-details {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+    }
+
+    .vehicle-info-text {
+      color: var(--color-text);
+      font-size: var(--text-sm);
+    }
+
+    .license-plate {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-1) var(--space-2);
+      background: var(--color-primary-500);
+      color: white;
+      border-radius: var(--radius-sm);
+      font-size: var(--text-xs);
+      font-weight: 500;
+    }
+
+    .driver-orders-section h5 {
+      margin: 0 0 var(--space-4) 0;
+      color: var(--color-heading);
+      font-size: var(--text-base);
+    }
+
+    .orders-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-3);
+      padding: var(--space-6);
+      color: var(--color-muted);
+    }
+
+    .driver-orders-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .order-item {
+      padding: var(--space-4);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-3);
+      background: var(--color-surface);
+    }
+
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-3);
+    }
+
+    .order-id {
+      font-weight: 600;
+      color: var(--color-heading);
+    }
+
+    .order-status {
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-xs);
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+
+    .order-status.pending { background: var(--color-warning); color: white; }
+    .order-status.confirmed { background: var(--color-info); color: white; }
+    .order-status.preparing { background: var(--color-primary); color: white; }
+    .order-status.ready { background: var(--color-success); color: white; }
+    .order-status.in_progress { background: var(--color-primary); color: white; }
+    .order-status.delivered { background: var(--color-success); color: white; }
+    .order-status.cancelled { background: var(--color-error); color: white; }
+
+    .order-details {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      margin-bottom: var(--space-3);
+    }
+
+    .order-customer, .order-address, .order-value {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--text-sm);
+      color: var(--color-text);
+    }
+
+    .order-timing {
+      display: flex;
+      justify-content: space-between;
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+    }
+
+    .order-created, .order-assigned {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .no-orders {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-3);
+      padding: var(--space-6);
+      color: var(--color-muted);
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
     }
   `]
 })
@@ -971,11 +1365,15 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
   pendingOrders: Order[] = [];
   driverStats: any = null;
 
-  // Modal state
-  showAssignmentModal = false;
-  selectedOrder: Order | null = null;
-  selectedDriver: Driver | null = null;
-  availableDrivers: Driver[] = [];
+  // New assignment workflow state
+  assignmentSelectedDriver: Driver | null = null;
+  selectedOrders: Order[] = [];
+
+  // Driver details modal state
+  showDriverDetailsModal = false;
+  selectedDriverForDetails: Driver | null = null;
+  driverAssignedOrders: Order[] = [];
+  isLoadingDriverOrders = false;
 
   // Add driver modal state
   showAddDriverModal = false;
@@ -992,9 +1390,8 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
 
   // Loading states
   isLoading = false;
-  isAssigning = false;
-  isConfirming = false;
   isAddingDriver = false;
+  isBulkAssigning = false;
 
   ngOnInit() {
     this.loadDrivers();
@@ -1020,14 +1417,6 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
       ).toPromise();
 
       this.drivers = response?.drivers || [];
-
-      // Debug: Check if names are loaded properly
-      console.log('Drivers loaded:', this.drivers.map(d => ({
-        id: d.id,
-        name: d.name,
-        email: d.email,
-        user_id: d.user_id
-      })));
     } catch (error: any) {
       console.error('Error loading drivers:', error);
       if (error.status === 500) {
@@ -1120,123 +1509,6 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
     }
   }
 
-  async assignBestDriver(order: Order) {
-    if (this.isAssigning) return;
-
-    try {
-      this.isAssigning = true;
-
-      const response = await this.http.post(
-        `${environment.apiUrl}/drivers/assign`,
-        {
-          order_id: order.id,
-          delivery_address: order.delivery_address,
-          priority: 'normal'
-        }
-      ).toPromise();
-
-      this.toastService.success('Erfolg', 'Fahrer wurde erfolgreich zugewiesen');
-      await this.refreshData();
-    } catch (error: any) {
-      console.error('Error assigning driver:', error);
-      const message = error.error?.error || 'Fahrer-Zuweisung fehlgeschlagen';
-      this.toastService.error('Fehler', message);
-    } finally {
-      this.isAssigning = false;
-    }
-  }
-
-  async assignOrderToDriver(driver: Driver) {
-    // Show modal for manual driver selection
-    this.selectedOrder = null; // We'll need to select an order first
-    this.selectedDriver = driver;
-    this.showAssignmentModal = true;
-
-    // Load available drivers for the modal - check both status fields
-    this.availableDrivers = this.drivers.filter(d =>
-      d.current_status === 'available' || d.status === 'available'
-    );
-
-    console.log('Opening driver assignment modal:', {
-      selectedDriver: driver.id,
-      totalDrivers: this.drivers.length,
-      availableDrivers: this.availableDrivers.length,
-      availableDriversList: this.availableDrivers.map(d => ({
-        id: d.id,
-        name: d.name,
-        status: d.status,
-        current_status: d.current_status
-      }))
-    });
-  }
-
-  async openManualAssignment(order: Order) {
-    // Show modal for manual driver selection for specific order
-    this.selectedOrder = order;
-    this.selectedDriver = null;
-    this.showAssignmentModal = true;
-
-    // Load available drivers for the modal - check both current_status and status fields
-    this.availableDrivers = this.drivers.filter(d =>
-      d.current_status === 'available' || d.status === 'available'
-    );
-
-    // Fallback: If no available drivers found, show all drivers (for testing/debugging)
-    if (this.availableDrivers.length === 0) {
-      console.warn('No available drivers found, showing all drivers as fallback');
-      this.availableDrivers = this.drivers;
-    }
-
-    console.log('Opening manual assignment modal:', {
-      order: order.id,
-      totalDrivers: this.drivers.length,
-      availableDrivers: this.availableDrivers.length,
-      availableDriversList: this.availableDrivers.map(d => ({
-        id: d.id,
-        name: d.name,
-        status: d.status,
-        current_status: d.current_status
-      }))
-    });
-  }
-
-  selectDriver(driver: Driver) {
-    this.selectedDriver = driver;
-  }
-
-  async confirmAssignment() {
-    if (!this.selectedOrder || !this.selectedDriver || this.isConfirming) return;
-
-    try {
-      this.isConfirming = true;
-
-      // Verwende die korrekte API für manuelle Zuweisung
-      const response = await this.http.post(
-        `${environment.apiUrl}/orders/${this.selectedOrder.id}/assign-driver`,
-        {
-          driver_id: this.selectedDriver.id,
-          estimated_delivery_time: new Date(Date.now() + 30 * 60 * 1000).toISOString() // 30 Minuten
-        }
-      ).toPromise();
-
-      this.toastService.success('Erfolg', `${this.selectedDriver.name || 'Fahrer'} wurde erfolgreich zugewiesen`);
-      this.closeAssignmentModal();
-      await this.refreshData();
-    } catch (error: any) {
-      console.error('Error confirming assignment:', error);
-      const message = error.error?.error || 'Zuweisung fehlgeschlagen';
-      this.toastService.error('Fehler', message);
-    } finally {
-      this.isConfirming = false;
-    }
-  }
-
-  closeAssignmentModal() {
-    this.showAssignmentModal = false;
-    this.selectedOrder = null;
-    this.selectedDriver = null;
-    this.availableDrivers = [];
-  }
 
   addDriver() {
     this.showAddDriverModal = true;
@@ -1328,9 +1600,11 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
     }
   }
 
-  viewDriverDetails(driver: Driver) {
-    // TODO: Implement driver details modal
-    console.log('View driver details:', driver);
+  async viewDriverDetails(driver: Driver) {
+    this.selectedDriverForDetails = driver;
+    this.showDriverDetailsModal = true;
+    this.driverAssignedOrders = [];
+    await this.loadDriverAssignedOrders(driver.id);
   }
 
   contactDriver(driver: Driver) {
@@ -1383,5 +1657,128 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
       scooter: 'fa-scooter'
     };
     return icons[type] || 'fa-car';
+  }
+
+  // New assignment workflow methods
+  selectDriverForAssignment(driver: Driver) {
+    if (!this.isDriverAvailable(driver)) return;
+
+    if (this.assignmentSelectedDriver?.id === driver.id) {
+      // Deselect if already selected
+      this.assignmentSelectedDriver = null;
+      this.selectedOrders = [];
+    } else {
+      // Select new driver
+      this.assignmentSelectedDriver = driver;
+      this.selectedOrders = [];
+    }
+  }
+
+  isDriverAvailable(driver: Driver): boolean {
+    // Allow assignment to available, busy, and on_delivery drivers
+    // Only exclude offline drivers
+    const available = (driver.current_status === 'available' ||
+                      driver.current_status === 'busy' ||
+                      driver.current_status === 'on_delivery' ||
+                      driver.status === 'available' ||
+                      driver.status === 'busy') &&
+                     (driver.current_status !== 'offline' && driver.status !== 'offline');
+
+    return available;
+  }
+
+  toggleOrderSelection(order: Order) {
+    if (!this.assignmentSelectedDriver) return;
+
+    const index = this.selectedOrders.findIndex(o => o.id === order.id);
+    if (index > -1) {
+      this.selectedOrders.splice(index, 1);
+    } else {
+      this.selectedOrders.push(order);
+    }
+  }
+
+  isOrderSelected(order: Order): boolean {
+    return this.selectedOrders.some(o => o.id === order.id);
+  }
+
+  async assignSelectedOrders() {
+    if (!this.assignmentSelectedDriver || this.selectedOrders.length === 0 || this.isBulkAssigning) return;
+
+    try {
+      this.isBulkAssigning = true;
+
+      const assignmentPromises = this.selectedOrders.map(order =>
+        this.http.post(
+          `${environment.apiUrl}/orders/${order.id}/assign-driver`,
+          {
+            driver_id: this.assignmentSelectedDriver!.id,
+            estimated_delivery_time: new Date(Date.now() + 30 * 60 * 1000).toISOString()
+          }
+        ).toPromise()
+      );
+
+      await Promise.all(assignmentPromises);
+
+      this.toastService.success(
+        'Erfolg',
+        `${this.selectedOrders.length} Bestellung${this.selectedOrders.length !== 1 ? 'en' : ''} wurde${this.selectedOrders.length === 1 ? '' : 'n'} erfolgreich zugewiesen`
+      );
+
+      // Reset selection
+      this.selectedOrders = [];
+      this.assignmentSelectedDriver = null;
+
+      await this.refreshData();
+    } catch (error: any) {
+      console.error('Error bulk assigning orders:', error);
+      const message = error.error?.error || 'Zuweisung fehlgeschlagen';
+      this.toastService.error('Fehler', message);
+    } finally {
+      this.isBulkAssigning = false;
+    }
+  }
+
+  // Getter for template
+  get selectedDriver(): Driver | null {
+    return this.assignmentSelectedDriver;
+  }
+
+  // Driver details modal methods
+  async loadDriverAssignedOrders(driverId: string) {
+    try {
+      this.isLoadingDriverOrders = true;
+
+      const response = await this.http.get<{ orders: Order[] }>(
+        `${environment.apiUrl}/drivers/${driverId}/orders`
+      ).toPromise();
+
+      this.driverAssignedOrders = response?.orders || [];
+    } catch (error: any) {
+      console.error('Error loading driver orders:', error);
+      this.toastService.error('Fehler', 'Bestellungen konnten nicht geladen werden');
+      this.driverAssignedOrders = [];
+    } finally {
+      this.isLoadingDriverOrders = false;
+    }
+  }
+
+  closeDriverDetailsModal() {
+    this.showDriverDetailsModal = false;
+    this.selectedDriverForDetails = null;
+    this.driverAssignedOrders = [];
+  }
+
+  getOrderStatusLabel(status: string): string {
+    const labels: { [key: string]: string } = {
+      pending: 'Ausstehend',
+      confirmed: 'Bestätigt',
+      preparing: 'In Zubereitung',
+      ready: 'Bereit',
+      in_progress: 'Unterwegs',
+      delivered: 'Geliefert',
+      cancelled: 'Storniert'
+    };
+    return labels[status] || status;
   }
 }

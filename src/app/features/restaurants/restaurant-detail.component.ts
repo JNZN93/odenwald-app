@@ -1,6 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { AsyncPipe, NgForOf, NgIf, CurrencyPipe } from '@angular/common';
+import { AsyncPipe, NgForOf, NgIf, CurrencyPipe, JsonPipe } from '@angular/common';
 import { RestaurantsService, RestaurantDTO } from '../../core/services/restaurants.service';
 import { CartService } from '../../core/services/supplier.service';
 import { ImageFallbackDirective } from '../../core/image-fallback.directive';
@@ -34,7 +34,7 @@ interface MenuCategory {
 @Component({
   selector: 'app-restaurant-detail',
   standalone: true,
-  imports: [AsyncPipe, NgForOf, NgIf, CurrencyPipe, ImageFallbackDirective],
+  imports: [AsyncPipe, NgForOf, NgIf, CurrencyPipe, JsonPipe, ImageFallbackDirective],
   template: `
     <div class="restaurant-detail" *ngIf="restaurant$ | async as restaurant">
       <!-- Restaurant Header -->
@@ -60,8 +60,18 @@ interface MenuCategory {
                 <span>{{ restaurant.rating }} ({{ restaurant.total_reviews }} Bewertungen)</span>
               </div>
               <div class="meta-item">
-                <i class="fa-regular fa-clock"></i>
-                <span>{{ restaurant.delivery_info.estimated_delivery_time_minutes }} Min Lieferzeit</span>
+                <button class="eta-badge" 
+                        [class.eta-fast]="getEtaStatus(etaSummaryMinutes !== null ? etaSummaryMinutes : restaurant.delivery_info.estimated_delivery_time_minutes) === 'fast'"
+                        [class.eta-medium]="getEtaStatus(etaSummaryMinutes !== null ? etaSummaryMinutes : restaurant.delivery_info.estimated_delivery_time_minutes) === 'medium'"
+                        [class.eta-slow]="getEtaStatus(etaSummaryMinutes !== null ? etaSummaryMinutes : restaurant.delivery_info.estimated_delivery_time_minutes) === 'slow'"
+                        (click)="openEtaModal(restaurant.id)">
+                  <i class="fa-regular fa-clock"></i>
+                  <span>Aktuell: {{ etaSummaryMinutes !== null ? etaSummaryMinutes : restaurant.delivery_info.estimated_delivery_time_minutes }} Min</span>
+                </button>
+              </div>
+              <div class="meta-item">
+                <i class="fa-solid fa-clock"></i>
+                <span>Durchschnitt: {{ restaurant.delivery_info.estimated_delivery_time_minutes }} Min</span>
               </div>
               <div class="meta-item">
                 <i class="fa-regular fa-euro-sign"></i>
@@ -71,6 +81,7 @@ interface MenuCategory {
                 <i class="fa-regular fa-truck"></i>
                 <span>{{ restaurant.delivery_info.delivery_fee }}€ Liefergebühr</span>
               </div>
+              
             </div>
           </div>
 
@@ -81,6 +92,54 @@ interface MenuCategory {
             </span>
           </div>
         </div>
+      </div>
+
+      <!-- Debug ETA Modal -->
+      <div class="modal-backdrop" *ngIf="etaModalOpen" (click)="closeEtaModal()"></div>
+      <div class="modal" *ngIf="etaModalOpen">
+        <div class="modal-header">
+          <h3>ETA Debug</h3>
+          <button class="close-btn" (click)="closeEtaModal()">×</button>
+        </div>
+        <div class="modal-body" *ngIf="etaDebug; else modalLoading">
+          <div class="eta-summary">
+            <div class="eta-value">{{ etaDebug?.computed_eta_minutes }}<span>Min</span></div>
+            <div class="eta-base">Basis: {{ etaDebug?.base_minutes }} Min</div>
+          </div>
+          <div class="eta-grid">
+            <div class="eta-card">
+              <h4>Komponenten</h4>
+              <ul>
+                <li>Fahrer-Queue: {{ etaDebug?.components?.driver_queue_minutes }} Min</li>
+                <li>Küche-Backlog: {{ etaDebug?.components?.kitchen_backlog_minutes }} Min</li>
+                <li>Unterwegs-Overhead: {{ etaDebug?.components?.in_transit_minutes }} Min</li>
+              </ul>
+            </div>
+            <div class="eta-card">
+              <h4>Bestellstatus</h4>
+              <pre class="pre-inline">{{ etaDebug?.inputs?.status_counts | json }}</pre>
+            </div>
+            <div class="eta-card">
+              <h4>Fahrer</h4>
+              <div class="drivers-list">
+                <div class="driver-item" *ngFor="let d of etaDebug?.inputs?.drivers">
+                  <span class="driver-name">{{ d.name || d.id }}</span>
+                  <span class="driver-status">{{ d.status }}</span>
+                  <span class="driver-load">Aufträge: {{ d.active_orders }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="close-cta" (click)="closeEtaModal()">Schließen</button>
+          </div>
+        </div>
+        <ng-template #modalLoading>
+          <div class="modal-loading">
+            <div class="loading-spinner"></div>
+            <p>Berechne ETA...</p>
+          </div>
+        </ng-template>
       </div>
 
       <!-- Menu Categories -->
@@ -267,6 +326,163 @@ interface MenuCategory {
       display: flex;
       justify-content: flex-end;
     }
+
+    .eta-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 9999px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      border: 2px solid;
+    }
+    .eta-badge i { color: white; font-size: 14px; }
+    .eta-badge:hover { 
+      transform: translateY(-2px);
+    }
+
+    /* Fast ETA (≤25 min) - Green */
+    .eta-badge.eta-fast {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      border-color: #047857;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    .eta-badge.eta-fast:hover {
+      box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+    }
+
+    /* Medium ETA (26-45 min) - Yellow/Orange */
+    .eta-badge.eta-medium {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: white;
+      border-color: #b45309;
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    }
+    .eta-badge.eta-medium:hover {
+      box-shadow: 0 6px 16px rgba(245, 158, 11, 0.4);
+    }
+
+    /* Slow ETA (>45 min) - Red */
+    .eta-badge.eta-slow {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+      border-color: #b91c1c;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+    .eta-badge.eta-slow:hover {
+      box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+    }
+
+    .eta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: var(--space-4);
+    }
+
+    .eta-card {
+      background: white;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+    }
+
+    .drivers-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .driver-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+    }
+
+    .pre-inline {
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      background: var(--bg-light);
+      padding: 8px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 1000;
+    }
+
+    .modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(900px, calc(100% - 32px));
+      max-height: 80vh;
+      overflow: auto;
+      background: #fff;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      z-index: 1001;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .modal-body {
+      padding: 16px;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      padding: 12px 16px;
+      border-top: 1px solid var(--color-border);
+    }
+
+    .close-btn {
+      background: transparent;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    .close-cta {
+      background: var(--color-primary-600);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+
+    .eta-summary {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+
+    .eta-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--color-heading);
+    }
+
+    .eta-value span { font-size: 16px; font-weight: 600; margin-left: 6px; }
 
     .status-badge {
       display: flex;
@@ -570,6 +786,9 @@ export class RestaurantDetailComponent implements OnInit {
   cartItemsCount$ = this.cartService.cart$.pipe(
     map(cart => cart ? this.cartService.getItemCount() : 0)
   );
+  etaDebug: any | null = null;
+  etaModalOpen = false;
+  etaSummaryMinutes: number | null = null;
 
   ngOnInit() {
     const restaurantId = this.route.snapshot.paramMap.get('id');
@@ -602,11 +821,21 @@ export class RestaurantDetailComponent implements OnInit {
         );
       })
     );
+
+    // Preload ETA summary so the badge shows the dynamic time without opening the modal
+    if (restaurantId) {
+      this.fetchEtaSummary(restaurantId);
+    }
   }
 
   isOpen(restaurant: RestaurantDTO): boolean {
     // Check if restaurant is active first
     if (!restaurant.is_active) {
+      return false;
+    }
+
+    // Check if restaurant is immediately closed (overrides all other checks)
+    if (restaurant.is_immediately_closed) {
       return false;
     }
 
@@ -655,5 +884,48 @@ export class RestaurantDetailComponent implements OnInit {
 
   goBack() {
     this.router.navigate(['/customer']);
+  }
+
+  debugEta(restaurantId: string) {
+    this.restaurantsService.getDeliveryEtaDebug(restaurantId).subscribe({
+      next: (data) => {
+        this.etaDebug = data;
+        console.log('ETA Debug:', data);
+        const minutes = typeof data?.computed_eta_minutes === 'number' ? data.computed_eta_minutes : null;
+        this.etaSummaryMinutes = minutes;
+      },
+      error: (err) => {
+        console.error('ETA Debug error:', err);
+        this.etaDebug = { error: 'Fehler beim Abrufen der ETA-Daten' };
+      }
+    });
+  }
+
+  private fetchEtaSummary(restaurantId: string) {
+    this.restaurantsService.getDeliveryEtaDebug(restaurantId).subscribe({
+      next: (data) => {
+        const minutes = typeof data?.computed_eta_minutes === 'number' ? data.computed_eta_minutes : null;
+        this.etaSummaryMinutes = minutes;
+      },
+      error: () => {
+        this.etaSummaryMinutes = null;
+      }
+    });
+  }
+
+  openEtaModal(restaurantId: string) {
+    this.etaModalOpen = true;
+    this.etaDebug = null;
+    this.debugEta(restaurantId);
+  }
+
+  closeEtaModal() {
+    this.etaModalOpen = false;
+  }
+
+  getEtaStatus(minutes: number): 'fast' | 'medium' | 'slow' {
+    if (minutes <= 25) return 'fast';
+    if (minutes <= 45) return 'medium';
+    return 'slow';
   }
 }

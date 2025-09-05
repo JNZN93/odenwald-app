@@ -412,6 +412,8 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
   currentStats: any = null;
   currentUser: User | null = null;
   isLoadingStats: boolean = false;
+  pendingOrdersCount: number = 0;
+  pendingWholesalerOrdersCount: number = 0;
 
 
   managerMenuItems: ManagerMenuItem[] = [];
@@ -435,6 +437,7 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
     this.setupManagerMenu();
     this.loadCurrentUser();
     this.loadManagedRestaurants();
+    this.loadBadgeCounts();
   }
 
   ngOnDestroy() {
@@ -506,7 +509,49 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
         this.restaurantManagerService.setSelectedRestaurant(selectedRestaurant);
       }
       this.loadRestaurantStats(this.selectedRestaurantId);
+      this.loadBadgeCounts(); // Reload badge counts when restaurant changes
     }
+  }
+
+  private async loadBadgeCounts() {
+    try {
+      // Load pending orders count
+      const ordersResponse = await this.restaurantManagerService.getHttpClient().get(
+        `${this.restaurantManagerService.getApiUrl()}/orders/stats/pending`
+      ).toPromise();
+
+      if (ordersResponse && typeof ordersResponse === 'object' && 'pending_orders_count' in ordersResponse) {
+        this.pendingOrdersCount = ordersResponse.pending_orders_count as number;
+      }
+
+      // Load pending wholesaler orders count
+      const wholesalerResponse = await this.restaurantManagerService.getHttpClient().get(
+        `${this.restaurantManagerService.getApiUrl()}/wholesaler-orders/stats/pending`
+      ).toPromise();
+
+      if (wholesalerResponse && typeof wholesalerResponse === 'object' && 'pending_wholesaler_orders_count' in wholesalerResponse) {
+        this.pendingWholesalerOrdersCount = wholesalerResponse.pending_wholesaler_orders_count as number;
+      }
+
+      // Update menu badges
+      this.updateMenuBadges();
+    } catch (error) {
+      console.error('Error loading badge counts:', error);
+      // Reset counts on error
+      this.pendingOrdersCount = 0;
+      this.pendingWholesalerOrdersCount = 0;
+      this.updateMenuBadges();
+    }
+  }
+
+  private updateMenuBadges() {
+    this.managerMenuItems.forEach(item => {
+      if (item.id === 'orders') {
+        item.badge = this.pendingOrdersCount > 0 ? this.pendingOrdersCount.toString() : undefined;
+      } else if (item.id === 'wholesale') {
+        item.badge = this.pendingWholesalerOrdersCount > 0 ? this.pendingWholesalerOrdersCount.toString() : undefined;
+      }
+    });
   }
 
   getSelectedRestaurantName(): string {
@@ -532,7 +577,8 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
         description: 'Bestellungen verwalten',
         icon: 'orders-icon',
         route: '/restaurant-manager/orders',
-        color: '#f59e0b'
+        color: '#f59e0b',
+        badge: this.pendingOrdersCount > 0 ? this.pendingOrdersCount.toString() : undefined
       },
       {
         id: 'drivers',
@@ -580,7 +626,8 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
         description: 'Zutaten und Waren bestellen',
         icon: 'wholesale-icon',
         route: '/restaurant-manager/wholesale',
-        color: '#10b981'
+        color: '#10b981',
+        badge: this.pendingWholesalerOrdersCount > 0 ? this.pendingWholesalerOrdersCount.toString() : undefined
       }
     ];
   }

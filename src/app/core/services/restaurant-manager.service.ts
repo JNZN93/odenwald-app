@@ -48,6 +48,15 @@ export class RestaurantManagerService {
     }
   }
 
+  // Hilfsmethoden für HTTP-Zugriff
+  getHttpClient(): HttpClient {
+    return this.http;
+  }
+
+  getApiUrl(): string {
+    return environment.apiUrl;
+  }
+
   // Aktuell ausgewähltes Restaurant bekommen
   getSelectedRestaurant(): RestaurantManager | null {
     return this.selectedRestaurantSubject.value;

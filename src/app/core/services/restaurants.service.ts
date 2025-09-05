@@ -241,6 +241,15 @@ export class RestaurantsService {
     );
   }
 
+  toggleImmediateClosure(restaurantId: string): Observable<{ success: boolean }> {
+    return this.http.patch<{ success: boolean }>(`${this.baseUrl}/${restaurantId}/toggle-immediate-closure`, {}).pipe(
+      catchError(error => {
+        console.error('Error toggling restaurant immediate closure status:', error);
+        throw error;
+      })
+    );
+  }
+
   delete(restaurantId: string): Observable<{ success: boolean }> {
     return this.http.delete<{ success: boolean }>(`${this.baseUrl}/${restaurantId}`).pipe(
       catchError(error => {
@@ -302,6 +311,17 @@ export class RestaurantsService {
       map(response => response.restaurant),
       catchError(error => {
         console.error('Error fetching restaurant:', error);
+        throw error;
+      })
+    );
+  }
+
+  // Debug: compute dynamic ETA and return breakdown
+  getDeliveryEtaDebug(restaurantId: string): Observable<any> {
+    const url = `${this.baseUrl}/${restaurantId}/delivery-eta-debug`;
+    return this.http.get(url).pipe(
+      catchError(error => {
+        console.error('Error fetching delivery ETA debug:', error);
         throw error;
       })
     );

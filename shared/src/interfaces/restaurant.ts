@@ -47,6 +47,7 @@ export interface Restaurant {
   rating: number;
   total_reviews: number;
   is_active: boolean;
+  is_immediately_closed: boolean;
   is_verified: boolean;
   owner_name?: string;
   owner_email?: string;

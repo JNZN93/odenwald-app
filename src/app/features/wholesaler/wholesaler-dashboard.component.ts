@@ -49,6 +49,7 @@ interface WholesalerData {
               <a routerLink="orders" routerLinkActive="active" class="nav-link">
                 <i class="fa-solid fa-shopping-cart"></i>
                 <span>Bestellungen</span>
+                <span *ngIf="pendingOrdersCount > 0" class="nav-badge">{{ pendingOrdersCount }}</span>
               </a>
             </li>
             <li>
@@ -207,6 +208,22 @@ interface WholesalerData {
     .nav-link i {
       width: 20px;
       text-align: center;
+    }
+
+    .nav-badge {
+      background: var(--color-danger);
+      color: white;
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-full);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      margin-left: var(--space-2);
+      min-width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
     }
 
     .sidebar-footer {
@@ -379,10 +396,12 @@ export class WholesalerDashboardComponent implements OnInit {
 
   currentUser$ = this.authService.currentUser$;
   wholesalerData: WholesalerData | null = null;
+  pendingOrdersCount: number = 0;
 
   ngOnInit() {
     // Load wholesaler data based on current user
     this.loadWholesalerData();
+    this.loadBadgeCounts();
   }
 
   private loadWholesalerData() {
@@ -418,6 +437,25 @@ export class WholesalerDashboardComponent implements OnInit {
       case 'rejected': return 'Abgelehnt';
       default: return 'Unbekannt';
     }
+  }
+
+  private loadBadgeCounts() {
+    // Load pending orders count for wholesaler
+    this.http.get(`${this.getApiUrl()}/wholesaler-orders/stats/pending-wholesaler`).subscribe({
+      next: (response: any) => {
+        if (response && typeof response === 'object' && 'pending_orders_count' in response) {
+          this.pendingOrdersCount = response.pending_orders_count as number;
+        }
+      },
+      error: (error) => {
+        console.error('Error loading badge counts:', error);
+        this.pendingOrdersCount = 0;
+      }
+    });
+  }
+
+  private getApiUrl(): string {
+    return (this.http as any)._defaultOptions?.baseUrl || 'http://localhost:3000/api/v1';
   }
 
   logout() {

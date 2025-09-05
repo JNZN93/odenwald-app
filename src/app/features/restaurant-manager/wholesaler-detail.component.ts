@@ -291,12 +291,30 @@ interface CartItem {
             <!-- Cart Items -->
             <div class="cart-items" *ngIf="cartItems.length > 0">
               <div class="cart-item" *ngFor="let item of cartItems">
-                <div class="item-info">
-                  <h4>{{ item.product.name }}</h4>
-                  <p>{{ item.wholesaler.name }}</p>
-                  <div class="item-details">
-                    <span>{{ item.quantity }} × €{{ item.unit_price.toFixed(2) }}</span>
-                    <span class="item-total">€{{ item.total_price.toFixed(2) }}</span>
+                <div class="item-main">
+                  <div class="item-info">
+                    <h4>{{ item.product.name }}</h4>
+                    <p>{{ item.wholesaler.name }}</p>
+                    <div class="item-details">
+                      <span>{{ item.quantity }} × €{{ item.unit_price.toFixed(2) }}</span>
+                      <span class="item-total">€{{ item.total_price.toFixed(2) }}</span>
+                    </div>
+                  </div>
+                  <div class="item-image">
+                    <img
+                      *ngIf="item.product.images && item.product.images.length > 0"
+                      [src]="item.product.images[0]"
+                      [alt]="item.product.name"
+                      (error)="onImageError($event)"
+                      loading="lazy"
+                    />
+                    <div class="no-image" *ngIf="!item.product.images || item.product.images.length === 0">
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <circle cx="9" cy="9" r="2"/>
+                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                      </svg>
+                    </div>
                   </div>
                 </div>
                 <div class="item-actions">
@@ -1192,6 +1210,17 @@ interface CartItem {
       border-color: rgba(61, 124, 95, 0.2);
     }
 
+    .item-main {
+      display: flex;
+      flex: 1;
+      gap: var(--space-4);
+      align-items: center;
+    }
+
+    .item-info {
+      flex: 1;
+    }
+
     .item-info h4 {
       margin: 0 0 var(--space-2) 0;
       font-size: var(--text-lg);
@@ -1205,6 +1234,39 @@ interface CartItem {
       font-size: var(--text-sm);
       color: var(--color-muted);
       font-weight: 500;
+    }
+
+    .item-image {
+      flex-shrink: 0;
+      width: 80px;
+      height: 80px;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.8);
+      border: 2px solid rgba(61, 124, 95, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .item-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: var(--radius-md);
+    }
+
+    .no-image {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-muted);
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: var(--radius-md);
+    }
+
+    .no-image svg {
+      opacity: 0.6;
     }
 
     .item-details {
@@ -1916,6 +1978,19 @@ export class WholesalerDetailComponent implements OnInit, OnDestroy {
       }
     } finally {
       this.placingOrder = false;
+    }
+  }
+
+  // Handle image loading errors
+  onImageError(event: Event) {
+    const img = event.target as HTMLImageElement;
+    img.style.display = 'none';
+    const parent = img.parentElement;
+    if (parent) {
+      const noImageDiv = parent.querySelector('.no-image') as HTMLElement;
+      if (noImageDiv) {
+        noImageDiv.style.display = 'flex';
+      }
     }
   }
 }

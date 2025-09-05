@@ -183,6 +183,32 @@ import { Subscription } from 'rxjs';
         <!-- Operating Hours -->
         <div *ngIf="activeTab === 'hours'" class="settings-section">
           <h2>Öffnungszeiten</h2>
+          
+          <!-- Immediate Closure Toggle -->
+          <div class="immediate-closure-section">
+            <div class="closure-toggle-card">
+              <div class="closure-info">
+                <h3>Sofort schließen</h3>
+                <p>Schließt das Restaurant sofort, unabhängig von den Öffnungszeiten. Kunden können keine Bestellungen aufgeben.</p>
+                <p><strong>DEBUG:</strong> isImmediatelyClosed = {{ isImmediatelyClosed }}</p>
+              </div>
+              <div class="closure-toggle">
+                <label class="toggle">
+                  <input 
+                    type="checkbox" 
+                    [(ngModel)]="isImmediatelyClosed" 
+                    (change)="toggleImmediateClosure()"
+                    [disabled]="isLoading"
+                  >
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="toggle-label" [class.active]="isImmediatelyClosed">
+                  {{ isImmediatelyClosed ? 'Geschlossen' : 'Geöffnet' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
           <form (ngSubmit)="saveOperatingHours()" #hoursForm="ngForm">
             <div class="hours-grid">
               <div *ngFor="let day of daysOfWeek; let i = index" class="day-hours">
@@ -649,7 +675,8 @@ import { Subscription } from 'rxjs';
       left: 0;
       right: 0;
       bottom: 0;
-      background: var(--color-muted-300);
+      background: #ccc;
+      border: 2px solid #999;
       border-radius: 24px;
       transition: 0.3s;
     }
@@ -667,7 +694,8 @@ import { Subscription } from 'rxjs';
     }
 
     .toggle input:checked + .toggle-slider {
-      background: var(--color-primary-500);
+      background: #ff6b35;
+      border-color: #e55a2b;
     }
 
     .toggle input:checked + .toggle-slider:before {
@@ -1140,6 +1168,100 @@ import { Subscription } from 'rxjs';
         text-align: center;
       }
     }
+
+    /* Immediate Closure Styles */
+    .immediate-closure-section {
+      margin-bottom: var(--space-8);
+    }
+
+    .closure-toggle-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-6);
+      background: var(--color-warning-100);
+      border: 3px solid var(--color-warning-500);
+      border-radius: var(--radius-lg);
+      transition: all var(--transition);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .closure-toggle-card:hover {
+      border-color: var(--color-warning-300);
+      background: var(--color-warning-100);
+    }
+
+    .closure-info h3 {
+      margin: 0 0 var(--space-2) 0;
+      color: var(--color-warning-800);
+      font-size: var(--text-lg);
+      font-weight: 600;
+    }
+
+    .closure-info p {
+      margin: 0;
+      color: var(--color-warning-700);
+      font-size: var(--text-sm);
+      line-height: 1.5;
+    }
+
+    .closure-toggle {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .toggle-label {
+      font-weight: 600;
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+      transition: color var(--transition);
+    }
+
+    .toggle-label.active {
+      color: var(--color-warning-800);
+    }
+
+    /* Specific styling for immediate closure toggle */
+    .closure-toggle .toggle {
+      width: 60px;
+      height: 30px;
+    }
+    
+    .closure-toggle .toggle-slider {
+      background: #ddd;
+      border: 2px solid #bbb;
+    }
+    
+    .closure-toggle .toggle input:checked + .toggle-slider {
+      background: #ff4444;
+      border-color: #cc0000;
+    }
+    
+    .closure-toggle .toggle-slider:before {
+      height: 22px;
+      width: 22px;
+      left: 2px;
+      bottom: 2px;
+    }
+    
+    .closure-toggle .toggle input:checked + .toggle-slider:before {
+      transform: translateX(30px);
+    }
+
+    /* Responsive for immediate closure */
+    @media (max-width: 768px) {
+      .closure-toggle-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-4);
+      }
+
+      .closure-toggle {
+        align-self: flex-end;
+      }
+    }
   `]
 })
 export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
@@ -1152,6 +1274,7 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
   isLoading: boolean = false;
   currentUser: User | null = null;
   currentRestaurant: RestaurantDTO | null = null;
+  isImmediatelyClosed: boolean = false;
 
   restaurant: any = {
     name: '',
@@ -1291,6 +1414,11 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
         paypal: !!restaurant.payment_methods.paypal
       };
     }
+
+    // Immediate closure status
+    console.log('Restaurant data loaded:', restaurant);
+    console.log('is_immediately_closed:', restaurant.is_immediately_closed);
+    this.isImmediatelyClosed = restaurant.is_immediately_closed || false;
   }
 
   saveGeneralSettings() {
@@ -1357,6 +1485,35 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
       error: (error) => {
         console.error('Error saving operating hours:', error);
         this.toastService.error('Fehler', 'Öffnungszeiten konnten nicht gespeichert werden');
+        this.isLoading = false;
+      }
+    });
+    this.subscriptions.push(sub);
+  }
+
+  toggleImmediateClosure() {
+    if (!this.currentRestaurant) return;
+
+    console.log('Toggling immediate closure for restaurant:', this.currentRestaurant.id);
+    console.log('Current isImmediatelyClosed:', this.isImmediatelyClosed);
+    this.isLoading = true;
+    const sub = this.restaurantsService.toggleImmediateClosure(this.currentRestaurant.id).subscribe({
+      next: (response) => {
+        if (response.success) {
+          // Update the local state
+          this.isImmediatelyClosed = !this.isImmediatelyClosed;
+          this.toastService.success(
+            'Erfolg', 
+            this.isImmediatelyClosed ? 'Restaurant wurde geschlossen' : 'Restaurant wurde geöffnet'
+          );
+        }
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error toggling immediate closure:', error);
+        this.toastService.error('Fehler', 'Status konnte nicht geändert werden');
+        // Revert the toggle state on error
+        this.isImmediatelyClosed = !this.isImmediatelyClosed;
         this.isLoading = false;
       }
     });
