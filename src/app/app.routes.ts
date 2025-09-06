@@ -65,7 +65,7 @@ export const routes: Routes = [
   { path: 'dashboard', loadComponent: () => import('./features/customer/dashboard/customer-dashboard.component').then(m => m.CustomerDashboardComponent), canActivate: [authGuard, roleGuard(['customer'])] },
   { path: 'restaurant/:id', component: RestaurantDetailComponent },
   { path: 'restaurants', component: RestaurantsComponent },
-  { path: 'checkout', loadComponent: () => import('./features/checkout/checkout.component').then(m => m.CheckoutComponent), canActivate: [authGuard, roleGuard(['customer', 'manager'])] },
+  { path: 'checkout', loadComponent: () => import('./features/checkout/checkout.component').then(m => m.CheckoutComponent) },
   { path: 'order-confirmation/:id', loadComponent: () => import('./features/order-confirmation/order-confirmation.component').then(m => m.OrderConfirmationComponent), canActivate: [authGuard, roleGuard(['customer', 'manager'])] },
   { path: 'driver-dashboard', loadComponent: () => import('./features/driver/driver-dashboard.component').then(m => m.DriverDashboardComponent), canActivate: [authGuard, roleGuard(['driver'])] },
   {

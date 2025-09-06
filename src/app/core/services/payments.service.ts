@@ -8,10 +8,11 @@ export class PaymentsService {
   private http = inject(HttpClient);
   private baseUrl = `${environment.apiUrl}/payments`;
 
-  createStripeCheckoutSession(orderId: string, successUrl?: string, cancelUrl?: string): Observable<{ id: string; url?: string }> {
+  createStripeCheckoutSession(orderId: string, successUrl?: string, cancelUrl?: string, customerEmail?: string): Observable<{ id: string; url?: string }> {
     const body: any = { order_id: orderId };
     if (successUrl) body.success_url = successUrl;
     if (cancelUrl) body.cancel_url = cancelUrl;
+    if (customerEmail) body.customer_email = customerEmail;
     return this.http.post<{ id: string; url?: string }>(`${this.baseUrl}/stripe/checkout-session`, body);
   }
 }

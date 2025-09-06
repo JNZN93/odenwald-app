@@ -223,12 +223,13 @@ interface CustomerInfo {
                 </div>
 
                 <div class="form-group">
-                  <label for="customer_phone">Telefonnummer (optional)</label>
+                  <label for="customer_phone">Telefonnummer</label>
                   <input
                     id="customer_phone"
                     type="tel"
                     [(ngModel)]="customerInfo.phone"
                     placeholder="+49 123 4567890"
+                    required
                   >
                 </div>
               </div>
@@ -806,7 +807,8 @@ export class CheckoutComponent implements OnInit {
 
     const customerInfoValid = this.isAuthenticated || (
       !!this.customerInfo.name.trim() &&
-      !!this.customerInfo.email.trim()
+      !!this.customerInfo.email.trim() &&
+      !!this.customerInfo.phone?.trim()
     );
 
     return deliveryValid && customerInfoValid;
@@ -830,11 +832,7 @@ export class CheckoutComponent implements OnInit {
       phone: this.customerInfo.phone?.trim() || undefined
     };
 
-    // Disallow online payments for guests (Stripe requires email ownership). Prompt login.
-    if (!this.isAuthenticated && (this.selectedPaymentMethod === 'card' || this.selectedPaymentMethod === 'paypal')) {
-      alert('Bitte melden Sie sich an, um online zu bezahlen.');
-      return;
-    }
+    // Guests can now use online payments (card/paypal)
 
     this.cartService.createOrder(fullAddress, this.deliveryAddress.instructions, this.selectedPaymentMethod, customerInfo)
       .subscribe({
@@ -846,7 +844,8 @@ export class CheckoutComponent implements OnInit {
             // Create Stripe checkout session and redirect (includes PayPal option)
             const successUrl = window.location.origin + '/order-confirmation/' + orderId;
             const cancelUrl = window.location.origin + '/checkout';
-            this.paymentsService.createStripeCheckoutSession(orderId, successUrl, cancelUrl).subscribe({
+            const customerEmail = this.isAuthenticated ? undefined : this.customerInfo.email;
+            this.paymentsService.createStripeCheckoutSession(orderId, successUrl, cancelUrl, customerEmail).subscribe({
               next: (data) => {
                 if (data.url) {
                   window.location.href = data.url;
@@ -875,18 +874,10 @@ export class CheckoutComponent implements OnInit {
   }
 
   selectCard() {
-    if (!this.isAuthenticated) {
-      alert('Bitte melden Sie sich an, um mit Karte zu bezahlen.');
-      return;
-    }
     this.selectedPaymentMethod = 'card';
   }
 
   selectPayPal() {
-    if (!this.isAuthenticated) {
-      alert('Bitte melden Sie sich an, um mit PayPal zu bezahlen.');
-      return;
-    }
     this.selectedPaymentMethod = 'paypal';
   }
 
