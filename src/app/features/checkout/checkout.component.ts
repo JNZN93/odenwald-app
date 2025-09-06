@@ -173,7 +173,7 @@ interface CustomerInfo {
                 </label>
               </div>
 
-              <div class="payment-method" [class.selected]="selectedPaymentMethod === 'paypal'">
+              <div class="payment-method" [class.selected]="selectedPaymentMethod === 'paypal'" (click)="selectPayPal()">
                 <input
                   type="radio"
                   id="paypal"
@@ -185,7 +185,7 @@ interface CustomerInfo {
                   <i class="fa-brands fa-paypal"></i>
                   <div>
                     <div class="method-name">PayPal</div>
-                    <div class="method-desc">Schnell und sicher zahlen</div>
+                    <div class="method-desc">Schnell und sicher über Stripe zahlen</div>
                   </div>
                 </label>
               </div>
@@ -830,9 +830,9 @@ export class CheckoutComponent implements OnInit {
       phone: this.customerInfo.phone?.trim() || undefined
     };
 
-    // Disallow card payments for guests (Stripe requires email ownership). Prompt login.
-    if (!this.isAuthenticated && this.selectedPaymentMethod === 'card') {
-      alert('Bitte melden Sie sich an, um mit Karte zu bezahlen.');
+    // Disallow online payments for guests (Stripe requires email ownership). Prompt login.
+    if (!this.isAuthenticated && (this.selectedPaymentMethod === 'card' || this.selectedPaymentMethod === 'paypal')) {
+      alert('Bitte melden Sie sich an, um online zu bezahlen.');
       return;
     }
 
@@ -842,8 +842,8 @@ export class CheckoutComponent implements OnInit {
           this.loading = false;
           console.log('Order placed successfully:', response);
           const orderId = response.order.id;
-          if (this.selectedPaymentMethod === 'card') {
-            // Create Stripe checkout session and redirect
+          if (this.selectedPaymentMethod === 'card' || this.selectedPaymentMethod === 'paypal') {
+            // Create Stripe checkout session and redirect (includes PayPal option)
             const successUrl = window.location.origin + '/order-confirmation/' + orderId;
             const cancelUrl = window.location.origin + '/checkout';
             this.paymentsService.createStripeCheckoutSession(orderId, successUrl, cancelUrl).subscribe({
@@ -880,6 +880,14 @@ export class CheckoutComponent implements OnInit {
       return;
     }
     this.selectedPaymentMethod = 'card';
+  }
+
+  selectPayPal() {
+    if (!this.isAuthenticated) {
+      alert('Bitte melden Sie sich an, um mit PayPal zu bezahlen.');
+      return;
+    }
+    this.selectedPaymentMethod = 'paypal';
   }
 
   goBack() {

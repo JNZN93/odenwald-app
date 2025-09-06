@@ -1496,7 +1496,7 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
         `${environment.apiUrl}/drivers/stats`
       ).toPromise();
 
-      this.driverStats = response;
+      this.driverStats = (response as any)?.stats;
     } catch (error: any) {
       console.error('Error loading driver stats:', error);
       if (error.status === 500) {

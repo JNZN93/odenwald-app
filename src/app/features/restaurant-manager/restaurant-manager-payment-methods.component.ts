@@ -80,7 +80,7 @@ interface PaymentMethod {
               </div>
               <div class="detail-item" *ngIf="method.id === 'paypal'">
                 <i class="fa-brands fa-paypal"></i>
-                <span>Schnelle Zahlung über PayPal-Konto</span>
+                <span>PayPal-Zahlung über Stripe (sicher und vertrauenswürdig)</span>
               </div>
             </div>
           </div>
@@ -407,7 +407,7 @@ export class RestaurantManagerPaymentMethodsComponent implements OnInit {
     {
       id: 'paypal',
       label: 'PayPal',
-      description: 'Zahlung über PayPal-Konto',
+      description: 'PayPal-Zahlung über Stripe',
       icon: 'fa-brands fa-paypal',
       enabled: false
     }
