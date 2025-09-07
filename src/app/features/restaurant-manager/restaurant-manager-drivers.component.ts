@@ -219,16 +219,15 @@ export interface Driver {
           </div>
 
           <div class="orders-list" *ngIf="pendingOrders.length > 0; else noOrders">
-            <div class="order-card selectable" *ngFor="let order of pendingOrders">
-              <div class="order-selection">
-                <input
-                  type="checkbox"
-                  [id]="'order-' + order.id"
-                  [checked]="isOrderSelected(order)"
-                  (change)="toggleOrderSelection(order)"
-                  [disabled]="!selectedDriver"
-                />
-                <label [for]="'order-' + order.id" class="checkbox-label"></label>
+            <div
+              class="order-card selectable"
+              *ngFor="let order of pendingOrders"
+              [class.selected]="isOrderSelected(order)"
+              [class.disabled]="!selectedDriver"
+              (click)="toggleOrderSelection(order)"
+            >
+              <div class="order-selection-indicator" *ngIf="isOrderSelected(order)">
+                <i class="fa-solid fa-check"></i>
               </div>
 
               <div class="order-header">
@@ -654,22 +653,22 @@ export interface Driver {
     }
 
     .driver-card.selectable:hover:not(.disabled):not(.selected) {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-md);
-      border-color: var(--color-primary);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(255, 140, 0, 0.08);
+      border-color: #ff8c00;
     }
 
     .driver-card.selectable:hover:not(.disabled).selected {
-      transform: translateY(-2px);
-      box-shadow: 0 0 0 4px var(--color-primary), 0 6px 16px color-mix(in oklab, var(--color-primary) 30%, transparent);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(255, 140, 0, 0.1);
     }
 
     .driver-card.selected {
-      border-color: var(--color-primary);
-      background: color-mix(in oklab, var(--color-primary) 5%, white);
-      box-shadow: 0 0 0 3px var(--color-primary), 0 4px 12px color-mix(in oklab, var(--color-primary) 25%, transparent);
-      border-left: 6px solid var(--color-primary);
-      transform: translateY(-2px);
+      border-color: #ff8c00;
+      background: rgba(255, 140, 0, 0.08);
+      box-shadow: 0 2px 4px rgba(255, 140, 0, 0.1);
+      border-left: 1px solid #ff8c00;
+      transform: translateY(-1px);
     }
 
     .driver-card.disabled {
@@ -688,7 +687,7 @@ export interface Driver {
     }
 
     .driver-card.selected .selection-indicator {
-      color: var(--color-primary);
+      color: #ff8c00;
     }
 
     .driver-card.disabled .selection-indicator {
@@ -702,14 +701,14 @@ export interface Driver {
       display: flex;
       align-items: center;
       gap: var(--space-1);
-      background: var(--color-primary);
+      background: #ff8c00;
       color: white;
       padding: var(--space-1) var(--space-2);
       border-radius: var(--radius-full);
       font-size: var(--text-xs);
       font-weight: 600;
       text-transform: uppercase;
-      box-shadow: 0 2px 8px color-mix(in oklab, var(--color-primary) 40%, transparent);
+      box-shadow: 0 2px 8px rgba(255, 140, 0, 0.4);
       animation: selectionPulse 0.3s ease-out;
       z-index: 3;
     }
@@ -784,10 +783,10 @@ export interface Driver {
       border-radius: 50%;
     }
 
-    .status-dot.available { background: var(--color-success); }
-    .status-dot.on_delivery { background: var(--color-primary); }
-    .status-dot.offline { background: var(--color-muted); }
-    .status-dot.busy { background: var(--color-warning); }
+    .status-dot.available { background: #32cd32; } /* Hellgrün für verfügbar */
+    .status-dot.on_delivery { background: #ff8c00; } /* Orange für unterwegs */
+    .status-dot.offline { background: #6c757d; } /* Grau für offline */
+    .status-dot.busy { background: #ffa500; } /* Hellorange für beschäftigt */
 
     .status-text {
       font-size: var(--text-sm);
@@ -838,34 +837,57 @@ export interface Driver {
 
     .order-card.selectable {
       transition: all var(--transition);
+      cursor: pointer;
+      position: relative;
     }
 
-    .order-card.selectable:hover {
-      border-color: var(--color-primary-300);
+    .order-card.selectable:hover:not(.disabled) {
+      border-color: #ff8c00;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(255, 140, 0, 0.1);
     }
 
-    .order-selection {
+    .order-card.selected {
+      border-color: #ff8c00;
+      background: rgba(255, 140, 0, 0.1);
+      box-shadow: 0 2px 4px rgba(255, 140, 0, 0.1);
+    }
+
+    .order-card.disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      background: var(--color-surface-2);
+    }
+
+    .order-selection-indicator {
       position: absolute;
       top: var(--space-3);
       right: var(--space-3);
+      width: 24px;
+      height: 24px;
+      background: #ff8c00;
+      border-radius: 50%;
       display: flex;
       align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: var(--text-sm);
+      box-shadow: 0 2px 4px rgba(255, 140, 0, 0.3);
+      animation: selectionPulse 0.3s ease-out;
     }
 
-    .order-selection input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      margin: 0;
-      cursor: pointer;
-    }
-
-    .order-selection input[type="checkbox"]:disabled {
-      cursor: not-allowed;
-      opacity: 0.5;
-    }
-
-    .checkbox-label {
-      display: none;
+    @keyframes selectionPulse {
+      0% {
+        transform: scale(0.8);
+        opacity: 0.8;
+      }
+      50% {
+        transform: scale(1.1);
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
     }
 
     .assignment-info {
@@ -873,8 +895,8 @@ export interface Driver {
     }
 
     .info-card {
-      background: color-mix(in oklab, var(--color-primary) 5%, white);
-      border: 1px solid var(--color-primary-200);
+      background: rgba(255, 140, 0, 0.08);
+      border: 1px solid rgba(255, 140, 0, 0.3);
       border-radius: var(--radius-md);
       padding: var(--space-3);
       display: flex;
@@ -883,7 +905,7 @@ export interface Driver {
     }
 
     .info-card i {
-      color: var(--color-primary);
+      color: #ff8c00;
       font-size: var(--text-lg);
     }
 
@@ -1305,13 +1327,13 @@ export interface Driver {
       text-transform: uppercase;
     }
 
-    .order-status.pending { background: var(--color-warning); color: white; }
-    .order-status.confirmed { background: var(--color-info); color: white; }
-    .order-status.preparing { background: var(--color-primary); color: white; }
-    .order-status.ready { background: var(--color-success); color: white; }
-    .order-status.in_progress { background: var(--color-primary); color: white; }
-    .order-status.delivered { background: var(--color-success); color: white; }
-    .order-status.cancelled { background: var(--color-error); color: white; }
+    .order-status.pending { background: #ffa500; color: white; } /* Hellorange für ausstehend */
+    .order-status.confirmed { background: #87ceeb; color: white; } /* Hellblau für bestätigt */
+    .order-status.preparing { background: #ff8c00; color: white; } /* Orange für in Zubereitung */
+    .order-status.ready { background: #ff8c00; color: white; } /* Orange für bereit */
+    .order-status.in_progress { background: #ff8c00; color: white; } /* Orange für unterwegs */
+    .order-status.delivered { background: #228b22; color: white; } /* Dunkelgrün für geliefert */
+    .order-status.cancelled { background: #dc143c; color: white; } /* Rot für storniert */
 
     .order-details {
       display: flex;
@@ -1688,7 +1710,10 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
   }
 
   toggleOrderSelection(order: Order) {
-    if (!this.assignmentSelectedDriver) return;
+    if (!this.assignmentSelectedDriver) {
+      this.toastService.info('Info', 'Bitte wählen Sie zuerst einen Fahrer aus');
+      return;
+    }
 
     const index = this.selectedOrders.findIndex(o => o.id === order.id);
     if (index > -1) {
