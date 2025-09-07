@@ -182,6 +182,10 @@ export class RestaurantsService {
     );
   }
 
+  getNearbyRestaurants(lat: number, lng: number, radius: number = 10): Observable<RestaurantDTO[]> {
+    return this.searchNearby(lat, lng, radius);
+  }
+
   getRestaurantById(restaurantId: string): Observable<RestaurantDTO> {
     return this.http.get<{ restaurant: RestaurantDTO }>(`${this.baseUrl}/${restaurantId}`).pipe(
       map(response => response.restaurant),
@@ -380,6 +384,22 @@ export class RestaurantsService {
       map(response => response.stats),
       catchError(error => {
         console.error('Error fetching restaurant stats:', error);
+        throw error;
+      })
+    );
+  }
+
+  updateRestaurantAddress(
+    restaurantId: string,
+    address: { street: string; postal_code: string; city: string; country: string }
+  ): Observable<RestaurantDTO> {
+    return this.http.put<{ message: string; restaurant: RestaurantDTO }>(
+      `${this.baseUrl}/${restaurantId}/address`,
+      { address }
+    ).pipe(
+      map(response => response.restaurant),
+      catchError(error => {
+        console.error('Error updating restaurant address:', error);
         throw error;
       })
     );

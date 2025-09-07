@@ -4,9 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { RestaurantsService, RestaurantDTO } from '../../core/services/restaurants.service';
 import { AuthService } from '../../core/auth/auth.service';
+import { GeocodingService, GeocodeResult } from '../../core/services/geocoding.service';
 import { ImageFallbackDirective } from '../../core/image-fallback.directive';
-import { Observable, Subscription, combineLatest } from 'rxjs';
-import { map, startWith, debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { Observable, Subscription, combineLatest, BehaviorSubject, of } from 'rxjs';
+import { map, startWith, debounceTime, distinctUntilChanged, catchError } from 'rxjs/operators';
 
 @Component({
   selector: 'app-customer-restaurants',
@@ -65,8 +66,69 @@ import { map, startWith, debounceTime, distinctUntilChanged } from 'rxjs/operato
             }
           </style>
 
+          <!-- Address Input Section -->
+          <div class="address-section" *ngIf="!userCoordinates">
+            <div class="address-container">
+              <h2 class="address-title">Wo möchtest du bestellen?</h2>
+              <div class="address-input-wrapper">
+                <i class="fa-solid fa-location-dot address-icon"></i>
+                <input
+                  type="text"
+                  class="address-input"
+                  placeholder="Gib deine Lieferadresse ein (z.B. Hauptstr. 123, 10115 Berlin)"
+                  [(ngModel)]="deliveryAddress"
+                  (keydown.enter)="onAddressSubmit()"
+                  [disabled]="isGeocoding"
+                  autofocus
+                >
+                <button
+                  class="address-submit-btn"
+                  (click)="onAddressSubmit()"
+                  [disabled]="!deliveryAddress || isGeocoding"
+                  type="button"
+                >
+                  <i class="fa-solid fa-magnifying-glass" *ngIf="!isGeocoding"></i>
+                  <i class="fa-solid fa-spinner fa-spin" *ngIf="isGeocoding"></i>
+                  Restaurants suchen
+                </button>
+              </div>
+
+              <div class="address-examples">
+                <p class="examples-title">Beispiele:</p>
+                <div class="examples-list">
+                  <button class="example-btn" (click)="setExampleAddress('Hauptstr. 123, 10115 Berlin')" type="button">
+                    Hauptstr. 123, Berlin
+                  </button>
+                  <button class="example-btn" (click)="setExampleAddress('Münchner Str. 45, 60329 Frankfurt')" type="button">
+                    Münchner Str. 45, Frankfurt
+                  </button>
+                  <button class="example-btn" (click)="setExampleAddress('Königstr. 78, 70173 Stuttgart')" type="button">
+                    Königstr. 78, Stuttgart
+                  </button>
+                </div>
+              </div>
+
+              <div class="address-hint">
+                <i class="fa-solid fa-info-circle"></i>
+                Nach der Adresseingabe zeigen wir dir alle Restaurants in deiner Nähe an
+              </div>
+            </div>
+          </div>
+
+          <!-- Current Location Bar -->
+          <div class="current-location-bar" *ngIf="userCoordinates">
+            <div class="location-info">
+              <i class="fa-solid fa-map-marker-alt location-icon"></i>
+              <span class="location-text">Lieferung nach: {{ formattedAddress || deliveryAddress }}</span>
+            </div>
+            <button class="change-address-btn" (click)="clearAddress()" type="button">
+              <i class="fa-solid fa-edit"></i>
+              Adresse ändern
+            </button>
+          </div>
+
           <!-- Search Section -->
-          <div class="search-section">
+          <div class="search-section" *ngIf="userCoordinates">
             <div class="search-container">
               <div class="search-input-wrapper">
                 <i class="fa-solid fa-magnifying-glass search-icon"></i>
@@ -78,7 +140,7 @@ import { map, startWith, debounceTime, distinctUntilChanged } from 'rxjs/operato
                   (input)="onSearchChange($event)"
                 >
               </div>
-              
+
               <div class="filter-controls">
                 <div class="filter-group">
                   <label class="filter-label">Küche</label>
@@ -89,7 +151,7 @@ import { map, startWith, debounceTime, distinctUntilChanged } from 'rxjs/operato
                     <option value="asian">Asiatische Küche</option>
                   </select>
                 </div>
-                
+
                 <div class="filter-group">
                   <label class="filter-label">Lieferzeit</label>
                   <select class="filter-select" [(ngModel)]="deliveryTimeFilter" (change)="onFilterChange()">
@@ -99,7 +161,7 @@ import { map, startWith, debounceTime, distinctUntilChanged } from 'rxjs/operato
                     <option value="60">Bis 60 Min</option>
                   </select>
                 </div>
-                
+
                 <div class="filter-group">
                   <label class="filter-label">Bewertung</label>
                   <select class="filter-select" [(ngModel)]="ratingFilter" (change)="onFilterChange()">
@@ -115,10 +177,11 @@ import { map, startWith, debounceTime, distinctUntilChanged } from 'rxjs/operato
       </div>
 
       <!-- Results Section -->
-      <div class="results-section">
+      <div class="results-section" *ngIf="userCoordinates">
         <div class="container">
           <div class="results-header">
             <h2 class="results-title">Restaurants in deiner Nähe</h2>
+            <p class="results-subtitle">Zeige Restaurants im {{ searchRadius }}km Radius um deine Adresse</p>
           </div>
           
           <ng-container *ngIf="restaurants$ | async as restaurants; else loading">
@@ -264,7 +327,15 @@ import { map, startWith, debounceTime, distinctUntilChanged } from 'rxjs/operato
 export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
   private restaurantsService = inject(RestaurantsService);
   private authService = inject(AuthService);
+  private geocodingService = inject(GeocodingService);
   private router = inject(Router);
+
+  // Address and location properties
+  deliveryAddress = '';
+  userCoordinates: GeocodeResult | null = null;
+  formattedAddress = '';
+  isGeocoding = false;
+  searchRadius = 10; // km
 
   // Search and filter properties
   searchTerm = '';
@@ -272,14 +343,9 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
   deliveryTimeFilter = '';
   ratingFilter = '';
 
-  // All restaurants (only verified ones)
-  private allRestaurants$: Observable<RestaurantDTO[]> = this.restaurantsService.listWithFilters({
-    is_verified: true,
-    is_active: true
-  });
-
-  // Filtered restaurants (will be set up in ngOnInit for reactivity)
-  restaurants$!: Observable<RestaurantDTO[]>;
+  // Restaurants based on location
+  private restaurantsSubject = new BehaviorSubject<RestaurantDTO[]>([]);
+  restaurants$ = this.restaurantsSubject.asObservable();
 
   isLoggedIn$ = this.authService.currentUser$.pipe(
     map(user => !!user)
@@ -290,10 +356,8 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
   ngOnInit() {
     console.log('CustomerRestaurantsComponent: Initialized');
 
-    // Set up initial restaurants observable
-    this.restaurants$ = this.allRestaurants$.pipe(
-      map(restaurants => this.filterRestaurants(restaurants))
-    );
+    // Start with empty restaurants list (user needs to enter address first)
+    this.restaurantsSubject.next([]);
 
     // Debug: Subscribe to restaurants observable
     const restaurantsSub = this.restaurants$.subscribe({
@@ -328,6 +392,61 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
     this.router.navigate(['/dashboard']);
   }
 
+  onAddressSubmit() {
+    if (!this.deliveryAddress.trim()) return;
+
+    this.isGeocoding = true;
+
+    this.geocodingService.geocodeAddress(this.deliveryAddress)
+      .pipe(
+        catchError(error => {
+          console.error('Geocoding error:', error);
+          alert('Adresse konnte nicht gefunden werden. Bitte überprüfe deine Eingabe.');
+          return of(null);
+        })
+      )
+      .subscribe(result => {
+        this.isGeocoding = false;
+
+        if (result) {
+          this.userCoordinates = result;
+          this.formattedAddress = result.formattedAddress || this.deliveryAddress;
+          this.loadNearbyRestaurants();
+        }
+      });
+  }
+
+  clearAddress() {
+    this.deliveryAddress = '';
+    this.userCoordinates = null;
+    this.formattedAddress = '';
+    this.restaurantsSubject.next([]);
+  }
+
+  setExampleAddress(address: string) {
+    this.deliveryAddress = address;
+    // Automatisch suchen nach Klick auf Beispiel für bessere UX
+    setTimeout(() => this.onAddressSubmit(), 100);
+  }
+
+  private loadNearbyRestaurants() {
+    if (!this.userCoordinates) return;
+
+    this.restaurantsService.getNearbyRestaurants(
+      this.userCoordinates.latitude,
+      this.userCoordinates.longitude,
+      10 // 10km radius
+    ).pipe(
+      map(restaurants => this.filterRestaurants(restaurants)),
+      catchError(error => {
+        console.error('Error loading nearby restaurants:', error);
+        return of([]);
+      })
+    ).subscribe(restaurants => {
+      this.restaurantsSubject.next(restaurants);
+    });
+  }
+
   onSearchChange(event: any) {
     this.searchTerm = event.target.value;
     this.triggerFilterUpdate();
@@ -338,10 +457,10 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
   }
 
   private triggerFilterUpdate() {
-    // Create a new observable that will re-emit with current filter values
-    this.restaurants$ = this.allRestaurants$.pipe(
-      map(restaurants => this.filterRestaurants(restaurants))
-    );
+    if (!this.userCoordinates) return;
+
+    // Reload restaurants and reapply filters
+    this.loadNearbyRestaurants();
   }
 
   private filterRestaurants(restaurants: RestaurantDTO[]): RestaurantDTO[] {

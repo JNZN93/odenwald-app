@@ -4,6 +4,236 @@
   overflow-x: hidden;
 }
 
+/* Address Section */
+.address-section {
+  padding: var(--space-8) 0;
+  background: var(--color-gray-50);
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+.address-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 var(--space-6);
+}
+
+.address-title {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--color-gray-900);
+  margin-bottom: var(--space-4);
+  text-align: center;
+}
+
+.address-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 2px solid var(--color-gray-300);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2);
+  transition: border-color var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+
+.address-input-wrapper:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.address-icon {
+  color: var(--color-gray-400);
+  margin: 0 var(--space-3);
+  font-size: var(--text-lg);
+}
+
+.address-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: var(--space-3) 0;
+  font-size: var(--text-base);
+  color: #000000 !important; /* Schwarze Schrift */
+  background: transparent;
+}
+
+.address-input::placeholder {
+  color: var(--color-gray-500);
+}
+
+.address-input:disabled {
+  background: var(--color-gray-50);
+  color: var(--color-gray-400);
+  cursor: not-allowed;
+}
+
+.address-submit-btn {
+  background: #4aa96c !important; /* Grüne Design-Farbe */
+  color: white !important;
+  border: none !important;
+  border-radius: 6px !important;
+  padding: 12px 16px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: background-color 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  white-space: nowrap !important;
+}
+
+.address-submit-btn:hover:not(:disabled) {
+  background: #3d8b57 !important; /* Dunkleres Grün beim Hover */
+}
+
+.address-submit-btn:disabled {
+  background: #D1D5DB !important; /* Grau wenn disabled */
+  cursor: not-allowed !important;
+  opacity: 0.6 !important;
+}
+
+.address-hint {
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  background: var(--color-blue-50);
+  border: 1px solid var(--color-blue-200);
+  border-radius: var(--radius-md);
+  color: var(--color-blue-800);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.current-location {
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  background: var(--color-green-50);
+  border: 1px solid var(--color-green-200);
+  border-radius: var(--radius-md);
+  color: var(--color-green-800);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.change-address-btn {
+  background: none;
+  border: 1px solid var(--color-green-300);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  color: var(--color-green-700);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.change-address-btn:hover {
+  background: var(--color-green-100);
+  border-color: var(--color-green-400);
+}
+
+/* Address Examples */
+.address-examples {
+  margin-top: var(--space-6);
+  text-align: center;
+}
+
+.examples-title {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-gray-600);
+  margin-bottom: var(--space-3);
+}
+
+.examples-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.example-btn {
+  background: var(--color-gray-100);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-gray-700);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.example-btn:hover {
+  background: var(--color-primary-50);
+  border-color: var(--color-primary-300);
+  color: var(--color-primary-700);
+}
+
+/* Current Location Bar */
+.current-location-bar {
+  background: var(--color-green-50);
+  border: 1px solid var(--color-green-200);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-6);
+  margin: var(--space-6) 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-sm);
+}
+
+.location-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.location-icon {
+  color: var(--color-green-600);
+  font-size: var(--text-lg);
+}
+
+.location-text {
+  font-weight: 600;
+  color: var(--color-green-800);
+  font-size: var(--text-base);
+}
+
+.current-location-bar .change-address-btn {
+  background: var(--color-green-100);
+  border: 1px solid var(--color-green-300);
+  color: var(--color-green-700);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  transition: all var(--transition);
+}
+
+.current-location-bar .change-address-btn:hover {
+  background: var(--color-green-200);
+  border-color: var(--color-green-400);
+}
+
+/* Results Subtitle */
+.results-subtitle {
+  font-size: var(--text-sm);
+  color: var(--color-gray-600);
+  margin-top: var(--space-2);
+  font-weight: 400;
+}
+
 /* Hero Header */
 .hero-header {
   background: var(--gradient-primary);
@@ -18,8 +248,8 @@
   box-shadow: var(--shadow-lg);
 }
 
-/* Ensure all text in hero header is white, but exclude search input */
-.hero-header *:not(.search-input):not(.search-input-wrapper):not(.search-input-wrapper *) {
+/* Ensure all text in hero header is white, but exclude search input and address input */
+.hero-header *:not(.search-input):not(.search-input-wrapper):not(.search-input-wrapper *):not(.address-input):not(.address-input-wrapper):not(.address-input-wrapper *) {
   color: white !important;
 }
 

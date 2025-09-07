@@ -163,6 +163,27 @@ import { Subscription } from 'rxjs';
                 <label for="restaurantCuisine">Küche/Typ</label>
                 <input id="restaurantCuisine" type="text" [(ngModel)]="restaurant.cuisine_type" name="cuisineType">
               </div>
+
+              <!-- Address Fields -->
+              <div class="form-group">
+                <label for="addressStreet">Straße und Hausnummer</label>
+                <input id="addressStreet" type="text" [(ngModel)]="restaurant.address_street" name="addressStreet">
+              </div>
+
+              <div class="form-group">
+                <label for="addressPostalCode">PLZ</label>
+                <input id="addressPostalCode" type="text" [(ngModel)]="restaurant.address_postal_code" name="addressPostalCode">
+              </div>
+
+              <div class="form-group">
+                <label for="addressCity">Stadt</label>
+                <input id="addressCity" type="text" [(ngModel)]="restaurant.address_city" name="addressCity">
+              </div>
+
+              <div class="form-group">
+                <label for="addressCountry">Land</label>
+                <input id="addressCountry" type="text" [(ngModel)]="restaurant.address_country" name="addressCountry">
+              </div>
             </div>
 
             <div class="form-group">
@@ -175,6 +196,10 @@ import { Subscription } from 'rxjs';
                 <i class="fa-solid fa-spinner fa-spin" *ngIf="isLoading"></i>
                 <i class="fa-solid fa-save" *ngIf="!isLoading"></i>
                 {{ isLoading ? 'Wird gespeichert...' : 'Speichern' }}
+              </button>
+              <button type="button" class="btn-secondary" (click)="saveAddressSettings()" [disabled]="isLoading">
+                <i class="fa-solid fa-location-arrow" *ngIf="!isLoading"></i>
+                Adresse speichern
               </button>
             </div>
           </form>
@@ -1281,7 +1306,11 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
     email: '',
     phone: '',
     description: '',
-    cuisine_type: ''
+    cuisine_type: '',
+    address_street: '',
+    address_postal_code: '',
+    address_city: '',
+    address_country: ''
   };
 
   settingsTabs = [
@@ -1381,7 +1410,11 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
       email: restaurant.contact_info?.email || '',
       phone: restaurant.contact_info?.phone || '',
       description: restaurant.description || '',
-      cuisine_type: restaurant.cuisine_type
+      cuisine_type: restaurant.cuisine_type,
+      address_street: restaurant.address?.street || '',
+      address_postal_code: restaurant.address?.postal_code || '',
+      address_city: restaurant.address?.city || '',
+      address_country: restaurant.address?.country || ''
     };
 
     // Operating hours
@@ -1444,6 +1477,32 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
       error: (error) => {
         console.error('Error saving general settings:', error);
         this.toastService.error('Fehler', 'Allgemeine Einstellungen konnten nicht gespeichert werden');
+        this.isLoading = false;
+      }
+    });
+    this.subscriptions.push(sub);
+  }
+
+  saveAddressSettings() {
+    if (!this.currentRestaurant) return;
+
+    this.isLoading = true;
+    const address = {
+      street: this.restaurant.address_street,
+      postal_code: this.restaurant.address_postal_code,
+      city: this.restaurant.address_city,
+      country: this.restaurant.address_country
+    };
+
+    const sub = this.restaurantsService.updateRestaurantAddress(this.currentRestaurant.id, address).subscribe({
+      next: (updatedRestaurant) => {
+        this.currentRestaurant = updatedRestaurant;
+        this.toastService.success('Erfolg', 'Adresse wurde gespeichert');
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error saving address:', error);
+        this.toastService.error('Fehler', 'Adresse konnte nicht gespeichert werden');
         this.isLoading = false;
       }
     });
