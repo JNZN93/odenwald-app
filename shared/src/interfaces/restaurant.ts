@@ -33,6 +33,11 @@ export interface Restaurant {
     delivery_fee: number;
     estimated_delivery_time_minutes: number;
     free_delivery_threshold?: number;
+    excluded_areas?: Array<{
+      postal_code: string;
+      sub_area: string;
+      reason?: string;
+    }>;
   };
   images: {
     logo?: string;

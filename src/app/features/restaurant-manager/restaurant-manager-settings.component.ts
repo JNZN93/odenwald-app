@@ -297,6 +297,31 @@ import { Subscription } from 'rxjs';
               </div>
             </div>
 
+            <!-- Excluded delivery areas (postal code + sub-area) -->
+            <div class="form-group">
+              <label>Ausgeschlossene Bereiche (PLZ + Ortsteil)</label>
+              <div *ngFor="let area of deliverySettings.excludedAreas; let i = index" class="excluded-area-row">
+                <input
+                  type="text"
+                  placeholder="PLZ"
+                  [(ngModel)]="deliverySettings.excludedAreas[i].postal_code"
+                  [name]="'excluded_postal_' + i"
+                >
+                <input
+                  type="text"
+                  placeholder="Ortsteil"
+                  [(ngModel)]="deliverySettings.excludedAreas[i].sub_area"
+                  [name]="'excluded_subarea_' + i"
+                >
+                <button type="button" class="btn-secondary" (click)="removeExcludedArea(i)">Entfernen</button>
+              </div>
+              <button type="button" class="btn-primary" (click)="addExcludedArea()">
+                <i class="fa-solid fa-plus"></i>
+                Bereich hinzufügen
+              </button>
+              <p class="upload-info">Beispiel: PLZ 64711, Ortsteil Bullau</p>
+            </div>
+
             <div class="form-group">
               <label class="checkbox-label">
                 <input type="checkbox" [(ngModel)]="deliverySettings.isActive" name="isActive">
@@ -313,6 +338,20 @@ import { Subscription } from 'rxjs';
               </button>
             </div>
           </form>
+
+          <!-- Display current excluded areas -->
+          <div *ngIf="hasExcludedAreas()" class="current-exclusions">
+            <h3>Aktuell ausgeschlossene Bereiche</h3>
+            <div class="exclusions-list">
+              <div *ngFor="let area of getExcludedAreas()" class="exclusion-item">
+                <div class="exclusion-info">
+                  <strong>{{ area.sub_area }}</strong> in {{ area.postal_code }}
+                  <span *ngIf="area.reason" class="exclusion-reason">({{ area.reason }})</span>
+                </div>
+              </div>
+            </div>
+            <p class="info-note">Diese Bereiche werden bei der Restaurant-Suche für Kunden nicht angezeigt.</p>
+          </div>
         </div>
 
         <!-- Notifications -->
@@ -1275,6 +1314,76 @@ import { Subscription } from 'rxjs';
       transform: translateX(30px);
     }
 
+    /* Excluded areas styles */
+    .excluded-area-row {
+      display: flex;
+      gap: var(--space-3);
+      align-items: center;
+      margin-bottom: var(--space-3);
+    }
+
+    .excluded-area-row input {
+      flex: 1;
+      padding: var(--space-2) var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+    }
+
+    .excluded-area-row input:first-child {
+      flex: 0 0 100px;
+    }
+
+    .current-exclusions {
+      margin-top: var(--space-6);
+      padding: var(--space-4);
+      background: var(--color-info-50);
+      border: 1px solid var(--color-info-200);
+      border-radius: var(--radius-lg);
+    }
+
+    .current-exclusions h3 {
+      margin: 0 0 var(--space-4) 0;
+      color: var(--color-info-800);
+      font-size: var(--text-lg);
+      font-weight: 600;
+    }
+
+    .exclusions-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+    }
+
+    .exclusion-item {
+      padding: var(--space-3);
+      background: white;
+      border: 1px solid var(--color-info-300);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .exclusion-info {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      color: var(--color-text);
+      font-size: var(--text-sm);
+    }
+
+    .exclusion-reason {
+      color: var(--color-muted);
+      font-style: italic;
+    }
+
+    .info-note {
+      margin: 0;
+      color: var(--color-info-700);
+      font-size: var(--text-sm);
+      font-style: italic;
+    }
+
     /* Responsive for immediate closure */
     @media (max-width: 768px) {
       .closure-toggle-card {
@@ -1285,6 +1394,20 @@ import { Subscription } from 'rxjs';
 
       .closure-toggle {
         align-self: flex-end;
+      }
+
+      .excluded-area-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-2);
+      }
+
+      .excluded-area-row input {
+        flex: none;
+      }
+
+      .excluded-area-row input:first-child {
+        flex: 1;
       }
     }
   `]
@@ -1345,7 +1468,8 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
     deliveryFee: 2.50,
     deliveryRadius: 5.0,
     estimatedDeliveryTime: 30,
-    isActive: true
+    isActive: true,
+    excludedAreas: [] as Array<{ postal_code: string; sub_area: string; reason?: string }>
   };
 
   notificationSettings = {
@@ -1435,7 +1559,8 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
         deliveryFee: restaurant.delivery_info.delivery_fee || 2.50,
         deliveryRadius: restaurant.delivery_info.delivery_radius_km || 5.0,
         estimatedDeliveryTime: restaurant.delivery_info.estimated_delivery_time_minutes || 30,
-        isActive: true // This would need to be stored separately
+        isActive: true, // This would need to be stored separately
+        excludedAreas: (restaurant.delivery_info as any).excluded_areas || []
       };
     }
 
@@ -1588,13 +1713,16 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
         minimum_order_amount: this.deliverySettings.minOrderAmount,
         delivery_fee: this.deliverySettings.deliveryFee,
         delivery_radius_km: this.deliverySettings.deliveryRadius,
-        estimated_delivery_time_minutes: this.deliverySettings.estimatedDeliveryTime
+        estimated_delivery_time_minutes: this.deliverySettings.estimatedDeliveryTime,
+        excluded_areas: (this.deliverySettings.excludedAreas || []).filter(a => a.postal_code && a.sub_area)
       }
     };
 
     const sub = this.restaurantsService.updateRestaurant(this.currentRestaurant.id, updateData).subscribe({
       next: (updatedRestaurant) => {
         this.currentRestaurant = updatedRestaurant;
+        // Update the form data to reflect the saved changes
+        this.populateFormData(updatedRestaurant);
         this.toastService.success('Erfolg', 'Liefer-Einstellungen wurden gespeichert');
         this.isLoading = false;
       },
@@ -1605,6 +1733,23 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
       }
     });
     this.subscriptions.push(sub);
+  }
+
+  addExcludedArea() {
+    this.deliverySettings.excludedAreas.push({ postal_code: '', sub_area: '' });
+  }
+
+  removeExcludedArea(index: number) {
+    this.deliverySettings.excludedAreas.splice(index, 1);
+  }
+
+  hasExcludedAreas(): boolean {
+    return !!(this.currentRestaurant?.delivery_info &&
+              (this.currentRestaurant.delivery_info as any).excluded_areas?.length > 0);
+  }
+
+  getExcludedAreas(): Array<{ postal_code: string; sub_area: string; reason?: string }> {
+    return (this.currentRestaurant?.delivery_info as any)?.excluded_areas || [];
   }
 
   saveNotificationSettings() {
