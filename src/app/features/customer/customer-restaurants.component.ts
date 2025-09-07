@@ -7,6 +7,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { GeocodingService, GeocodeResult } from '../../core/services/geocoding.service';
 import { ImageFallbackDirective } from '../../core/image-fallback.directive';
 import { Observable, Subscription, combineLatest, BehaviorSubject, of } from 'rxjs';
+import { from } from 'rxjs';
 import { map, startWith, debounceTime, distinctUntilChanged, catchError } from 'rxjs/operators';
 
 @Component({
@@ -96,6 +97,11 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
               <div class="address-examples">
                 <p class="examples-title">Beispiele:</p>
                 <div class="examples-list">
+                  <button class="example-btn current-location-btn" (click)="useCurrentLocation()" [disabled]="isGettingLocation" type="button">
+                    <i class="fa-solid fa-location-crosshairs" *ngIf="!isGettingLocation"></i>
+                    <i class="fa-solid fa-spinner fa-spin" *ngIf="isGettingLocation"></i>
+                    {{ isGettingLocation ? 'Standort wird ermittelt...' : 'Meinen aktuellen Standort verwenden' }}
+                  </button>
                   <button class="example-btn" (click)="setExampleAddress('Hauptstr. 123, 10115 Berlin')" type="button">
                     Hauptstr. 123, Berlin
                   </button>
@@ -126,6 +132,7 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
               Adresse ändern
             </button>
           </div>
+
 
           <!-- Search Section - Vereinfacht für Standort-Suche -->
           <div class="search-section" *ngIf="userCoordinates">
@@ -298,6 +305,7 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
   userCoordinates: GeocodeResult | null = null;
   formattedAddress = '';
   isGeocoding = false;
+  isGettingLocation = false;
   searchRadius = 40; // km - Erhöht für bessere Abdeckung im Odenwald
 
   // Search and filter properties - vereinfacht für Standort-basierte Suche
@@ -402,6 +410,50 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
     setTimeout(() => this.onAddressSubmit(), 100);
   }
 
+  useCurrentLocation() {
+    this.isGettingLocation = true;
+    console.log('🎯 Getting current location...');
+
+    this.geocodingService.getCurrentLocation()
+      .pipe(
+        catchError(error => {
+          console.error('Location error:', error);
+          alert(error.message || 'Standort konnte nicht ermittelt werden. Bitte überprüfe deine Browser-Einstellungen.');
+          return of(null);
+        })
+      )
+      .subscribe(result => {
+        this.isGettingLocation = false;
+
+        if (result) {
+          console.log('📍 Current location result:', result);
+          this.userCoordinates = result;
+          this.formattedAddress = result.formattedAddress || 'Mein aktueller Standort';
+          this.deliveryAddress = this.formattedAddress;
+
+          // Versuche reverse geocoding für genauere Adresse
+          this.geocodingService.reverseGeocode(result.latitude, result.longitude)
+            .pipe(
+              catchError(error => {
+                console.log('Reverse geocoding failed, using default address');
+                return of(result);
+              })
+            )
+            .subscribe(reverseResult => {
+              if (reverseResult && reverseResult.formattedAddress) {
+                this.userCoordinates = reverseResult;
+                this.formattedAddress = reverseResult.formattedAddress;
+                this.deliveryAddress = this.formattedAddress;
+                console.log('🏙️ Reverse geocoding successful:', reverseResult);
+              }
+              this.loadNearbyRestaurants();
+            });
+        } else {
+          console.error('❌ No location result');
+        }
+      });
+  }
+
   private loadNearbyRestaurants() {
     if (!this.userCoordinates) return;
 
@@ -463,6 +515,7 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
     console.log('✅ All restaurants shown (no additional filtering):', restaurants.length);
     return restaurants;
   }
+
 }
 
 

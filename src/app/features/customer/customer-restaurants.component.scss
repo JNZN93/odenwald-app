@@ -197,6 +197,55 @@
   color: var(--color-primary-700);
 }
 
+.current-location-btn {
+  background: linear-gradient(135deg, var(--color-green-100) 0%, var(--color-green-50) 100%) !important;
+  border: 2px solid var(--color-green-400) !important;
+  color: var(--color-green-800) !important;
+  font-weight: 600 !important;
+  position: relative;
+  box-shadow: 0 3px 12px rgba(34, 197, 94, 0.25), 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: subtlePulse 2s ease-in-out infinite;
+}
+
+.current-location-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--color-green-200) 0%, var(--color-green-100) 100%) !important;
+  border-color: var(--color-green-500) !important;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(34, 197, 94, 0.35), 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+@keyframes subtlePulse {
+  0%, 100% {
+    box-shadow: 0 3px 12px rgba(34, 197, 94, 0.25), 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  50% {
+    box-shadow: 0 4px 14px rgba(34, 197, 94, 0.3), 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.current-location-btn:disabled {
+  background: var(--color-gray-100) !important;
+  border-color: var(--color-gray-300) !important;
+  color: var(--color-gray-500) !important;
+  cursor: not-allowed !important;
+  opacity: 0.7 !important;
+}
+
+.current-location-btn i {
+  color: var(--color-green-600) !important;
+  font-size: 1.1em !important;
+  margin-right: 2px !important;
+}
+
+/* Mobile Optimierung für den Standort-Button */
+@media (max-width: 768px) {
+  .current-location-btn {
+    width: 100% !important;
+    margin-bottom: var(--space-2) !important;
+  }
+}
+
 /* Current Location Bar */
 .current-location-bar {
   background: var(--color-green-50);
@@ -803,3 +852,7 @@
     gap: var(--space-10);
   }
 }
+
+
+
+
