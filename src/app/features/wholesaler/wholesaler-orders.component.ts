@@ -366,7 +366,8 @@ interface WholesalerOrder {
 
     .btn-warning {
       background: var(--color-warning);
-      color: var(--color-warning);
+      color: white;
+      border: 1px solid var(--color-warning);
     }
 
     .btn-info {

@@ -3,6 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
+// Declare global gapi for Google Sign In
+declare global {
+  interface Window {
+    gapi: any;
+  }
+}
+
 export interface User {
   id: string;
   name: string;
@@ -29,6 +36,11 @@ export interface AuthResponse {
   message: string;
   user: User;
   token: string;
+}
+
+export interface GoogleSignInResponse {
+  credential: string;
+  select_by: string;
 }
 
 @Injectable({
@@ -108,6 +120,79 @@ export class AuthService {
     return this.http.post<{ message: string }>(`${environment.apiUrl}/auth/forgot-password`, { email });
   }
 
+  // Google Sign In methods
+  initiateGoogleSignIn(): void {
+    // Store current URL for return after auth
+    localStorage.setItem('returnUrl', window.location.pathname);
+    // Redirect to backend Google OAuth endpoint
+    window.location.href = `${environment.apiUrl}/auth/google`;
+  }
+
+  // Check for Google OAuth callback when page loads
+  checkForGoogleCallback(): Observable<AuthResponse | null> {
+    return new Observable(observer => {
+      // Check if we have a code parameter in URL (Google OAuth callback)
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+
+      if (code && state === 'google_oauth') {
+        // This is a Google OAuth callback - exchange code for tokens
+        this.http.get<AuthResponse>(`${environment.apiUrl}/auth/google/callback?code=${code}`)
+          .subscribe({
+            next: (response) => {
+              this.handleAuthSuccess(response);
+              observer.next(response);
+              observer.complete();
+            },
+            error: (error) => {
+              console.error('Google callback error:', error);
+              observer.next(null);
+              observer.complete();
+            }
+          });
+      } else {
+        observer.next(null);
+        observer.complete();
+      }
+    });
+  }
+
+  handleGoogleCallback(code: string): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${environment.apiUrl}/auth/google/callback`, { code })
+      .pipe(
+        tap(response => this.handleAuthSuccess(response))
+      );
+  }
+
+  // Method to check if Google Sign In is available
+  isGoogleSignInAvailable(): boolean {
+    return typeof window !== 'undefined' && !!window.gapi;
+  }
+
+  private navigateAfterLogin(user: User): void {
+    let targetRoute = '/customer'; // Default route
+
+    if (user.role === 'app_admin' || user.role === 'admin') {
+      targetRoute = '/admin';
+    } else if (user.role === 'manager') {
+      targetRoute = '/restaurant-manager';
+    } else if (user.role === 'wholesaler') {
+      targetRoute = '/wholesaler';
+    } else if (user.role === 'driver') {
+      targetRoute = '/driver-dashboard';
+    }
+
+    // Check for stored return URL
+    const returnUrl = localStorage.getItem('returnUrl');
+    if (returnUrl && !returnUrl.includes('/auth/login')) {
+      localStorage.removeItem('returnUrl');
+      window.location.href = returnUrl;
+    } else {
+      window.location.href = targetRoute;
+    }
+  }
+
   getToken(): string | null {
     return localStorage.getItem('auth_token');
   }
@@ -128,7 +213,7 @@ export class AuthService {
     return user ? roles.includes(user.role) : false;
   }
 
-  private handleAuthSuccess(response: AuthResponse): void {
+  handleAuthSuccess(response: AuthResponse): void {
     console.log('AuthService: handling auth success:', response);
     localStorage.setItem('auth_token', response.token);
     localStorage.setItem('current_user', JSON.stringify(response.user));

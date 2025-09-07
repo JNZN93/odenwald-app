@@ -33,6 +33,31 @@ interface MenuCategoriesResponse {
   categories: MenuCategory[];
 }
 
+interface VariantOptionDTO {
+  id: string;
+  variant_group_id: string;
+  name: string;
+  price_modifier_cents: number;
+  is_available: boolean;
+  position: number;
+}
+
+interface VariantGroupDTO {
+  id: string;
+  menu_item_id: string;
+  name: string;
+  is_required: boolean;
+  min_selections: number;
+  max_selections: number;
+  position: number;
+  options: VariantOptionDTO[];
+}
+
+interface MenuItemVariantsResponse {
+  count: number;
+  variant_groups: VariantGroupDTO[];
+}
+
 interface MenuCategoryWithItems {
   id: string;
   restaurant_id: string;
@@ -40,8 +65,8 @@ interface MenuCategoryWithItems {
   name: string;
   description?: string;
   position: number;
-  created_at: Date;
-  updated_at: Date;
+  created_at: string; // ISO string from API
+  updated_at: string; // ISO string from API
   items: MenuItem[];
 }
 
@@ -102,14 +127,10 @@ export class RestaurantsService {
   private baseUrl = `${environment.apiUrl}/restaurants`;
 
   list(): Observable<RestaurantDTO[]> {
-    console.log('RestaurantsService: Fetching restaurants from:', this.baseUrl);
     return this.http.get<RestaurantsResponse>(this.baseUrl).pipe(
-      map(response => {
-        console.log('RestaurantsService: Received response:', response);
-        return response.restaurants || [];
-      }),
+      map(response => response.restaurants || []),
       catchError(error => {
-        console.error('RestaurantsService: Error fetching restaurants:', error);
+        console.error('Error fetching restaurants:', error);
         return of([]);
       })
     );
@@ -126,8 +147,6 @@ export class RestaurantsService {
     lng?: number;
     radius?: number;
   }): Observable<RestaurantDTO[]> {
-    console.log('RestaurantsService: Fetching restaurants with filters:', filters);
-
     const params = new URLSearchParams();
 
     if (filters?.tenant_id) params.append('tenant_id', filters.tenant_id);
@@ -143,19 +162,18 @@ export class RestaurantsService {
     const url = params.toString() ? `${this.baseUrl}?${params.toString()}` : this.baseUrl;
 
     return this.http.get<RestaurantsResponse>(url).pipe(
-      map(response => {
-        console.log('RestaurantsService: Received filtered response:', response);
-        return response.restaurants || [];
-      }),
+      map(response => response.restaurants || []),
       catchError(error => {
-        console.error('RestaurantsService: Error fetching restaurants with filters:', error);
+        console.error('Error fetching restaurants with filters:', error);
         return of([]);
       })
     );
   }
 
   searchNearby(lat: number, lng: number, radius: number = 10): Observable<RestaurantDTO[]> {
-    return this.http.get<NearbyRestaurantsResponse>(`${this.baseUrl}/nearby?lat=${lat}&lng=${lng}&radius=${radius}`).pipe(
+    return this.http.get<NearbyRestaurantsResponse>(
+      `${this.baseUrl}/nearby?lat=${lat}&lng=${lng}&radius=${radius}`
+    ).pipe(
       map(response => response.restaurants || []),
       catchError(error => {
         console.error('Error searching nearby restaurants:', error);
@@ -164,8 +182,8 @@ export class RestaurantsService {
     );
   }
 
-  getById(id: string): Observable<RestaurantDTO> {
-    return this.http.get<{ restaurant: RestaurantDTO }>(`${this.baseUrl}/${id}`).pipe(
+  getRestaurantById(restaurantId: string): Observable<RestaurantDTO> {
+    return this.http.get<{ restaurant: RestaurantDTO }>(`${this.baseUrl}/${restaurantId}`).pipe(
       map(response => response.restaurant),
       catchError(error => {
         console.error('Error fetching restaurant:', error);
@@ -195,18 +213,40 @@ export class RestaurantsService {
   }
 
   getMenuCategoriesWithItems(restaurantId: string): Observable<MenuCategoryWithItems[]> {
-    console.log('🌐 Making request to public endpoint:', `${this.baseUrl}/${restaurantId}/menu-categories/public`);
-    return this.http.get<MenuCategoriesWithItemsResponse>(`${this.baseUrl}/${restaurantId}/menu-categories/public`).pipe(
-      map(response => {
-        console.log('✅ Received response:', response);
-        return response.categories || [];
-      }),
+    return this.http.get<MenuCategoriesWithItemsResponse>(
+      `${this.baseUrl}/${restaurantId}/menu-categories/public`
+    ).pipe(
+      map(response => response.categories || []),
       catchError(error => {
-        console.error('❌ Error fetching menu categories with items:', error);
-        console.error('❌ Error status:', error.status);
-        console.error('❌ Error message:', error.message);
-        console.error('❌ Error URL:', error.url);
+        console.error('Error fetching menu categories with items:', error);
         return of([]);
+      })
+    );
+  }
+
+  getMenuItemVariants(restaurantId: string, menuItemId: string): Observable<VariantGroupDTO[]> {
+    return this.http.get<MenuItemVariantsResponse>(
+      `${this.baseUrl}/${restaurantId}/menu-items/${menuItemId}/variants`
+    ).pipe(
+      map(response => response.variant_groups || []),
+      catchError(error => {
+        console.error('Error fetching menu item variants:', error);
+        return of([]);
+      })
+    );
+  }
+
+  getMenuCategoriesWithItemsAndVariants(restaurantId: string): Observable<MenuCategoryWithItems[]> {
+    return this.getMenuCategoriesWithItems(restaurantId).pipe(
+      map(categories => {
+        // For each category, enrich items with variants
+        return categories.map(category => ({
+          ...category,
+          items: category.items.map(item => ({
+            ...item,
+            variants: [] as VariantGroupDTO[] // Will be populated below
+          }))
+        }));
       })
     );
   }
@@ -305,21 +345,8 @@ export class RestaurantsService {
     return this.http.patch(`${this.baseUrl}/${restaurantId}/menu-items/${itemId}/restore`, {});
   }
 
-  // Get single restaurant by ID
-  getRestaurantById(restaurantId: string): Observable<RestaurantDTO> {
-    return this.http.get<{ restaurant: RestaurantDTO }>(`${this.baseUrl}/${restaurantId}`).pipe(
-      map(response => response.restaurant),
-      catchError(error => {
-        console.error('Error fetching restaurant:', error);
-        throw error;
-      })
-    );
-  }
-
-  // Debug: compute dynamic ETA and return breakdown
   getDeliveryEtaDebug(restaurantId: string): Observable<any> {
-    const url = `${this.baseUrl}/${restaurantId}/delivery-eta-debug`;
-    return this.http.get(url).pipe(
+    return this.http.get(`${this.baseUrl}/${restaurantId}/delivery-eta-debug`).pipe(
       catchError(error => {
         console.error('Error fetching delivery ETA debug:', error);
         throw error;
@@ -327,7 +354,6 @@ export class RestaurantsService {
     );
   }
 
-  // Restaurant Settings Update Methods
   updateRestaurant(restaurantId: string, data: UpdateRestaurantRequest): Observable<RestaurantDTO> {
     return this.http.put<{ restaurant: RestaurantDTO }>(`${this.baseUrl}/${restaurantId}`, data).pipe(
       map(response => response.restaurant),
@@ -338,7 +364,6 @@ export class RestaurantsService {
     );
   }
 
-  // Get restaurant statistics
   getRestaurantStats(restaurantId: string, timeRange?: {
     start: Date;
     end: Date;
@@ -360,10 +385,10 @@ export class RestaurantsService {
     );
   }
 
-  // Get restaurants managed by a specific manager
   getRestaurantsByManager(managerId: string): Observable<RestaurantDTO[]> {
-    const url = `${this.baseUrl}/manager/${managerId}`;
-    return this.http.get<{ count: number; restaurants: RestaurantDTO[] }>(url).pipe(
+    return this.http.get<{ count: number; restaurants: RestaurantDTO[] }>(
+      `${this.baseUrl}/manager/${managerId}`
+    ).pipe(
       map(response => response.restaurants || []),
       catchError(error => {
         console.error('Error fetching restaurants by manager:', error);
@@ -372,11 +397,27 @@ export class RestaurantsService {
     );
   }
 
-  // Update payment methods for a restaurant
-  updateRestaurantPaymentMethods(restaurantId: string, paymentMethods: { cash: boolean; card: boolean; paypal: boolean }): Observable<RestaurantDTO> {
-    const url = `${this.baseUrl}/${restaurantId}/payment-methods`;
-    return this.http.put<{ message: string; payment_methods: any }>(url, { payment_methods: paymentMethods }).pipe(
-      map(response => response as any),
+  getRestaurantPaymentMethods(restaurantId: string): Observable<{ cash: boolean; card: boolean; paypal: boolean }> {
+    return this.http.get<{ payment_methods: { cash: boolean; card: boolean; paypal: boolean } }>(
+      `${this.baseUrl}/${restaurantId}/payment-methods/public`
+    ).pipe(
+      map(response => response.payment_methods),
+      catchError(error => {
+        console.error('Error fetching payment methods:', error);
+        throw error;
+      })
+    );
+  }
+
+  updateRestaurantPaymentMethods(
+    restaurantId: string,
+    paymentMethods: { cash: boolean; card: boolean; paypal: boolean }
+  ): Observable<{ message: string; payment_methods: { cash: boolean; card: boolean; paypal: boolean } }> {
+    return this.http.put<{ message: string; payment_methods: { cash: boolean; card: boolean; paypal: boolean } }>(
+      `${this.baseUrl}/${restaurantId}/payment-methods`,
+      { payment_methods: paymentMethods }
+    ).pipe(
+      map(response => response),
       catchError(error => {
         console.error('Error updating payment methods:', error);
         throw error;
@@ -384,10 +425,8 @@ export class RestaurantsService {
     );
   }
 
-  // Image Upload Methods
   uploadRestaurantLogo(restaurantId: string, formData: FormData): Observable<any> {
-    const url = `${this.baseUrl}/${restaurantId}/upload-logo`;
-    return this.http.post(url, formData).pipe(
+    return this.http.post(`${this.baseUrl}/${restaurantId}/upload-logo`, formData).pipe(
       catchError(error => {
         console.error('Error uploading restaurant logo:', error);
         throw error;
@@ -396,8 +435,7 @@ export class RestaurantsService {
   }
 
   uploadRestaurantBanner(restaurantId: string, formData: FormData): Observable<any> {
-    const url = `${this.baseUrl}/${restaurantId}/upload-banner`;
-    return this.http.post(url, formData).pipe(
+    return this.http.post(`${this.baseUrl}/${restaurantId}/upload-banner`, formData).pipe(
       catchError(error => {
         console.error('Error uploading restaurant banner:', error);
         throw error;
@@ -406,8 +444,7 @@ export class RestaurantsService {
   }
 
   uploadRestaurantGallery(restaurantId: string, formData: FormData): Observable<any> {
-    const url = `${this.baseUrl}/${restaurantId}/upload-gallery`;
-    return this.http.post(url, formData).pipe(
+    return this.http.post(`${this.baseUrl}/${restaurantId}/upload-gallery`, formData).pipe(
       catchError(error => {
         console.error('Error uploading restaurant gallery:', error);
         throw error;
@@ -416,8 +453,7 @@ export class RestaurantsService {
   }
 
   deleteGalleryImage(restaurantId: string, imageIndex: number): Observable<any> {
-    const url = `${this.baseUrl}/${restaurantId}/gallery/${imageIndex}`;
-    return this.http.delete(url).pipe(
+    return this.http.delete(`${this.baseUrl}/${restaurantId}/gallery/${imageIndex}`).pipe(
       catchError(error => {
         console.error('Error deleting gallery image:', error);
         throw error;
@@ -425,10 +461,8 @@ export class RestaurantsService {
     );
   }
 
-  // Menu Item Image Upload Methods
   uploadMenuItemImage(restaurantId: string, itemId: string, formData: FormData): Observable<any> {
-    const url = `${this.baseUrl}/${restaurantId}/menu-items/${itemId}/upload-image`;
-    return this.http.post(url, formData).pipe(
+    return this.http.post(`${this.baseUrl}/${restaurantId}/menu-items/${itemId}/upload-image`, formData).pipe(
       catchError(error => {
         console.error('Error uploading menu item image:', error);
         throw error;
@@ -437,8 +471,7 @@ export class RestaurantsService {
   }
 
   deleteMenuItemImage(restaurantId: string, itemId: string): Observable<any> {
-    const url = `${this.baseUrl}/${restaurantId}/menu-items/${itemId}/remove-image`;
-    return this.http.delete(url).pipe(
+    return this.http.delete(`${this.baseUrl}/${restaurantId}/menu-items/${itemId}/remove-image`).pipe(
       catchError(error => {
         console.error('Error deleting menu item image:', error);
         throw error;
@@ -446,10 +479,10 @@ export class RestaurantsService {
     );
   }
 
-  // Restaurant Customer Management Methods
   getRestaurantCustomers(restaurantId: string): Observable<RestaurantCustomer[]> {
-    const url = `${this.baseUrl}/${restaurantId}/customers`;
-    return this.http.get<RestaurantCustomersResponse>(url).pipe(
+    return this.http.get<RestaurantCustomersResponse>(
+      `${this.baseUrl}/${restaurantId}/customers`
+    ).pipe(
       map(response => response.customers || []),
       catchError(error => {
         console.error('Error fetching restaurant customers:', error);
@@ -459,8 +492,9 @@ export class RestaurantsService {
   }
 
   getRestaurantCustomer(restaurantId: string, customerId: string): Observable<RestaurantCustomer> {
-    const url = `${this.baseUrl}/${restaurantId}/customers/${customerId}`;
-    return this.http.get<{ customer: RestaurantCustomer }>(url).pipe(
+    return this.http.get<{ customer: RestaurantCustomer }>(
+      `${this.baseUrl}/${restaurantId}/customers/${customerId}`
+    ).pipe(
       map(response => response.customer),
       catchError(error => {
         console.error('Error fetching restaurant customer:', error);
@@ -475,8 +509,10 @@ export class RestaurantsService {
     phone?: string;
     preferences?: RestaurantCustomer['preferences'];
   }): Observable<RestaurantCustomer> {
-    const url = `${this.baseUrl}/${restaurantId}/customers`;
-    return this.http.post<{ customer: RestaurantCustomer }>(url, customerData).pipe(
+    return this.http.post<{ customer: RestaurantCustomer }>(
+      `${this.baseUrl}/${restaurantId}/customers`,
+      customerData
+    ).pipe(
       map(response => response.customer),
       catchError(error => {
         console.error('Error creating restaurant customer:', error);
@@ -491,8 +527,10 @@ export class RestaurantsService {
     preferences?: RestaurantCustomer['preferences'];
     is_active?: boolean;
   }): Observable<RestaurantCustomer> {
-    const url = `${this.baseUrl}/${restaurantId}/customers/${customerId}`;
-    return this.http.put<{ customer: RestaurantCustomer }>(url, customerData).pipe(
+    return this.http.put<{ customer: RestaurantCustomer }>(
+      `${this.baseUrl}/${restaurantId}/customers/${customerId}`,
+      customerData
+    ).pipe(
       map(response => response.customer),
       catchError(error => {
         console.error('Error updating restaurant customer:', error);
@@ -502,8 +540,7 @@ export class RestaurantsService {
   }
 
   deleteRestaurantCustomer(restaurantId: string, customerId: string): Observable<any> {
-    const url = `${this.baseUrl}/${restaurantId}/customers/${customerId}`;
-    return this.http.delete(url).pipe(
+    return this.http.delete(`${this.baseUrl}/${restaurantId}/customers/${customerId}`).pipe(
       catchError(error => {
         console.error('Error deleting restaurant customer:', error);
         throw error;
@@ -512,11 +549,11 @@ export class RestaurantsService {
   }
 
   getRestaurantCustomerStats(restaurantId: string): Observable<RestaurantCustomerStats> {
-    const url = `${this.baseUrl}/${restaurantId}/customers/stats`;
-    return this.http.get<{ stats: RestaurantCustomerStats }>(url).pipe(
+    return this.http.get<{ stats: RestaurantCustomerStats }>(
+      `${this.baseUrl}/${restaurantId}/customers/stats`
+    ).pipe(
       map(response => response.stats),
       catchError(error => {
-        // Don't log 404/403 errors as they are expected for non-existent restaurants
         if (error.status !== 404 && error.status !== 403) {
           console.error('Error fetching restaurant customer stats:', error);
         }
@@ -531,8 +568,9 @@ export class RestaurantsService {
   }
 
   searchRestaurantCustomers(restaurantId: string, email: string): Observable<RestaurantCustomer> {
-    const url = `${this.baseUrl}/${restaurantId}/customers/search?email=${encodeURIComponent(email)}`;
-    return this.http.get<{ customer: RestaurantCustomer }>(url).pipe(
+    return this.http.get<{ customer: RestaurantCustomer }>(
+      `${this.baseUrl}/${restaurantId}/customers/search?email=${encodeURIComponent(email)}`
+    ).pipe(
       map(response => response.customer),
       catchError(error => {
         console.error('Error searching restaurant customer:', error);
@@ -540,8 +578,107 @@ export class RestaurantsService {
       })
     );
   }
+
+  getVariantsForMenuItem(restaurantId: string, itemId: string): Observable<MenuItemVariantsResponse> {
+    return this.http.get<MenuItemVariantsResponse>(
+      `${this.baseUrl}/${restaurantId}/menu-items/${itemId}/variants`
+    ).pipe(
+      catchError(() => of({ count: 0, variant_groups: [] }))
+    );
+  }
+
+  createVariantGroup(restaurantId: string, itemId: string, groupData: {
+    name: string;
+    is_required?: boolean;
+    min_selections?: number;
+    max_selections?: number;
+    position?: number;
+  }): Observable<any> {
+    return this.http.post(
+      `${this.baseUrl}/${restaurantId}/menu-items/${itemId}/variant-groups`,
+      groupData
+    ).pipe(
+      catchError(error => {
+        console.error('Error creating variant group:', error);
+        throw error;
+      })
+    );
+  }
+
+  updateVariantGroup(restaurantId: string, itemId: string, groupId: string, groupData: {
+    name?: string;
+    is_required?: boolean;
+    min_selections?: number;
+    max_selections?: number;
+    position?: number;
+  }): Observable<any> {
+    return this.http.put(
+      `${this.baseUrl}/${restaurantId}/menu-items/${itemId}/variant-groups/${groupId}`,
+      groupData
+    ).pipe(
+      catchError(error => {
+        console.error('Error updating variant group:', error);
+        throw error;
+      })
+    );
+  }
+
+  deleteVariantGroup(restaurantId: string, itemId: string, groupId: string): Observable<any> {
+    return this.http.delete(
+      `${this.baseUrl}/${restaurantId}/menu-items/${itemId}/variant-groups/${groupId}`
+    ).pipe(
+      catchError(error => {
+        console.error('Error deleting variant group:', error);
+        throw error;
+      })
+    );
+  }
+
+  createVariantOption(restaurantId: string, itemId: string, groupId: string, optionData: {
+    name: string;
+    price_modifier_cents?: number;
+    is_available?: boolean;
+    position?: number;
+  }): Observable<any> {
+    return this.http.post(
+      `${this.baseUrl}/${restaurantId}/menu-items/${itemId}/variant-groups/${groupId}/options`,
+      optionData
+    ).pipe(
+      catchError(error => {
+        console.error('Error creating variant option:', error);
+        throw error;
+      })
+    );
+  }
+
+  updateVariantOption(restaurantId: string, itemId: string, groupId: string, optionId: string, optionData: {
+    name?: string;
+    price_modifier_cents?: number;
+    is_available?: boolean;
+    position?: number;
+  }): Observable<any> {
+    return this.http.put(
+      `${this.baseUrl}/${restaurantId}/menu-items/${itemId}/variant-groups/${groupId}/options/${optionId}`,
+      optionData
+    ).pipe(
+      catchError(error => {
+        console.error('Error updating variant option:', error);
+        throw error;
+      })
+    );
+  }
+
+  deleteVariantOption(restaurantId: string, itemId: string, groupId: string, optionId: string): Observable<any> {
+    return this.http.delete(
+      `${this.baseUrl}/${restaurantId}/menu-items/${itemId}/variant-groups/${groupId}/options/${optionId}`
+    ).pipe(
+      catchError(error => {
+        console.error('Error deleting variant option:', error);
+        throw error;
+      })
+    );
+  }
 }
 
 export type { RestaurantDTO } from '@odenwald/shared';
-
 

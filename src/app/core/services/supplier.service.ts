@@ -12,6 +12,12 @@ export interface CartItem {
   total_price: number;
   image_url?: string;
   restaurant_id: string;
+  selected_variant_option_ids?: string[];
+  selected_variant_options?: Array<{
+    id: string;
+    name: string;
+    price_modifier_cents: number;
+  }>;
 }
 
 export interface Cart {
@@ -60,7 +66,7 @@ export class CartService {
     return this.cartSubject.value;
   }
 
-  addToCart(menuItem: any, restaurant: any): void {
+  addToCart(menuItem: any, restaurant: any, selectedVariantOptionIds?: string[], selectedVariantOptions?: Array<{id: string, name: string, price_modifier_cents: number}>): void {
     const currentCart = this.getCurrentCart();
 
     // Check if item is from same restaurant
@@ -72,14 +78,22 @@ export class CartService {
       this.clearCart();
     }
 
+    // Calculate unit price including variant price modifiers
+    let unitPrice = menuItem.price_cents / 100;
+    if (selectedVariantOptions) {
+      unitPrice += selectedVariantOptions.reduce((sum, option) => sum + (option.price_modifier_cents / 100), 0);
+    }
+
     const cartItem: CartItem = {
       menu_item_id: menuItem.id,
       name: menuItem.name,
       quantity: 1,
-      unit_price: menuItem.price_cents / 100,
-      total_price: menuItem.price_cents / 100,
+      unit_price: unitPrice,
+      total_price: unitPrice,
       image_url: menuItem.image_url,
-      restaurant_id: restaurant.id
+      restaurant_id: restaurant.id,
+      selected_variant_option_ids: selectedVariantOptionIds,
+      selected_variant_options: selectedVariantOptions
     };
 
     let updatedCart: Cart;
@@ -88,9 +102,12 @@ export class CartService {
 
     if (currentCart && currentCart.restaurant_id === restaurant.id) {
       // Add to existing cart
-      const existingItemIndex = currentCart.items.findIndex(item =>
-        item.menu_item_id === menuItem.id
-      );
+      // Find existing item with same menu_item_id AND same selected variants
+      const existingItemIndex = currentCart.items.findIndex(item => {
+        const sameMenuItem = item.menu_item_id === menuItem.id;
+        const sameVariants = JSON.stringify(item.selected_variant_option_ids?.sort()) === JSON.stringify(selectedVariantOptionIds?.sort());
+        return sameMenuItem && sameVariants;
+      });
 
       if (existingItemIndex >= 0) {
         currentCart.items[existingItemIndex].quantity += 1;
@@ -197,7 +214,8 @@ export class CartService {
       items: cart.items.map(item => ({
         menu_item_id: item.menu_item_id,
         quantity: item.quantity,
-        unit_price: item.unit_price
+        unit_price: item.unit_price,
+        selected_variant_option_ids: item.selected_variant_option_ids
       }))
     };
 

@@ -13,6 +13,7 @@ import { PaymentsAdminComponent } from './features/admin/payments-admin.componen
 import { AnalyticsAdminComponent } from './features/admin/analytics-admin.component';
 import { LoginComponent } from './features/auth/login.component';
 import { RegistrationComponent } from './features/auth/registration.component';
+import { GoogleCallbackComponent } from './features/auth/google-callback.component';
 import { authGuard, roleGuard, guestGuard } from './core/auth/auth.guard';
 import { RestaurantManagerDashboardComponent } from './features/restaurant-manager/restaurant-manager-dashboard.component';
 import { WholesalerDashboardComponent } from './features/wholesaler/wholesaler-dashboard.component';
@@ -58,6 +59,7 @@ export const routes: Routes = [
   { path: '', pathMatch: 'full', component: RootRedirectComponent },
   { path: 'auth/login', component: LoginComponent },
   { path: 'auth/register', component: RegistrationComponent },
+  { path: 'auth/callback', component: GoogleCallbackComponent },
   { path: 'auth/register-restaurant', loadComponent: () => import('./features/auth/restaurant-owner-registration.component').then(m => m.RestaurantOwnerRegistrationComponent) },
   { path: 'auth/register-wholesaler', loadComponent: () => import('./features/auth/wholesaler-registration.component').then(m => m.WholesalerRegistrationComponent) },
   { path: 'restaurant-registration', loadComponent: () => import('./features/restaurant-registration/restaurant-registration.component').then(m => m.RestaurantRegistrationComponent), canActivate: [authGuard, roleGuard(['manager'])] },

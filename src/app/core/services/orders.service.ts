@@ -12,6 +12,12 @@ export interface OrderItem {
   total_price: number;
   price_cents?: number;
   image_url?: string;
+  selected_variant_options?: Array<{
+    id: string;
+    name: string;
+    group_name: string;
+    price_modifier_cents: number;
+  }>;
 }
 
 export interface Order {
@@ -73,7 +79,8 @@ export class OrdersService {
     quantity: Number(item.quantity),
     unit_price: Number(item.unit_price),
     total_price: Number(item.total_price),
-    image_url: item.image_url
+    image_url: item.image_url,
+    selected_variant_options: item.selected_variant_options
   });
 
   // Normalize raw API order to typed Order

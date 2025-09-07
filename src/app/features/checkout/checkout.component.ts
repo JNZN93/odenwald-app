@@ -6,6 +6,7 @@ import { CartService, Cart, CartItem } from '../../core/services/supplier.servic
 import { OrdersService } from '../../core/services/orders.service';
 import { PaymentsService } from '../../core/services/payments.service';
 import { AuthService } from '../../core/auth/auth.service';
+import { RestaurantsService } from '../../core/services/restaurants.service';
 import { ImageFallbackDirective } from '../../core/image-fallback.directive';
 import { Observable, map } from 'rxjs';
 
@@ -51,6 +52,16 @@ interface CustomerInfo {
                 <div class="item-details">
                   <h3 class="item-name">{{ item.name }}</h3>
                   <div class="item-price">{{ item.unit_price | currency:'EUR':'symbol':'1.2-2':'de' }} / Stück</div>
+
+                  <!-- Show selected variants -->
+                  <div class="selected-variants" *ngIf="item.selected_variant_options && item.selected_variant_options.length > 0">
+                    <div *ngFor="let variant of item.selected_variant_options" class="variant-tag">
+                      {{ variant.name }}
+                      <span *ngIf="variant.price_modifier_cents !== 0" class="variant-price">
+                        ({{ variant.price_modifier_cents > 0 ? '+' : '' }}{{ variant.price_modifier_cents / 100 | currency:'EUR':'symbol':'1.2-2':'de' }})
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 <div class="item-quantity">
@@ -139,7 +150,7 @@ interface CustomerInfo {
             <h2>Zahlungsmethode</h2>
 
             <div class="payment-methods">
-              <div class="payment-method" [class.selected]="selectedPaymentMethod === 'cash'">
+              <div class="payment-method" [class.selected]="selectedPaymentMethod === 'cash'" *ngIf="isPaymentMethodAvailable('cash')">
                 <input
                   type="radio"
                   id="cash"
@@ -156,7 +167,7 @@ interface CustomerInfo {
                 </label>
               </div>
 
-              <div class="payment-method" [class.selected]="selectedPaymentMethod === 'card'" (click)="selectCard()">
+              <div class="payment-method" [class.selected]="selectedPaymentMethod === 'card'" (click)="selectCard()" *ngIf="isPaymentMethodAvailable('card')">
                 <input
                   type="radio"
                   id="card"
@@ -173,7 +184,7 @@ interface CustomerInfo {
                 </label>
               </div>
 
-              <div class="payment-method" [class.selected]="selectedPaymentMethod === 'paypal'" (click)="selectPayPal()">
+              <div class="payment-method" [class.selected]="selectedPaymentMethod === 'paypal'" (click)="selectPayPal()" *ngIf="isPaymentMethodAvailable('paypal')">
                 <input
                   type="radio"
                   id="paypal"
@@ -188,6 +199,12 @@ interface CustomerInfo {
                     <div class="method-desc">Schnell und sicher über Stripe zahlen</div>
                   </div>
                 </label>
+              </div>
+
+              <!-- Show message if no payment methods are available -->
+              <div class="no-payment-methods" *ngIf="!hasAvailablePaymentMethods()">
+                <i class="fa-solid fa-exclamation-triangle"></i>
+                <span>Dieses Restaurant bietet derzeit keine Zahlungsmethoden an.</span>
               </div>
             </div>
           </div>
@@ -417,6 +434,30 @@ interface CustomerInfo {
       font-size: var(--text-sm);
     }
 
+    .selected-variants {
+      margin-top: var(--space-2);
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .variant-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      background: var(--color-primary-50);
+      color: var(--color-primary-700);
+      padding: 2px var(--space-2);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-xs);
+      font-weight: 500;
+    }
+
+    .variant-price {
+      color: var(--color-primary-600);
+      font-weight: 600;
+    }
+
     .item-quantity {
       display: flex;
       align-items: center;
@@ -574,6 +615,23 @@ interface CustomerInfo {
     .method-desc {
       color: var(--color-muted);
       font-size: var(--text-sm);
+    }
+
+    .no-payment-methods {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-4);
+      background: color-mix(in oklab, var(--color-warning) 10%, white);
+      border: 1px solid var(--color-warning);
+      border-radius: var(--radius-lg);
+      color: var(--color-warning);
+      font-size: var(--text-sm);
+      margin-top: var(--space-4);
+    }
+
+    .no-payment-methods i {
+      font-size: var(--text-lg);
     }
 
     .checkout-sidebar {
@@ -752,6 +810,7 @@ export class CheckoutComponent implements OnInit {
   private paymentsService = inject(PaymentsService);
   private authService = inject(AuthService);
   private router = inject(Router);
+  private restaurantsService = inject(RestaurantsService);
 
   cart$ = this.cartService.cart$;
   loading = false;
@@ -771,12 +830,17 @@ export class CheckoutComponent implements OnInit {
 
   selectedPaymentMethod = 'cash';
   isAuthenticated = false;
+  availablePaymentMethods: { cash: boolean; card: boolean; paypal: boolean } | null = null;
 
   ngOnInit() {
     // Check if cart is empty and redirect if needed
     this.cart$.subscribe(cart => {
       if (!cart || cart.items.length === 0) {
         // Cart is empty, but we'll show the empty state
+        this.availablePaymentMethods = null;
+      } else {
+        // Load payment methods for the restaurant
+        this.loadRestaurantPaymentMethods(cart.restaurant_id);
       }
     });
 
@@ -787,6 +851,41 @@ export class CheckoutComponent implements OnInit {
     this.authService.currentUser$.subscribe(user => {
       this.isAuthenticated = !!(user && user.is_active);
     });
+  }
+
+  private loadRestaurantPaymentMethods(restaurantId: string) {
+    this.restaurantsService.getRestaurantPaymentMethods(restaurantId).subscribe({
+      next: (paymentMethods) => {
+        this.availablePaymentMethods = paymentMethods;
+        // Set default payment method if current selection is not available
+        if (!this.isPaymentMethodAvailable(this.selectedPaymentMethod)) {
+          this.selectedPaymentMethod = this.getFirstAvailablePaymentMethod();
+        }
+      },
+      error: (error) => {
+        console.error('Error loading payment methods:', error);
+        // Fallback to all payment methods enabled if loading fails
+        this.availablePaymentMethods = { cash: true, card: true, paypal: true };
+      }
+    });
+  }
+
+  public isPaymentMethodAvailable(method: string): boolean {
+    if (!this.availablePaymentMethods) return true;
+    switch (method) {
+      case 'cash': return this.availablePaymentMethods.cash;
+      case 'card': return this.availablePaymentMethods.card;
+      case 'paypal': return this.availablePaymentMethods.paypal;
+      default: return false;
+    }
+  }
+
+  private getFirstAvailablePaymentMethod(): string {
+    if (!this.availablePaymentMethods) return 'cash';
+    if (this.availablePaymentMethods.cash) return 'cash';
+    if (this.availablePaymentMethods.card) return 'card';
+    if (this.availablePaymentMethods.paypal) return 'paypal';
+    return 'cash'; // fallback
   }
 
   updateQuantity(menuItemId: string, quantity: number) {
@@ -801,9 +900,10 @@ export class CheckoutComponent implements OnInit {
     const deliveryValid = !!(
       this.deliveryAddress.street.trim() &&
       this.deliveryAddress.city.trim() &&
-      this.deliveryAddress.postal_code.trim() &&
-      this.selectedPaymentMethod
+      this.deliveryAddress.postal_code.trim()
     );
+
+    const paymentMethodValid = !!this.selectedPaymentMethod && this.isPaymentMethodAvailable(this.selectedPaymentMethod);
 
     const customerInfoValid = this.isAuthenticated || (
       !!this.customerInfo.name.trim() &&
@@ -811,7 +911,12 @@ export class CheckoutComponent implements OnInit {
       !!this.customerInfo.phone?.trim()
     );
 
-    return deliveryValid && customerInfoValid;
+    return deliveryValid && paymentMethodValid && customerInfoValid;
+  }
+
+  public hasAvailablePaymentMethods(): boolean {
+    if (!this.availablePaymentMethods) return true;
+    return this.availablePaymentMethods.cash || this.availablePaymentMethods.card || this.availablePaymentMethods.paypal;
   }
 
   isMinimumOrderMet(cart: Cart): boolean {

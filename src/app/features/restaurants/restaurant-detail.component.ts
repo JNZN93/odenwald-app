@@ -2,6 +2,8 @@ import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AsyncPipe, NgForOf, NgIf, CurrencyPipe, JsonPipe } from '@angular/common';
 import { RestaurantsService, RestaurantDTO } from '../../core/services/restaurants.service';
+import { MenuItemVariantsModalComponent } from './menu-item-variants-modal.component';
+
 import { CartService } from '../../core/services/supplier.service';
 import { ImageFallbackDirective } from '../../core/image-fallback.directive';
 import { Observable, map, switchMap, tap } from 'rxjs';
@@ -17,6 +19,23 @@ interface MenuItem {
   is_vegetarian?: boolean;
   is_vegan?: boolean;
   is_gluten_free?: boolean;
+  variants?: MenuItemVariant[];
+}
+
+interface MenuItemVariant {
+  id: string;
+  name: string;
+  is_required: boolean;
+  min_selections?: number;
+  max_selections?: number;
+  options: MenuItemVariantOption[];
+}
+
+interface MenuItemVariantOption {
+  id: string;
+  name: string;
+  price_modifier_cents: number;
+  is_available: boolean;
 }
 
 interface MenuCategory {
@@ -31,10 +50,22 @@ interface MenuCategory {
   items: MenuItem[];
 }
 
+interface MenuCategoryWithItems {
+  id: string;
+  restaurant_id: string;
+  tenant_id: string;
+  name: string;
+  description?: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+  items: MenuItem[];
+}
+
 @Component({
   selector: 'app-restaurant-detail',
   standalone: true,
-  imports: [AsyncPipe, NgForOf, NgIf, CurrencyPipe, JsonPipe, ImageFallbackDirective],
+  imports: [AsyncPipe, NgForOf, NgIf, CurrencyPipe, JsonPipe, ImageFallbackDirective, MenuItemVariantsModalComponent],
   template: `
     <div class="restaurant-detail" *ngIf="restaurant$ | async as restaurant">
       <!-- Restaurant Header -->
@@ -170,11 +201,11 @@ interface MenuCategory {
                         >
                       </div>
 
-                      <div class="item-info">
-                        <h4 class="item-name">{{ item.name }}</h4>
-                        <p class="item-description" *ngIf="item.description">{{ item.description }}</p>
-                        <div class="item-price">{{ item.price_cents / 100 | currency:'EUR':'symbol':'1.2-2':'de' }}</div>
-                      </div>
+                    <div class="item-info">
+                      <h4 class="item-name">{{ item.name }}</h4>
+                      <p class="item-description" *ngIf="item.description">{{ item.description }}</p>
+                      <div class="item-price">{{ item.price_cents / 100 | currency:'EUR':'symbol':'1.2-2':'de' }}</div>
+                    </div>
                     </div>
 
                     <div class="item-actions">
@@ -217,6 +248,15 @@ interface MenuCategory {
         </div>
         </div>
       </ng-container>
+
+      <!-- Variants Selection Modal -->
+      <app-menu-item-variants-modal
+        *ngIf="variantsModalOpen"
+        [menuItem]="selectedMenuItem"
+        [isOpen]="variantsModalOpen"
+        (close)="closeVariantsModal()"
+        (confirm)="onVariantsConfirm($event)">
+      </app-menu-item-variants-modal>
     </div>
   `,
   styles: [`
@@ -782,13 +822,18 @@ export class RestaurantDetailComponent implements OnInit {
   private cartService = inject(CartService);
 
   restaurant$!: Observable<RestaurantDTO>;
-  menuData$!: Observable<{ categories: MenuCategory[] }>;
+  menuData$!: Observable<{ categories: MenuCategoryWithItems[] }>;
   cartItemsCount$ = this.cartService.cart$.pipe(
     map(cart => cart ? this.cartService.getItemCount() : 0)
   );
   etaDebug: any | null = null;
   etaModalOpen = false;
   etaSummaryMinutes: number | null = null;
+
+  // Variants modal
+  variantsModalOpen = false;
+  selectedMenuItem: MenuItem | null = null;
+  currentRestaurant: RestaurantDTO | null = null;
 
   ngOnInit() {
     const restaurantId = this.route.snapshot.paramMap.get('id');
@@ -800,9 +845,10 @@ export class RestaurantDetailComponent implements OnInit {
       return;
     }
 
-    this.restaurant$ = this.restaurantsService.getById(restaurantId).pipe(
+    this.restaurant$ = this.restaurantsService.getRestaurantById(restaurantId).pipe(
       tap(restaurant => {
         console.log('🔥 Restaurant data:', restaurant);
+        this.currentRestaurant = restaurant;
       })
     );
 
@@ -821,6 +867,15 @@ export class RestaurantDetailComponent implements OnInit {
         );
       })
     );
+
+    // Load variants for all menu items
+    setTimeout(() => {
+      this.loadVariantsForMenuItems(restaurantId).then(() => {
+        console.log('🎉 Variants loading completed successfully');
+      }).catch((error) => {
+        console.error('💥 Variants loading failed:', error);
+      });
+    }, 1000); // Small delay to ensure menu is rendered
 
     // Preload ETA summary so the badge shows the dynamic time without opening the modal
     if (restaurantId) {
@@ -871,9 +926,55 @@ export class RestaurantDetailComponent implements OnInit {
     return `${hours}:${minutes}`;
   }
 
-  addToCart(item: MenuItem, restaurant: RestaurantDTO) {
-    console.log('Adding to cart:', item);
-    this.cartService.addToCart(item, restaurant);
+  async addToCart(item: MenuItem, restaurant: RestaurantDTO) {
+    console.log('🛒 Adding to cart:', item);
+    console.log('📋 Item variants on object:', (item as any).variants);
+
+    // Check if item has variants that need selection
+    let variants = (item as any).variants;
+
+    // If no variants loaded yet, try to load them now
+    if (!variants || variants.length === 0) {
+      console.log('🔄 No variants found, trying to load them now...');
+      try {
+        const loadedVariants = await this.restaurantsService.getMenuItemVariants(restaurant.id, item.id).toPromise();
+        if (loadedVariants && loadedVariants.length > 0) {
+          console.log('✅ Variants loaded on-demand:', loadedVariants);
+
+          // Transform and attach to item
+          variants = loadedVariants.map(variant => ({
+            id: variant.id,
+            name: variant.name,
+            is_required: variant.is_required,
+            min_selections: variant.min_selections,
+            max_selections: variant.max_selections,
+            options: variant.options.map(option => ({
+              id: option.id,
+              name: option.name,
+              price_modifier_cents: option.price_modifier_cents,
+              is_available: option.is_available
+            }))
+          }));
+
+          // Store on item for future use
+          (item as any).variants = variants;
+        }
+      } catch (error) {
+        console.error('❌ Failed to load variants on-demand:', error);
+      }
+    }
+
+    if (variants && variants.length > 0) {
+      console.log('✅ Opening variants modal for item:', item.name);
+      console.log('🎯 Final variants data:', variants);
+      this.selectedMenuItem = item;
+      this.variantsModalOpen = true;
+    } else {
+      console.log('❌ Still no variants found, adding directly to cart');
+      console.log('🔍 Available properties on item:', Object.keys(item));
+      // No variants, add directly to cart
+      this.cartService.addToCart(item, restaurant);
+    }
   }
 
   viewCart() {
@@ -921,6 +1022,87 @@ export class RestaurantDetailComponent implements OnInit {
 
   closeEtaModal() {
     this.etaModalOpen = false;
+  }
+
+  // Variants modal methods
+  closeVariantsModal() {
+    this.variantsModalOpen = false;
+    this.selectedMenuItem = null;
+  }
+
+  onVariantsConfirm(selection: { selectedOptionIds: string[], selectedOptions: Array<{id: string, name: string, price_modifier_cents: number}> }) {
+    if (this.selectedMenuItem && this.currentRestaurant) {
+      this.cartService.addToCart(
+        this.selectedMenuItem,
+        this.currentRestaurant,
+        selection.selectedOptionIds,
+        selection.selectedOptions
+      );
+    }
+    this.closeVariantsModal();
+  }
+
+  private async loadVariantsForMenuItems(restaurantId: string) {
+    try {
+      console.log('🏪 Starting to load variants for restaurant:', restaurantId);
+
+      // First get menu categories with items
+      const categories = await this.restaurantsService.getMenuCategoriesWithItems(restaurantId).toPromise();
+      console.log('📋 Categories loaded:', categories?.length || 0);
+
+      if (!categories) {
+        console.warn('❌ No categories found');
+        return;
+      }
+
+      // Load variants for each menu item
+      let totalVariantsLoaded = 0;
+
+      for (const category of categories) {
+        console.log(`📂 Processing category: ${category.name} (${category.items.length} items)`);
+
+        for (const item of category.items) {
+          try {
+            console.log(`🔄 Loading variants for: ${item.name} (ID: ${item.id})`);
+            const variants = await this.restaurantsService.getMenuItemVariants(restaurantId, item.id).toPromise();
+
+            if (variants && variants.length > 0) {
+              console.log(`✅ Found ${variants.length} variant groups for ${item.name}`);
+
+              // Transform backend variant format to frontend format
+              const transformedVariants = variants.map(variant => ({
+                id: variant.id,
+                name: variant.name,
+                is_required: variant.is_required,
+                min_selections: variant.min_selections,
+                max_selections: variant.max_selections,
+                options: variant.options.map(option => ({
+                  id: option.id,
+                  name: option.name,
+                  price_modifier_cents: option.price_modifier_cents,
+                  is_available: option.is_available
+                }))
+              }));
+
+              // Store variants directly on the item object
+              (item as any).variants = transformedVariants;
+              totalVariantsLoaded++;
+
+              console.log(`✅ Variants attached to ${item.name}:`, transformedVariants);
+            } else {
+              console.log(`ℹ️ No variants found for ${item.name}`);
+            }
+          } catch (error) {
+            console.error(`❌ Failed to load variants for ${item.name} (${item.id}):`, error);
+          }
+        }
+      }
+
+      console.log(`🎉 Variants loading complete! ${totalVariantsLoaded} items with variants loaded.`);
+
+    } catch (error) {
+      console.error('💥 Error loading variants for menu items:', error);
+    }
   }
 
   getEtaStatus(minutes: number): 'fast' | 'medium' | 'slow' {

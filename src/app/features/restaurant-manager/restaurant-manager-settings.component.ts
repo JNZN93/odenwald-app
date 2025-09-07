@@ -1358,14 +1358,14 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
     // In a real scenario, this would come from route params or user selection
     const restaurantId = this.currentUser.tenant_id;
 
-    const sub = this.restaurantsService.getById(restaurantId).subscribe({
-      next: (restaurant) => {
+    const sub = this.restaurantsService.getRestaurantById(restaurantId).subscribe({
+      next: (restaurant: any) => {
         this.currentRestaurant = restaurant;
         this.populateFormData(restaurant);
         this.isLoading = false;
         console.log('Restaurant data loaded:', restaurant);
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('Error loading restaurant:', error);
         this.toastService.error('Fehler', 'Restaurant-Daten konnten nicht geladen werden');
         this.isLoading = false;

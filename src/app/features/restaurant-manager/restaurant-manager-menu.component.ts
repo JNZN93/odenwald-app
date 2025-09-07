@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { RestaurantsService } from '../../core/services/restaurants.service';
 import { RestaurantManagerService } from '../../core/services/restaurant-manager.service';
+import { MenuItemVariantsComponent } from './menu-item-variants.component';
 
 // Local interface for category management
 interface CategoryFormData {
@@ -15,7 +16,7 @@ interface CategoryFormData {
 @Component({
   selector: 'app-restaurant-manager-menu',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, MenuItemVariantsComponent],
   template: `
     <div class="menu-container">
       <!-- Header -->
@@ -63,7 +64,7 @@ interface CategoryFormData {
                 <h3>{{ item.name }}</h3>
                 <p class="item-description">{{ item.description }}</p>
                 <div class="item-details">
-                  <span class="price">€{{ item.price.toFixed(2) }}</span>
+                  <span class="price">€{{ (item.price || 0).toFixed(2) }}</span>
                   <span class="prep-time">{{ item.preparation_time_minutes }} Min.</span>
                 </div>
                 <div class="item-badges">
@@ -117,7 +118,7 @@ interface CategoryFormData {
                 <h3>{{ item.name }}</h3>
                 <p class="item-description">{{ item.description }}</p>
                 <div class="item-details">
-                  <span class="price">€{{ item.price.toFixed(2) }}</span>
+                  <span class="price">€{{ (item.price || 0).toFixed(2) }}</span>
                   <span class="prep-time">{{ item.preparation_time_minutes }} Min.</span>
                 </div>
                 <div class="item-badges">
@@ -148,11 +149,30 @@ interface CategoryFormData {
             </button>
           </div>
 
-          <form (ngSubmit)="saveItem()" #itemForm="ngForm" class="modal-form">
-            <div class="form-group">
-              <label for="itemName">Name *</label>
-              <input id="itemName" type="text" [(ngModel)]="currentItem.name" name="name" required>
-            </div>
+          <!-- Tabs for Item Details and Variants -->
+          <div class="modal-tabs">
+            <button
+              type="button"
+              class="tab-btn"
+              [class.active]="activeTab === 'details'"
+              (click)="activeTab = 'details'">
+              Grunddaten
+            </button>
+            <button
+              type="button"
+              class="tab-btn"
+              [class.active]="activeTab === 'variants'"
+              (click)="activeTab = 'variants'">
+              Varianten
+            </button>
+          </div>
+
+          <div [class.hidden]="activeTab !== 'details'">
+            <form (ngSubmit)="saveItem()" #itemForm="ngForm" class="modal-form">
+              <div class="form-group">
+                <label for="itemName">Name *</label>
+                <input id="itemName" type="text" [(ngModel)]="currentItem.name" name="name" required>
+              </div>
 
             <div class="form-group">
               <label for="itemDescription">Beschreibung</label>
@@ -280,13 +300,24 @@ interface CategoryFormData {
               <input id="itemAllergens" type="text" [(ngModel)]="currentItem.allergens" name="allergens">
             </div>
 
-            <div class="modal-actions">
-              <button type="button" class="btn-secondary" (click)="showAddItemModal = false">Abbrechen</button>
-              <button type="submit" class="btn-primary" [disabled]="!itemForm.valid">
-                {{ editingItem ? 'Speichern' : 'Hinzufügen' }}
-              </button>
-            </div>
-          </form>
+              <div class="modal-actions">
+                <button type="button" class="btn-secondary" (click)="showAddItemModal = false">Abbrechen</button>
+                <button type="submit" class="btn-primary" [disabled]="!itemForm.valid">
+                  {{ editingItem ? 'Speichern' : 'Hinzufügen' }}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Variants Tab -->
+          <div [class.hidden]="activeTab !== 'variants'">
+            <app-menu-item-variants
+              *ngIf="editingItem"
+              [menuItemId]="editingItem.id"
+              [restaurantId]="managedRestaurantId!"
+              (variantsChanged)="onVariantsChanged()">
+            </app-menu-item-variants>
+          </div>
         </div>
       </div>
 
@@ -995,6 +1026,37 @@ interface CategoryFormData {
         max-height: 80px;
       }
     }
+
+    /* Modal Tabs */
+    .modal-tabs {
+      display: flex;
+      border-bottom: 1px solid #dee2e6;
+      margin-bottom: var(--space-4);
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      font-weight: 500;
+      color: #6c757d;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      color: #007bff;
+      border-bottom-color: #007bff;
+    }
+
+    .tab-btn:hover:not(.active) {
+      color: #495057;
+    }
+
+    .hidden {
+      display: none;
+    }
   `]
 })
 export class RestaurantManagerMenuComponent implements OnInit {
@@ -1006,6 +1068,7 @@ export class RestaurantManagerMenuComponent implements OnInit {
   managedRestaurantId: string | null = null;
 
   showAddItemModal: boolean = false;
+  activeTab: string = 'details';
   showAddCategoryModal: boolean = false;
   editingItem: any = null;
   editingCategory: CategoryFormData | null = null;
@@ -1060,7 +1123,7 @@ export class RestaurantManagerMenuComponent implements OnInit {
               category_id: String(i.category_id ?? c.id),
               name: i.name,
               description: i.description,
-              price: typeof i.price === 'number' ? i.price : (i.price_cents ? i.price_cents / 100 : 0),
+              price: typeof i.price === 'number' ? i.price : (i.price_cents ? Math.round(i.price_cents) / 100 : 0),
               image_url: i.image_url,
               is_available: !!i.is_available,
               is_vegetarian: !!i.is_vegetarian,
@@ -1152,6 +1215,9 @@ export class RestaurantManagerMenuComponent implements OnInit {
 
     // Set image source based on whether item has an image URL
     this.imageSource = item.image_url && item.image_url.trim() ? 'upload' : 'upload'; // Default to upload for editing
+
+    // Set default tab to details
+    this.activeTab = 'details';
 
     // console.log('Editing item:', item.name, 'original category_id:', item.category_id, 'form category_id:', this.currentItem.category_id);
     this.showAddItemModal = true;
@@ -1271,7 +1337,7 @@ export class RestaurantManagerMenuComponent implements OnInit {
   }
 
   saveItem() {
-    if (!this.currentItem.name || !(this.currentItem.price > 0)) {
+    if (!this.currentItem.name || !(Number(this.currentItem.price) > 0)) {
       return;
     }
 
@@ -1291,7 +1357,7 @@ export class RestaurantManagerMenuComponent implements OnInit {
       const updatePayload: any = {
         name: this.currentItem.name,
         description: this.currentItem.description || undefined,
-        price_cents: Math.round(Number(this.currentItem.price) * 100),
+        price_cents: Math.round(Number(this.currentItem.price || 0) * 100),
         is_available: this.currentItem.is_available,
         is_vegetarian: !!this.currentItem.is_vegetarian,
         is_vegan: !!this.currentItem.is_vegan,
@@ -1354,7 +1420,7 @@ export class RestaurantManagerMenuComponent implements OnInit {
           category_id: created.category_id ? String(created.category_id) : undefined,
           name: created.name,
           description: created.description,
-          price: typeof (created as any).price === 'number' ? (created as any).price : (created.price_cents ? created.price_cents / 100 : Number(this.currentItem.price)),
+          price: typeof (created as any).price === 'number' ? (created as any).price : (created.price_cents ? created.price_cents / 100 : Number(this.currentItem.price || 0)),
           image_url: created.image_url,
           is_available: !!(created as any).is_available,
           is_vegetarian: !!(created as any).is_vegetarian,
@@ -1589,5 +1655,44 @@ export class RestaurantManagerMenuComponent implements OnInit {
       position: 0
     };
     this.editingCategory = null;
+  }
+
+  onVariantsChanged() {
+    // Refresh menu items to reflect any changes in variants
+    if (this.managedRestaurantId) {
+      this.loadMenuCategories();
+    }
+  }
+
+  private loadMenuCategories() {
+    if (!this.managedRestaurantId) return;
+
+    this.restaurantsService.getMenuCategoriesWithItems(this.managedRestaurantId).subscribe({
+      next: (cats: any[]) => {
+        this.categories = (cats || [])
+          .filter(c => c.id)
+          .map(c => ({
+            id: String(c.id),
+            name: c.name,
+            position: c.position ?? 0
+          }));
+
+        this.menuItems = (cats || []).flatMap(c => (c.items || []).map((i: any) => ({
+          id: String(i.id),
+          name: i.name,
+          description: i.description,
+          price_cents: i.price_cents,
+          is_available: i.is_available,
+          category_id: String(c.id),
+          image_url: i.image_url,
+          is_vegetarian: i.is_vegetarian,
+          is_vegan: i.is_vegan,
+          is_gluten_free: i.is_gluten_free
+        })));
+      },
+      error: (error) => {
+        console.error('Error loading menu categories:', error);
+      }
+    });
   }
 }

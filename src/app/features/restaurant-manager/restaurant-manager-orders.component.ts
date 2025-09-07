@@ -99,9 +99,17 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
 
               <div class="order-items">
                 <div *ngFor="let item of order.items" class="order-item">
-                  <span class="item-quantity">{{ item.quantity }}x</span>
-                  <span class="item-name">{{ item.name }}</span>
-                  <span class="item-price">€{{ item.total_price.toFixed(2) }}</span>
+                  <div class="item-main">
+                    <span class="item-quantity">{{ item.quantity }}x</span>
+                    <div class="item-details">
+                      <span class="item-name">{{ item.name }}</span>
+                      <!-- Show selected variants inline -->
+                      <span class="item-variants-inline" *ngIf="item.selected_variant_options && item.selected_variant_options.length > 0">
+                        ({{ getVariantSummary(item.selected_variant_options) }})
+                      </span>
+                    </div>
+                    <span class="item-price">€{{ item.total_price.toFixed(2) }}</span>
+                  </div>
                 </div>
               </div>
 
@@ -406,14 +414,36 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       min-width: 40px;
     }
 
-    .item-name {
-      flex: 1;
-      margin: 0 var(--space-2);
-    }
 
     .item-price {
       font-weight: 600;
       color: var(--color-text);
+    }
+
+    .item-main {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+
+    .item-details {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      margin: 0 var(--space-2);
+    }
+
+    .item-name {
+      font-weight: 500;
+      color: var(--color-text);
+    }
+
+    .item-variants-inline {
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+      font-style: italic;
+      margin-top: 2px;
     }
 
     .order-summary {
@@ -898,5 +928,35 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
       case 'cancelled': return 'Storniert';
       default: return 'Unbekannt';
     }
+  }
+
+  getVariantSummary(variants: Array<{id: string, name: string, group_name: string, price_modifier_cents: number}>): string {
+    if (!variants || variants.length === 0) return '';
+
+    // Group variants by group_name
+    const groupedVariants = variants.reduce((groups, variant) => {
+      const groupName = variant.group_name;
+      if (!groups[groupName]) {
+        groups[groupName] = [];
+      }
+      groups[groupName].push(variant);
+      return groups;
+    }, {} as Record<string, typeof variants>);
+
+    // Create summary strings for each group
+    const summaries: string[] = [];
+
+    for (const [groupName, groupVariants] of Object.entries(groupedVariants)) {
+      if (groupVariants.length === 1) {
+        // Single variant in group - just show the name
+        summaries.push(groupVariants[0].name);
+      } else {
+        // Multiple variants in group - show group name and variant names
+        const variantNames = groupVariants.map(v => v.name).join(', ');
+        summaries.push(`${groupName}: ${variantNames}`);
+      }
+    }
+
+    return summaries.join(', ');
   }
 }

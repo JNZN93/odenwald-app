@@ -32,6 +32,7 @@ export interface OrderItem {
   unit_price: number;
   total_price: number;
   special_instructions?: string;
+  selected_variant_option_ids?: string[];
 }
 
 export interface OrderItemDTO extends OrderItem {}
@@ -45,6 +46,7 @@ export interface CreateOrderRequest {
     quantity: number;
     unit_price: number;
     special_instructions?: string;
+    selected_variant_option_ids?: string[];
   }>;
 }
 
@@ -60,6 +62,11 @@ export interface OrderWithItems {
   order: Order;
   items: Array<OrderItem & {
     name: string;
+    selected_variant_options?: Array<{
+      id: string;
+      name: string;
+      price_modifier_cents: number;
+    }>;
   }>;
 }
 
@@ -67,6 +74,11 @@ export interface OrderWithItemsDTO {
   order: OrderDTO;
   items: Array<OrderItemDTO & {
     name: string;
+    selected_variant_options?: Array<{
+      id: string;
+      name: string;
+      price_modifier_cents: number;
+    }>;
   }>;
 }
 
