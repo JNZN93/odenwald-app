@@ -431,41 +431,81 @@ export class LoginComponent implements OnInit {
   private checkForGoogleCallback() {
     // Check if we have Google OAuth parameters in the URL
     const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    const scope = urlParams.get('scope');
+    const success = urlParams.get('success');
+    const token = urlParams.get('token');
+    const userParam = urlParams.get('user');
+    const error = urlParams.get('error');
 
-    console.log('LoginComponent: Checking for Google OAuth callback...', { code: !!code, scope });
+    console.log('LoginComponent: Checking for Google OAuth callback...', { success, token: !!token, user: !!userParam, error });
 
-    if (code && scope && scope.includes('google')) {
+    // Handle error from OAuth callback
+    if (error) {
+      console.error('LoginComponent: Google OAuth error:', error);
+      this.error = this.getErrorMessage(error);
+      // Clean up URL
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+      return;
+    }
+
+    // Handle successful OAuth callback
+    if (success === 'true' && token && userParam) {
       console.log('LoginComponent: Google OAuth callback detected, processing...');
       this.loading = true;
 
-      // Clean up URL by removing OAuth parameters
-      const cleanUrl = window.location.pathname;
-      window.history.replaceState({}, document.title, cleanUrl);
+      try {
+        // Parse user data from URL parameter
+        const user = JSON.parse(decodeURIComponent(userParam));
 
-      // Process the Google OAuth callback
-      this.http.get<any>(`${environment.apiUrl}/auth/google/callback?code=${code}`)
-        .subscribe({
-          next: (response) => {
-            console.log('LoginComponent: Google OAuth response:', response);
-            if (response && response.user) {
-              // Handle the auth success
-              this.auth.handleAuthSuccess(response);
-              console.log('LoginComponent: Google OAuth successful, navigating...');
-              this.navigateAfterGoogleLogin(response.user);
-            }
-          },
-          error: (error) => {
-            console.error('LoginComponent: Google OAuth callback error:', error);
-            this.loading = false;
-            this.error = 'Google-Anmeldung fehlgeschlagen';
-          }
-        });
+        // Create auth response object
+        const authResponse = {
+          message: 'Google authentication successful',
+          user: user,
+          token: token
+        };
+
+        console.log('LoginComponent: Google OAuth response:', authResponse);
+
+        // Handle the auth success
+        this.auth.handleAuthSuccess(authResponse);
+
+        // Clean up URL by removing OAuth parameters
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+
+        console.log('LoginComponent: Google OAuth successful, navigating...');
+
+        // Small delay to ensure auth state is properly updated
+        setTimeout(() => {
+          this.navigateAfterGoogleLogin(user);
+        }, 100);
+
+      } catch (parseError) {
+        console.error('LoginComponent: Error parsing OAuth response:', parseError);
+        this.loading = false;
+        this.error = 'Google-Anmeldung fehlgeschlagen: Ungültige Antwortdaten';
+        // Clean up URL
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    }
+  }
+
+  private getErrorMessage(error: string): string {
+    switch (error) {
+      case 'google_auth_failed':
+        return 'Google-Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.';
+      case 'internal_server_error':
+        return 'Serverfehler bei der Google-Anmeldung. Bitte versuchen Sie es später erneut.';
+      default:
+        return 'Google-Anmeldung fehlgeschlagen';
     }
   }
 
   private navigateAfterGoogleLogin(user: any): void {
+    // Reset loading state
+    this.loading = false;
+
     let targetRoute = '/customer'; // Default route
 
     if (user.role === 'app_admin' || user.role === 'admin') {
@@ -563,6 +603,7 @@ export class LoginComponent implements OnInit {
     try {
       // Use the redirect-based Google Sign In for better compatibility
       this.auth.initiateGoogleSignIn();
+      // Note: loading will be reset by the OAuth callback handler
     } catch (error) {
       this.loading = false;
       console.error('Google Sign In error:', error);
