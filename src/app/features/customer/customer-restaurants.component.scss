@@ -11,6 +11,26 @@
   border-bottom: 1px solid var(--color-gray-200);
 }
 
+/* Simple Search Notice */
+.simple-search-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-blue-50);
+  border: 1px solid var(--color-blue-200);
+  border-radius: var(--radius-lg);
+  color: var(--color-blue-700);
+  font-size: var(--text-sm);
+  text-align: center;
+  justify-content: center;
+}
+
+.simple-search-notice i {
+  color: var(--color-blue-500);
+  font-size: var(--text-lg);
+}
+
 .address-container {
   max-width: 600px;
   margin: 0 auto;

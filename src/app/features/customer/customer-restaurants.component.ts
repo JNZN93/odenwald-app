@@ -127,49 +127,12 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
             </button>
           </div>
 
-          <!-- Search Section -->
+          <!-- Search Section - Vereinfacht für Standort-Suche -->
           <div class="search-section" *ngIf="userCoordinates">
             <div class="search-container">
-              <div class="search-input-wrapper">
-                <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                <input
-                  type="text"
-                  class="search-input"
-                  placeholder="Nach Restaurant oder Küche suchen..."
-                  [(ngModel)]="searchTerm"
-                  (input)="onSearchChange($event)"
-                >
-              </div>
-
-              <div class="filter-controls">
-                <div class="filter-group">
-                  <label class="filter-label">Küche</label>
-                  <select class="filter-select" [(ngModel)]="cuisineFilter" (change)="onFilterChange()">
-                    <option value="">Alle Küchen</option>
-                    <option value="german">Deutsche Küche</option>
-                    <option value="italian">Italienische Küche</option>
-                    <option value="asian">Asiatische Küche</option>
-                  </select>
-                </div>
-
-                <div class="filter-group">
-                  <label class="filter-label">Lieferzeit</label>
-                  <select class="filter-select" [(ngModel)]="deliveryTimeFilter" (change)="onFilterChange()">
-                    <option value="">Alle Zeiten</option>
-                    <option value="30">Bis 30 Min</option>
-                    <option value="45">Bis 45 Min</option>
-                    <option value="60">Bis 60 Min</option>
-                  </select>
-                </div>
-
-                <div class="filter-group">
-                  <label class="filter-label">Bewertung</label>
-                  <select class="filter-select" [(ngModel)]="ratingFilter" (change)="onFilterChange()">
-                    <option value="">Alle Bewertungen</option>
-                    <option value="4">4+ Sterne</option>
-                    <option value="3">3+ Sterne</option>
-                  </select>
-                </div>
+              <div class="simple-search-notice">
+                <i class="fa-solid fa-info-circle"></i>
+                <span>Zeige alle Restaurants in {{ searchRadius }}km Entfernung zu deiner Adresse</span>
               </div>
             </div>
           </div>
@@ -335,13 +298,16 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
   userCoordinates: GeocodeResult | null = null;
   formattedAddress = '';
   isGeocoding = false;
-  searchRadius = 10; // km
+  searchRadius = 40; // km - Erhöht für bessere Abdeckung im Odenwald
 
-  // Search and filter properties
+  // Search and filter properties - vereinfacht für Standort-basierte Suche
   searchTerm = '';
   cuisineFilter = '';
   deliveryTimeFilter = '';
   ratingFilter = '';
+
+  // Deaktiviere alle zusätzlichen Filter für reine Standort-Suche
+  private useSimpleSearch = true;
 
   // Restaurants based on location
   private restaurantsSubject = new BehaviorSubject<RestaurantDTO[]>([]);
@@ -365,7 +331,9 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
         console.log('CustomerRestaurantsComponent: Filtered restaurants:', restaurants.length);
         if (restaurants.length > 0) {
           console.log('Sample restaurant:', restaurants[0]);
+          console.log('All restaurants:', restaurants.map(r => ({ name: r.name, cuisine: r.cuisine_type, verified: r.is_verified })));
         }
+        console.log('📍 Simple location search active - no additional filters');
       },
       error: (error) => {
         console.error('CustomerRestaurantsComponent: Error loading restaurants:', error);
@@ -397,6 +365,8 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
 
     this.isGeocoding = true;
 
+    console.log('🎯 Geocoding address:', this.deliveryAddress);
+
     this.geocodingService.geocodeAddress(this.deliveryAddress)
       .pipe(
         catchError(error => {
@@ -409,9 +379,12 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
         this.isGeocoding = false;
 
         if (result) {
+          console.log('📍 Geocoding result:', result);
           this.userCoordinates = result;
           this.formattedAddress = result.formattedAddress || this.deliveryAddress;
           this.loadNearbyRestaurants();
+        } else {
+          console.error('❌ No geocoding result');
         }
       });
   }
@@ -432,10 +405,16 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
   private loadNearbyRestaurants() {
     if (!this.userCoordinates) return;
 
+    console.log('🔍 Loading nearby restaurants with coordinates:', {
+      latitude: this.userCoordinates.latitude,
+      longitude: this.userCoordinates.longitude,
+      radius: this.searchRadius
+    });
+
     this.restaurantsService.getNearbyRestaurants(
       this.userCoordinates.latitude,
       this.userCoordinates.longitude,
-      10 // 10km radius
+      this.searchRadius // Verwende den konfigurierten Radius
     ).pipe(
       map(restaurants => this.filterRestaurants(restaurants)),
       catchError(error => {
@@ -443,49 +422,46 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
         return of([]);
       })
     ).subscribe(restaurants => {
+      console.log('🏪 Simple search - API returned:', restaurants.length, 'restaurants');
+      console.log('🍔 Firats Burgerkreis in API response:', !!restaurants.find(r => r.name?.includes('Burgerkreis')));
+
+      // Bei einfacher Suche: Zeige alle Restaurants ohne zusätzliche Filter
       this.restaurantsSubject.next(restaurants);
     });
   }
 
+  // Vereinfachte Suchlogik - keine zusätzlichen Filter
   onSearchChange(event: any) {
+    // Bei einfacher Suche keine zusätzlichen Filter anwenden
     this.searchTerm = event.target.value;
-    this.triggerFilterUpdate();
   }
 
   onFilterChange() {
-    this.triggerFilterUpdate();
+    // Bei einfacher Suche keine Filter-Updates
   }
 
   private triggerFilterUpdate() {
-    if (!this.userCoordinates) return;
-
-    // Reload restaurants and reapply filters
-    this.loadNearbyRestaurants();
+    // Bei einfacher Suche keine Filter-Updates notwendig
   }
 
   private filterRestaurants(restaurants: RestaurantDTO[]): RestaurantDTO[] {
-    return restaurants.filter(restaurant => {
-      // Search term filter (name, description, cuisine)
-      const matchesSearch = !this.searchTerm ||
-        restaurant.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        (restaurant.description && restaurant.description.toLowerCase().includes(this.searchTerm.toLowerCase())) ||
-        (restaurant.cuisine_type && restaurant.cuisine_type.toLowerCase().includes(this.searchTerm.toLowerCase()));
+    console.log('🏪 Simple location-based search - showing all nearby restaurants:', restaurants.length);
 
-      // Cuisine filter
-      const matchesCuisine = !this.cuisineFilter ||
-        restaurant.cuisine_type?.toLowerCase() === this.cuisineFilter.toLowerCase();
+    // Bei einfacher Standort-Suche: Zeige alle Restaurants, die die API zurückgibt
+    // Keine zusätzlichen Filter anwenden
 
-      // Delivery time filter
-      const matchesDeliveryTime = !this.deliveryTimeFilter ||
-        (restaurant.delivery_info?.estimated_delivery_time_minutes &&
-         restaurant.delivery_info.estimated_delivery_time_minutes <= parseInt(this.deliveryTimeFilter));
+    const firatsRestaurant = restaurants.find(r => r.name?.includes('Burgerkreis'));
+    if (firatsRestaurant) {
+      console.log('🍔 Firats Burgerkreis found in results:', {
+        name: firatsRestaurant.name,
+        cuisine: firatsRestaurant.cuisine_type,
+        rating: firatsRestaurant.rating,
+        delivery_time: firatsRestaurant.delivery_info?.estimated_delivery_time_minutes
+      });
+    }
 
-      // Rating filter
-      const matchesRating = !this.ratingFilter ||
-        (restaurant.rating && restaurant.rating >= parseInt(this.ratingFilter));
-
-      return matchesSearch && matchesCuisine && matchesDeliveryTime && matchesRating;
-    });
+    console.log('✅ All restaurants shown (no additional filtering):', restaurants.length);
+    return restaurants;
   }
 }
 
