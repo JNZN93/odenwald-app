@@ -6,6 +6,7 @@ import { AuthService, User } from '../../core/auth/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { OrdersService, Order } from '../../core/services/orders.service';
 import { RestaurantManagerService } from '../../core/services/restaurant-manager.service';
+ 
 import { environment } from '../../../environments/environment';
 import { Subscription, interval } from 'rxjs';
 
@@ -111,7 +112,7 @@ export interface Driver {
         <!-- Drivers List -->
         <div class="drivers-section">
           <h2>1. Fahrer auswählen</h2>
-          <p class="section-description">Wählen Sie zuerst einen Fahrer aus, dem Sie Bestellungen zuweisen möchten. Verfügbare und beschäftigte Fahrer können ausgewählt werden.</p>
+          <p class="section-description">Wählen Sie einen Fahrer aus. Alle aktiven Fahrer (verfügbar, beschäftigt, unterwegs) können neue Bestellungen erhalten.</p>
 
           <div class="drivers-list" *ngIf="drivers.length > 0; else noDrivers">
             <div
@@ -191,6 +192,21 @@ export interface Driver {
             <h2>2. Bestellungen auswählen</h2>
             <div class="bulk-actions" *ngIf="selectedDriver && pendingOrders.length > 0">
               <button
+                class="btn btn-outline-primary"
+                (click)="optimizeRoute()"
+                [disabled]="selectedOrders.length < 2 || isOptimizingRoute"
+                title="Route für mehrere Bestellungen optimieren"
+              >
+                <span *ngIf="!isOptimizingRoute">
+                  <i class="fa-solid fa-route"></i>
+                  Route optimieren
+                </span>
+                <span *ngIf="isOptimizingRoute">
+                  <i class="fa-solid fa-spinner fa-spin"></i>
+                  Optimierung...
+                </span>
+              </button>
+              <button
                 class="btn btn-primary"
                 (click)="assignSelectedOrders()"
                 [disabled]="selectedOrders.length === 0 || isBulkAssigning"
@@ -198,6 +214,9 @@ export interface Driver {
                 <span *ngIf="!isBulkAssigning">
                   <i class="fa-solid fa-check"></i>
                   {{ selectedOrders.length }} Bestellung{{ selectedOrders.length !== 1 ? 'en' : '' }} zuweisen
+                  <span *ngIf="selectedOrders.length >= 2" class="auto-optimize-indicator">
+                    <i class="fa-solid fa-route"></i> (Auto-Optimierung)
+                  </span>
                 </span>
                 <span *ngIf="isBulkAssigning">
                   <i class="fa-solid fa-spinner fa-spin"></i>
@@ -214,6 +233,10 @@ export interface Driver {
                 <strong>{{ selectedDriver.name || 'Fahrer ' + selectedDriver.id }}</strong> ausgewählt
                 <br>
                 <small>Wählen Sie die Bestellungen aus, die zugewiesen werden sollen</small>
+                <br *ngIf="selectedOrders.length >= 2">
+                <small *ngIf="selectedOrders.length >= 2" class="auto-optimize-notice">
+                  <i class="fa-solid fa-route"></i> Bei {{ selectedOrders.length }}+ Bestellungen wird die Route automatisch optimiert (immer vom echten Restaurant-Standort)
+                </small>
               </div>
             </div>
           </div>
@@ -527,6 +550,146 @@ export interface Driver {
                 </div>
               </div>
             </div>
+          </div>
+
+          
+        </div>
+      </div>
+
+      
+
+      <!-- Route Optimization Modal -->
+      <div class="modal" *ngIf="showRouteOptimizationModal" (click)="closeRouteOptimizationModal()">
+        <div class="modal-content route-optimization-modal" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3><i class="fa-solid fa-route"></i> Route-Optimierung</h3>
+            <button class="close-btn" (click)="closeRouteOptimizationModal()">
+              <i class="fa-solid fa-times"></i>
+            </button>
+          </div>
+
+          <div class="modal-body" *ngIf="optimizedRoute && routeInsights">
+            <!-- Route Overview -->
+            <div class="route-overview">
+              <div class="overview-grid">
+                <div class="overview-card">
+                  <i class="fa-solid fa-map-marker-alt"></i>
+                  <div class="overview-content">
+                    <span class="overview-value">{{ routeInsights.deliveryCount }}</span>
+                    <span class="overview-label">Lieferungen</span>
+                  </div>
+                </div>
+                <div class="overview-card">
+                  <i class="fa-solid fa-road"></i>
+                  <div class="overview-content">
+                    <span class="overview-value">{{ optimizedRoute.totalDistance }} km</span>
+                    <span class="overview-label">Gesamtstrecke</span>
+                  </div>
+                </div>
+                <div class="overview-card">
+                  <i class="fa-solid fa-clock"></i>
+                  <div class="overview-content">
+                    <span class="overview-value">{{ optimizedRoute.totalTime }} min</span>
+                    <span class="overview-label">Geschätzte Zeit</span>
+                  </div>
+                </div>
+                <div class="overview-card">
+                  <i class="fa-solid fa-tachometer-alt"></i>
+                  <div class="overview-content">
+                    <span class="overview-value">{{ routeInsights.efficiency }}%</span>
+                    <span class="overview-label">Effizienz</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Optimized Route Sequence -->
+            <div class="route-sequence">
+              <h4><i class="fa-solid fa-list-ol"></i> Optimierte Reihenfolge</h4>
+              <div class="sequence-list">
+                <div
+                  class="sequence-item"
+                  *ngFor="let waypoint of optimizedRoute.waypoints; let i = index; trackBy: trackByWaypointId"
+                >
+                  <div class="sequence-number" [class]="getSequenceClass(i)">
+                    <span *ngIf="i === 0"><i class="fa-solid fa-play"></i></span>
+                    <span *ngIf="i > 0">{{ i }}</span>
+                  </div>
+                  <div class="sequence-content">
+                    <div class="waypoint-name">{{ waypoint.name }}</div>
+                    <div class="waypoint-address">{{ waypoint.address }}</div>
+                    <div class="waypoint-coords" *ngIf="waypoint.lat && waypoint.lng">
+                      {{ waypoint.lat | number:'1.4-4' }}, {{ waypoint.lng | number:'1.4-4' }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Route Insights -->
+            <div class="route-insights" *ngIf="routeInsights">
+              <h4><i class="fa-solid fa-chart-line"></i> Routen-Statistiken</h4>
+              <div class="insights-grid">
+                <div class="insight-item">
+                  <span class="insight-label">Ø Distanz pro Lieferung:</span>
+                  <span class="insight-value">{{ routeInsights.avgDistancePerDelivery }} km</span>
+                </div>
+                <div class="insight-item">
+                  <span class="insight-label">Ø Zeit pro Lieferung:</span>
+                  <span class="insight-value">{{ routeInsights.avgTimePerDelivery }} min</span>
+                </div>
+                <div class="insight-item" *ngIf="optimizedRoute?.estimatedDeliveryTime">
+                  <span class="insight-label">Voraussichtliche Ankunft:</span>
+                  <span class="insight-value">{{ optimizedRoute.estimatedDeliveryTime | date:'short' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Assignment Summary -->
+            <div class="assignment-summary" *ngIf="selectedDriver">
+              <h4><i class="fa-solid fa-user-check"></i> Zuweisung bestätigen</h4>
+              <div class="summary-card">
+                <div class="summary-driver">
+                  <i class="fa-solid fa-truck"></i>
+                  <div>
+                    <strong>{{ selectedDriver.name || 'Fahrer ' + selectedDriver.id }}</strong>
+                    <br>
+                    <small>{{ getVehicleTypeLabel(selectedDriver.vehicle_type) }}</small>
+                  </div>
+                </div>
+                <div class="summary-details">
+                  <div class="summary-item">
+                    <span>Bestellungen:</span>
+                    <strong>{{ routeInsights.deliveryCount }}</strong>
+                  </div>
+                  <div class="summary-item" *ngIf="optimizedRoute?.estimatedDeliveryTime">
+                    <span>Geschätzte Lieferzeit:</span>
+                    <strong>{{ optimizedRoute.estimatedDeliveryTime | date:'short' }}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-ghost" (click)="closeRouteOptimizationModal()">
+              Abbrechen
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              (click)="applyOptimizedRoute()"
+              [disabled]="isBulkAssigning"
+            >
+              <span *ngIf="!isBulkAssigning">
+                <i class="fa-solid fa-check"></i>
+                Route zuweisen & Bestellungen starten
+              </span>
+              <span *ngIf="isBulkAssigning">
+                <i class="fa-solid fa-spinner fa-spin"></i>
+                Zuweisen...
+              </span>
+            </button>
           </div>
         </div>
       </div>
@@ -1373,6 +1536,316 @@ export interface Driver {
       background: var(--color-surface);
       border-radius: var(--radius-md);
     }
+
+    /* Route Optimization Modal Styles */
+    .route-optimization-modal {
+      max-width: 900px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .route-optimization-modal .modal-body {
+      padding: var(--space-6);
+    }
+
+    .route-optimization-modal h4 {
+      color: var(--color-heading);
+      font-size: var(--text-lg);
+      margin: 0 0 var(--space-4) 0;
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .route-optimization-modal h4 i {
+      color: var(--color-primary);
+    }
+
+    /* Route Overview */
+    .route-overview {
+      margin-bottom: var(--space-6);
+    }
+
+    .overview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--space-4);
+    }
+
+    .overview-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .overview-card i {
+      font-size: var(--text-2xl);
+      color: var(--color-primary);
+    }
+
+    .overview-content {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .overview-value {
+      font-size: var(--text-xl);
+      font-weight: 700;
+      color: var(--color-heading);
+      margin-bottom: var(--space-1);
+    }
+
+    .overview-label {
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+    }
+
+    /* Route Sequence */
+    .route-sequence {
+      margin-bottom: var(--space-6);
+    }
+
+    .sequence-list {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .sequence-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-4);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .sequence-item:last-child {
+      border-bottom: none;
+    }
+
+    .sequence-number {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: var(--text-lg);
+      flex-shrink: 0;
+    }
+
+    .sequence-number.start {
+      background: var(--color-success);
+      color: white;
+    }
+
+    .sequence-number.stop {
+      background: var(--color-primary);
+      color: white;
+    }
+
+    .sequence-number i {
+      font-size: var(--text-sm);
+    }
+
+    .sequence-content {
+      flex: 1;
+    }
+
+    .waypoint-name {
+      font-weight: 600;
+      color: var(--color-heading);
+      margin-bottom: var(--space-1);
+    }
+
+    .waypoint-address {
+      color: var(--color-text);
+      font-size: var(--text-sm);
+      margin-bottom: var(--space-1);
+    }
+
+    .waypoint-coords {
+      color: var(--color-muted);
+      font-size: var(--text-xs);
+      font-family: monospace;
+    }
+
+    /* Route Insights */
+    .route-insights {
+      margin-bottom: var(--space-6);
+    }
+
+    .insights-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: var(--space-3);
+    }
+
+    .insight-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-3);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+    }
+
+    .insight-label {
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+    }
+
+    .insight-value {
+      font-weight: 600;
+      color: var(--color-heading);
+    }
+
+    /* Assignment Summary */
+    .assignment-summary {
+      margin-bottom: var(--space-6);
+    }
+
+    .summary-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+    }
+
+    .summary-driver {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+      padding-bottom: var(--space-4);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .summary-driver i {
+      font-size: var(--text-xl);
+      color: var(--color-primary);
+    }
+
+    .summary-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-4);
+    }
+
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .summary-item span:first-child {
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+    }
+
+    .summary-item strong {
+      color: var(--color-heading);
+    }
+
+    /* Route Actions */
+    .driver-route-actions {
+      margin-top: var(--space-6);
+      padding-top: var(--space-4);
+      border-top: 1px solid var(--color-border);
+    }
+
+    .driver-route-actions h5 {
+      margin: 0 0 var(--space-3) 0;
+      color: var(--color-heading);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .driver-route-actions h5 i {
+      color: var(--color-primary);
+    }
+
+    .route-action-buttons {
+      display: flex;
+      gap: var(--space-3);
+      flex-wrap: wrap;
+    }
+
+    /* Modal Actions */
+    .route-optimization-modal .modal-actions {
+      display: flex;
+      gap: var(--space-3);
+      justify-content: flex-end;
+      padding: var(--space-6);
+      border-top: 1px solid var(--color-border);
+      background: var(--color-surface-2);
+    }
+
+    /* Auto-Optimization Styles */
+    .auto-optimize-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      margin-left: var(--space-2);
+      font-size: var(--text-sm);
+      color: var(--color-primary);
+      font-weight: 600;
+    }
+
+    .auto-optimize-indicator i {
+      font-size: var(--text-xs);
+    }
+
+    .auto-optimize-notice {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      margin-top: var(--space-1);
+      color: var(--color-primary);
+      font-weight: 500;
+    }
+
+    .auto-optimize-notice i {
+      font-size: var(--text-sm);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .route-optimization-modal {
+        max-width: 95%;
+        margin: var(--space-2);
+      }
+
+      .overview-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .insights-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-details {
+        grid-template-columns: 1fr;
+      }
+
+      .sequence-item {
+        gap: var(--space-3);
+        padding: var(--space-3);
+      }
+
+      .waypoint-name {
+        font-size: var(--text-sm);
+      }
+    }
   `]
 })
 export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
@@ -1414,6 +1887,14 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
   isLoading = false;
   isAddingDriver = false;
   isBulkAssigning = false;
+  isOptimizingRoute = false;
+
+  // Route optimization modal state
+  showRouteOptimizationModal = false;
+  optimizedRoute: any = null;
+  routeInsights: any = null;
+
+  
 
   ngOnInit() {
     this.loadDrivers();
@@ -1460,7 +1941,22 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
         next: async (restaurants: any[]) => {
           if (restaurants?.length > 0) {
             // Get orders for the first restaurant (same as orders component)
-            const restaurantId = restaurants[0].restaurant_id;
+            const firstRestaurant = restaurants[0];
+            const restaurantId = firstRestaurant.restaurant_id || firstRestaurant.id;
+
+            console.log('Loading orders for restaurant:', {
+              restaurantId,
+              restaurant_name: firstRestaurant.restaurant_name,
+              has_restaurant_id: !!firstRestaurant.restaurant_id,
+              has_id: !!firstRestaurant.id
+            });
+
+            if (!restaurantId) {
+              console.error('Restaurant has no valid ID:', firstRestaurant);
+              this.toastService.error('Fehler', 'Restaurant hat keine gültige ID. Bitte wenden Sie sich an den Administrator.');
+              this.pendingOrders = [];
+              return;
+            }
 
             // Load orders with different statuses to find pending ones
             const allOrders = await this.ordersService.getRestaurantOrders(restaurantId).toPromise();
@@ -1697,7 +2193,10 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
   }
 
   isDriverAvailable(driver: Driver): boolean {
-    // Allow assignment to available, busy, and on_delivery drivers
+    // Allow assignment to all active drivers:
+    // - available: ready for new assignments
+    // - busy: already has deliveries, can take more
+    // - on_delivery: actively delivering, can add more stops
     // Only exclude offline drivers
     const available = (driver.current_status === 'available' ||
                       driver.current_status === 'busy' ||
@@ -1733,6 +2232,133 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
     try {
       this.isBulkAssigning = true;
 
+      // Automatische Routenoptimierung bei mehreren Bestellungen
+      if (this.selectedOrders.length >= 2) {
+        await this.autoOptimizeAndAssign();
+      } else {
+        // Einzelne Bestellung: normale Zuweisung
+        await this.assignSingleOrder();
+      }
+
+    } catch (error: any) {
+      console.error('Error assigning orders:', error);
+      const message = error.error?.error || 'Zuweisung fehlgeschlagen';
+      this.toastService.error('Fehler', message);
+    } finally {
+      this.isBulkAssigning = false;
+    }
+  }
+
+  private async assignSingleOrder() {
+    const order = this.selectedOrders[0];
+    await this.http.post(
+      `${environment.apiUrl}/orders/${order.id}/assign-driver`,
+      {
+        driver_id: this.assignmentSelectedDriver!.id,
+        estimated_delivery_time: new Date(Date.now() + 30 * 60 * 1000).toISOString()
+      }
+    ).toPromise();
+
+    this.toastService.success(
+      'Erfolg',
+      'Bestellung wurde erfolgreich zugewiesen'
+    );
+
+    // Reset selection
+    this.selectedOrders = [];
+    this.assignmentSelectedDriver = null;
+    await this.refreshData();
+  }
+
+  private async autoOptimizeAndAssign() {
+    try {
+      // Schritt 1: Route automatisch optimieren
+      this.toastService.info('Optimierung läuft...', 'Route wird automatisch optimiert');
+
+      // Intelligente Startpunkt-Bestimmung
+      const startLocation = await this.determineOptimalStartLocation();
+
+      const orderIds = this.selectedOrders.map(order => order.id);
+
+      // Route optimieren
+      const optimizationResponse = await this.http.post(
+        `${environment.apiUrl}/orders/optimize-route`,
+        {
+          order_ids: orderIds,
+          start_location: startLocation,
+          driver_speed: 30,
+          stop_time: 5
+        }
+      ).toPromise();
+
+      const optimizationData = optimizationResponse as any;
+
+      if (optimizationData.success) {
+        // Schritt 2: Optimierte Route anwenden
+        const orderSequence = optimizationData.optimized_route.waypoints
+          .filter((waypoint: any) => waypoint.id !== 'start')
+          .map((waypoint: any) => waypoint.id);
+
+        const applyResponse = await this.http.post(
+          `${environment.apiUrl}/orders/apply-route-optimization`,
+          {
+            driver_id: this.assignmentSelectedDriver!.id,
+            order_sequence: orderSequence,
+            route_optimization_data: {
+              route_segments: optimizationData.optimized_route.routeSegments,
+              total_distance: optimizationData.optimized_route.totalDistance,
+              total_time: optimizationData.optimized_route.totalTime,
+              service_used: optimizationData.insights.serviceUsed
+            }
+          }
+        ).toPromise();
+
+        const applyData = applyResponse as any;
+
+        if (applyData.success) {
+          // Erfolgsmeldungen
+          this.toastService.success(
+            'Route automatisch optimiert!',
+            `${this.selectedOrders.length} Bestellungen wurden mit optimierter Route zugewiesen`
+          );
+
+          // Zusätzliche Infos nach kurzer Verzögerung
+          if (applyData.note) {
+            setTimeout(() => {
+              this.toastService.info('Route aktualisiert', applyData.note);
+            }, 1500);
+          }
+
+          if (applyData.route_recalculated && applyData.existing_orders_updated > 0) {
+            setTimeout(() => {
+              this.toastService.info(
+                'Komplette Route neu berechnet',
+                `${applyData.existing_orders_updated} bestehende Lieferungen wurden mit optimierten Zeiten aktualisiert.`
+              );
+            }, 2500);
+          }
+
+          // Reset selection
+          this.selectedOrders = [];
+          this.assignmentSelectedDriver = null;
+
+          await this.refreshData();
+        } else {
+          throw new Error('Optimierte Route konnte nicht angewendet werden');
+        }
+      } else {
+        throw new Error('Route-Optimierung fehlgeschlagen');
+      }
+
+    } catch (error: any) {
+      console.error('Auto optimization error:', error);
+      // Bei Fehler: Zeige detaillierte Fehlermeldung
+      const errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler bei der Routenoptimierung';
+      this.toastService.error('Routenoptimierung fehlgeschlagen', errorMessage);
+
+      // Fallback: Normale Zuweisung ohne Optimierung
+      this.toastService.info('Fallback aktiv', 'Bestellungen werden ohne Optimierung zugewiesen');
+
       const assignmentPromises = this.selectedOrders.map(order =>
         this.http.post(
           `${environment.apiUrl}/orders/${order.id}/assign-driver`,
@@ -1747,16 +2373,123 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
 
       this.toastService.success(
         'Erfolg',
-        `${this.selectedOrders.length} Bestellung${this.selectedOrders.length !== 1 ? 'en' : ''} wurde${this.selectedOrders.length === 1 ? '' : 'n'} erfolgreich zugewiesen`
+        `${this.selectedOrders.length} Bestellungen wurden zugewiesen (ohne Optimierung)`
       );
 
       // Reset selection
       this.selectedOrders = [];
       this.assignmentSelectedDriver = null;
-
       await this.refreshData();
+    }
+  }
+
+  // Route optimization methods
+  async optimizeRoute() {
+    if (!this.assignmentSelectedDriver || this.selectedOrders.length < 2 || this.isOptimizingRoute) return;
+
+    try {
+      this.isOptimizingRoute = true;
+
+      // Intelligente Startpunkt-Bestimmung
+      const startLocation = await this.determineOptimalStartLocation();
+
+      const orderIds = this.selectedOrders.map(order => order.id);
+
+      const response = await this.http.post(
+        `${environment.apiUrl}/orders/optimize-route`,
+        {
+          order_ids: orderIds,
+          start_location: startLocation,
+          driver_speed: 30, // km/h
+          stop_time: 5 // minutes per stop
+        }
+      ).toPromise();
+
+      const data = response as any;
+
+      if (data.success) {
+        this.optimizedRoute = data.optimized_route;
+        this.routeInsights = data.insights;
+        this.showRouteOptimizationModal = true;
+
+        this.toastService.success(
+          'Route optimiert',
+          `Optimale Route für ${data.order_count} Bestellungen berechnet`
+        );
+      } else {
+        this.toastService.error('Fehler', 'Route konnte nicht optimiert werden');
+      }
+
     } catch (error: any) {
-      console.error('Error bulk assigning orders:', error);
+      console.error('Route optimization error:', error);
+      const message = error.error?.error || 'Route-Optimierung fehlgeschlagen';
+      this.toastService.error('Fehler', message);
+    } finally {
+      this.isOptimizingRoute = false;
+    }
+  }
+
+  async applyOptimizedRoute() {
+    if (!this.assignmentSelectedDriver || !this.optimizedRoute) return;
+
+    try {
+      this.isBulkAssigning = true;
+
+      // Extract order IDs from optimized waypoints (excluding start point)
+      const orderSequence = this.optimizedRoute.waypoints
+        .filter((waypoint: any) => waypoint.id !== 'start')
+        .map((waypoint: any) => waypoint.id);
+
+      const response = await this.http.post(
+        `${environment.apiUrl}/orders/apply-route-optimization`,
+        {
+          driver_id: this.assignmentSelectedDriver.id,
+          order_sequence: orderSequence,
+          route_optimization_data: {
+            route_segments: this.optimizedRoute.routeSegments,
+            total_distance: this.optimizedRoute.totalDistance,
+            total_time: this.optimizedRoute.totalTime,
+            service_used: this.routeInsights.serviceUsed
+          }
+        }
+      ).toPromise();
+
+      const data = response as any;
+
+      if (data.success) {
+        this.toastService.success(
+          'Erfolg',
+          data.message
+        );
+
+        // Show additional note if available
+        if (data.note) {
+          setTimeout(() => {
+            this.toastService.info('Route aktualisiert', data.note);
+          }, 1000);
+        }
+
+        // Show route recalculation info if existing orders were updated
+        if (data.route_recalculated && data.existing_orders_updated > 0) {
+          setTimeout(() => {
+            this.toastService.info(
+              'Komplette Route neu berechnet',
+              `${data.existing_orders_updated} bestehende Lieferungen wurden mit optimierten Zeiten aktualisiert.`
+            );
+          }, 2000);
+        }
+
+        // Close modal and reset state
+        this.closeRouteOptimizationModal();
+
+        // Refresh data
+        await this.refreshData();
+      } else {
+        this.toastService.error('Fehler', 'Zuweisung fehlgeschlagen');
+      }
+
+    } catch (error: any) {
+      console.error('Apply optimized route error:', error);
       const message = error.error?.error || 'Zuweisung fehlgeschlagen';
       this.toastService.error('Fehler', message);
     } finally {
@@ -1764,9 +2497,243 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
     }
   }
 
+  closeRouteOptimizationModal() {
+    this.showRouteOptimizationModal = false;
+    this.optimizedRoute = null;
+    this.routeInsights = null;
+  }
+
+  // Template helper methods for route optimization
+  trackByWaypointId(index: number, waypoint: any): string {
+    return waypoint.id;
+  }
+
+  getSequenceClass(index: number): string {
+    if (index === 0) return 'start';
+    return 'stop';
+  }
+
+  // Intelligente Startpunkt-Bestimmung basierend auf Fahrer-Status
+  private async determineOptimalStartLocation(): Promise<{ lat: number; lng: number; address: string }> {
+    const driver = this.assignmentSelectedDriver!;
+    const driverId = driver.id;
+
+    try {
+      // Schritt 1: Prüfe, ob Fahrer bereits aktive Lieferungen hat
+      const driverOrders = await this.http.get<{ orders: any[] }>(
+        `${environment.apiUrl}/drivers/${driverId}/orders`
+      ).toPromise();
+
+      const activeOrders = driverOrders?.orders?.filter(order =>
+        order.status === 'picked_up' || order.status === 'ready'
+      ) || [];
+
+      // Schritt 2: Wenn Fahrer aktive Lieferungen hat → Start von aktueller Position
+      if (activeOrders.length > 0) {
+        console.log(`🚛 Fahrer ${driverId} hat ${activeOrders.length} aktive Lieferungen`);
+
+        // Versuche aktuelle Fahrer-Position zu verwenden
+        if (driver.current_location) {
+          console.log('📍 Start von aktueller Fahrer-Position:', driver.current_location);
+          return {
+            lat: driver.current_location.lat,
+            lng: driver.current_location.lng,
+            address: driver.current_location.address || 'Aktuelle Fahrer-Position'
+          };
+        }
+
+        // Fallback: Verwende die Adresse der letzten aktiven Lieferung
+        const lastActiveOrder = activeOrders[activeOrders.length - 1];
+        if (lastActiveOrder.delivery_address) {
+          console.log('📍 Start von letzter Lieferadresse:', lastActiveOrder.delivery_address);
+          // Hier könnte Geocoding implementiert werden
+          // Für jetzt: Verwende Restaurant als Fallback für aktive Fahrer
+          const restaurantLocation = await this.getRestaurantLocation();
+          if (restaurantLocation) {
+            return {
+              ...restaurantLocation,
+              address: `Bei Lieferung: ${lastActiveOrder.customer_name || 'Kunde'}`
+            };
+          }
+        }
+      }
+
+      // Schritt 3: Fahrer ist verfügbar (keine aktiven Lieferungen) → Start vom Restaurant
+      console.log(`✅ Fahrer ${driverId} ist verfügbar - Start vom Restaurant`);
+      const restaurantLocation = await this.getRestaurantLocation();
+      return restaurantLocation; // Restaurant-Standort ist immer erforderlich!
+
+    } catch (error) {
+      console.error('❌ Fehler bei Startpunkt-Bestimmung:', error);
+
+      // Bei Fehler: Restaurant-Standort ist Pflicht!
+      throw new Error(`Startpunkt-Bestimmung fehlgeschlagen: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
+    }
+  }
+
+  // Helper method to get restaurant location (immer erforderlich!)
+  private async getRestaurantLocation(): Promise<{ lat: number; lng: number; address: string }> {
+    try {
+      // First get managed restaurants to find the restaurant ID
+      const restaurants = await new Promise<any[]>((resolve, reject) => {
+        this.restaurantManagerService.getManagedRestaurants().subscribe({
+          next: (restaurants) => resolve(restaurants),
+          error: (error) => reject(error)
+        });
+      });
+
+      if (restaurants && restaurants.length > 0) {
+        const restaurant = restaurants[0];
+
+        // Debug logging to understand the data structure
+        console.log('Restaurant data:', {
+          restaurant,
+          restaurant_id: restaurant.restaurant_id,
+          id: restaurant.id,
+          restaurant_name: restaurant.restaurant_name
+        });
+
+        // Handle both possible ID field names
+        const restaurantId = restaurant.restaurant_id || restaurant.id;
+
+        if (!restaurantId) {
+          throw new Error(`Restaurant "${restaurant.restaurant_name || restaurant.name || 'Unknown'}" hat keine gültige ID. Bitte wenden Sie sich an den Administrator.`);
+        }
+
+        // Now get the full restaurant details including coordinates
+        try {
+          const restaurantDetails = await this.http.get(
+            `${environment.apiUrl}/restaurants/${restaurantId}`
+          ).toPromise() as any;
+
+          console.log('Full restaurant details response:', restaurantDetails);
+
+          if (restaurantDetails && restaurantDetails.restaurant) {
+            const fullRestaurant = restaurantDetails.restaurant;
+
+            console.log('Full restaurant object:', fullRestaurant);
+            console.log('Available properties:', Object.keys(fullRestaurant));
+            console.log('Address related properties:', {
+              address: fullRestaurant.address,
+              street: fullRestaurant.address?.street,
+              coordinates: fullRestaurant.coordinates,
+              latitude: fullRestaurant.latitude,
+              longitude: fullRestaurant.longitude
+            });
+
+            // Try to get coordinates from the full restaurant data - multiple possible structures
+            let lat: number | null = null;
+            let lng: number | null = null;
+            let address: string = fullRestaurant.name || 'Restaurant Standort';
+
+            // Option 1: address.coordinates object (primary structure)
+            if (fullRestaurant.address && fullRestaurant.address.coordinates) {
+              lat = parseFloat(fullRestaurant.address.coordinates.latitude);
+              lng = parseFloat(fullRestaurant.address.coordinates.longitude);
+              address = fullRestaurant.name || this.formatAddress(fullRestaurant.address) || address;
+              console.log('Found coordinates in address.coordinates:', { lat, lng, address });
+            }
+
+            // Option 2: coordinates object with lat/lng (fallback)
+            if (!lat && !lng && fullRestaurant.coordinates && typeof fullRestaurant.coordinates === 'object') {
+              if (fullRestaurant.coordinates.latitude && fullRestaurant.coordinates.longitude) {
+                lat = parseFloat(fullRestaurant.coordinates.latitude);
+                lng = parseFloat(fullRestaurant.coordinates.longitude);
+                address = fullRestaurant.name || fullRestaurant.coordinates.address || address;
+              } else if (fullRestaurant.coordinates.lat && fullRestaurant.coordinates.lng) {
+                lat = parseFloat(fullRestaurant.coordinates.lat);
+                lng = parseFloat(fullRestaurant.coordinates.lng);
+                address = fullRestaurant.name || fullRestaurant.coordinates.address || address;
+              }
+            }
+
+            // Option 2: Direct latitude/longitude fields
+            if (!lat && !lng && fullRestaurant.latitude && fullRestaurant.longitude) {
+              lat = parseFloat(fullRestaurant.latitude);
+              lng = parseFloat(fullRestaurant.longitude);
+            }
+
+            // Option 3: Address object with street/city/postal_code (without coordinates)
+            if (!lat && !lng && fullRestaurant.address) {
+              if (typeof fullRestaurant.address === 'object') {
+                address = this.formatAddress(fullRestaurant.address) || fullRestaurant.name || address;
+              } else if (typeof fullRestaurant.address === 'string') {
+                address = fullRestaurant.address;
+              }
+            }
+
+            // Option 4: String address field
+            if (!lat && !lng && fullRestaurant.street_address) {
+              address = fullRestaurant.street_address;
+            }
+
+            // If we have coordinates, return them
+            if (lat && lng) {
+              console.log('Found coordinates:', { lat, lng, address });
+              return { lat, lng, address };
+            }
+
+            // If we have an address but no coordinates, we could geocode (but for now throw error)
+            if (address && address !== 'Restaurant Standort') {
+              console.log('Found address but no coordinates:', address);
+              throw new Error(`Restaurant "${fullRestaurant.name}" hat eine Adresse ("${address}") aber keine Koordinaten. Bitte Koordinaten in der Datenbank setzen oder Geocoding-Service verwenden.`);
+            }
+
+            // No address or coordinates found
+            console.error('No address or coordinates found for restaurant:', fullRestaurant);
+            throw new Error(`Restaurant "${fullRestaurant.name}" hat keine Adresse oder Koordinaten. Bitte diese Informationen in den Restaurant-Einstellungen hinzufügen.`);
+          }
+        } catch (error) {
+          console.warn('Failed to get full restaurant details:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler';
+          throw new Error(`Konnte Restaurant-Details für "${restaurant.restaurant_name || restaurant.name || 'Restaurant'}" nicht laden: ${errorMessage}`);
+        }
+      }
+
+      throw new Error('Keine verwalteten Restaurants gefunden. Bitte kontaktieren Sie den Administrator.');
+    } catch (error) {
+      console.error('Error getting restaurant location:', error);
+
+      // Provide more specific error messages based on the error type
+      let errorMessage = 'Unbekannter Fehler beim Laden des Restaurant-Standorts';
+
+      if (error instanceof Error) {
+        if (error.message.includes('Restaurant-Details nicht laden')) {
+          errorMessage = error.message; // Already has good context
+        } else if (error.message.includes('Keine verwalteten Restaurants')) {
+          errorMessage = error.message; // Already has good context
+        } else if (error.message.includes('hat keine gültige ID')) {
+          errorMessage = error.message; // Already has good context
+        } else {
+          errorMessage = `Restaurant-Standort konnte nicht bestimmt werden: ${error.message}`;
+        }
+      }
+
+      throw new Error(errorMessage);
+    }
+  }
+
   // Getter for template
   get selectedDriver(): Driver | null {
     return this.assignmentSelectedDriver;
+  }
+
+  // Helper method to format address
+  private formatAddress(address: any): string {
+    if (!address) return '';
+
+    const parts = [];
+    if (address.street) parts.push(address.street);
+    if (address.city) {
+      if (address.postal_code) {
+        parts.push(`${address.postal_code} ${address.city}`);
+      } else {
+        parts.push(address.city);
+      }
+    }
+    if (address.country) parts.push(address.country);
+
+    return parts.join(', ');
   }
 
   // Driver details modal methods
@@ -1793,6 +2760,8 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
     this.selectedDriverForDetails = null;
     this.driverAssignedOrders = [];
   }
+
+  
 
   getOrderStatusLabel(status: string): string {
     const labels: { [key: string]: string } = {
