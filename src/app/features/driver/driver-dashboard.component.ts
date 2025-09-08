@@ -4,7 +4,6 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { OrdersService, Order } from '../../core/services/orders.service';
 import { ToastService } from '../../core/services/toast.service';
- 
 import { Observable, map, switchMap, of, interval, tap, catchError } from 'rxjs';
 
 interface DriverStats {
@@ -109,76 +108,17 @@ interface DriverStats {
         <!-- Active Delivery Section -->
         <div class="active-delivery" *ngIf="activeDeliveries$ | async as activeDeliveries; else availableOrders">
           <div class="delivery-header">
-            <h2><i class="fa-solid fa-route"></i> Optimierte Route ({{ activeDeliveries.length }} Lieferungen)</h2>
-            <div class="delivery-actions">
-              <button
-                class="btn btn-outline-primary btn-sm"
-                (click)="openInGoogleMaps(activeDeliveries)"
-                title="Route in Google Maps öffnen"
-              >
-                <i class="fa-solid fa-external-link-alt"></i>
-                Google Maps
-              </button>
-              <div class="delivery-status">
-                <span class="status-badge status-delivery">
-                  <i class="fa-solid fa-route"></i>
-                  Unterwegs
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Route Overview -->
-          <div class="route-overview" *ngIf="activeDeliveries.length > 0">
-            <div class="route-summary">
-              <div class="route-stat">
-                <i class="fa-solid fa-list-ol"></i>
-                <div>
-                  <span class="stat-value">{{ activeDeliveries.length }}</span>
-                  <span class="stat-label">Stationen</span>
-                </div>
-              </div>
-              <div class="route-stat">
-                <i class="fa-solid fa-clock"></i>
-                <div>
-                  <span class="stat-value">{{ getTotalEstimatedTime(activeDeliveries) }}</span>
-                  <span class="stat-label">Route fertig</span>
-                </div>
-              </div>
-              <div class="route-stat">
-                <i class="fa-solid fa-stopwatch"></i>
-                <div>
-                  <span class="stat-value">{{ getAverageTimePerDelivery(activeDeliveries) }}min</span>
-                  <span class="stat-label">Ø pro Station</span>
-                </div>
-              </div>
-              <div class="route-stat">
-                <i class="fa-solid fa-euro-sign"></i>
-                <div>
-                  <span class="stat-value">{{ getTotalEarnings(activeDeliveries) | currency:'EUR':'symbol':'1.2-2':'de' }}</span>
-                  <span class="stat-label">Verdienst</span>
-                </div>
-              </div>
+            <h2><i class="fa-solid fa-truck"></i> Aktuelle Lieferungen ({{ activeDeliveries.length }})</h2>
+            <div class="delivery-status">
+              <span class="status-badge status-delivery">
+                <i class="fa-solid fa-route"></i>
+                Unterwegs
+              </span>
             </div>
           </div>
 
           <!-- Multiple deliveries -->
           <div *ngFor="let delivery of activeDeliveries; let i = index" class="delivery-card" [class.primary-delivery]="i === 0">
-            <div class="delivery-sequence">
-              <div class="sequence-number" [class]="getSequenceClass(i)">
-                <span *ngIf="i === 0"><i class="fa-solid fa-play"></i></span>
-                <span *ngIf="i > 0">{{ i + 1 }}</span>
-              </div>
-              <div class="sequence-info">
-                <span class="sequence-label" *ngIf="i === 0">Nächste Station</span>
-                <span class="sequence-label" *ngIf="i === 1">Danach</span>
-                <span class="sequence-label" *ngIf="i > 1">Station {{ i + 1 }}</span>
-                <span class="sequence-sequence" *ngIf="delivery.delivery_sequence">
-                  (Seq: {{ delivery.delivery_sequence }})
-                </span>
-              </div>
-            </div>
-
             <div class="delivery-details">
               <div class="delivery-info">
                 <h3>Bestellung #{{ delivery.id }}</h3>
@@ -187,10 +127,9 @@ interface DriverStats {
                   <i class="fa-solid fa-map-marker-alt"></i>
                   {{ delivery.delivery_address }}
                 </p>
-                <p class="delivery-time" *ngIf="delivery.estimated_delivery_time">
+                <p class="delivery-time">
                   <i class="fa-solid fa-clock"></i>
-                  {{ getDeliveryTimeText(delivery) }}
-                  <small>(ca. {{ delivery.estimated_delivery_time | date:'HH:mm' }})</small>
+                  Geschätzte Ankunft: {{ delivery.estimated_delivery | date:'HH:mm' }}
                 </p>
               </div>
 
@@ -258,7 +197,7 @@ interface DriverStats {
                       <i class="fa-solid fa-map-marker-alt"></i>
                       {{ order.delivery_address }}
                     </p>
-                    <p class="estimated-time" *ngIf="order.estimated_delivery">
+                    <p class="estimated-time">
                       <i class="fa-solid fa-clock"></i>
                       Lieferung bis: {{ order.estimated_delivery | date:'HH:mm' }}
                     </p>
@@ -333,8 +272,6 @@ interface DriverStats {
           </div>
         </ng-template>
       </div>
-
-
     </div>
   `,
   styles: [`
@@ -513,17 +450,6 @@ interface DriverStats {
       display: flex;
       align-items: center;
       gap: var(--space-2);
-    }
-
-    .delivery-actions {
-      display: flex;
-      align-items: center;
-      gap: var(--space-3);
-    }
-
-    .delivery-actions .btn {
-      font-size: var(--text-sm);
-      padding: var(--space-2) var(--space-3);
     }
 
     .refresh-btn {
@@ -915,118 +841,6 @@ interface DriverStats {
       font-size: var(--text-sm);
     }
 
-    /* Route Optimization Styles */
-    .route-overview {
-      background: color-mix(in oklab, var(--color-primary) 5%, var(--bg-light));
-      border: 1px solid color-mix(in oklab, var(--color-primary) 20%, transparent);
-      border-radius: var(--radius-lg);
-      padding: var(--space-4);
-      margin-bottom: var(--space-6);
-    }
-
-    .route-summary {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      gap: var(--space-4);
-    }
-
-    .route-stat {
-      display: flex;
-      align-items: center;
-      gap: var(--space-3);
-      padding: var(--space-2);
-      background: var(--color-surface);
-      border-radius: var(--radius-md);
-      text-align: center;
-    }
-
-    .route-stat i {
-      font-size: var(--text-lg);
-      color: var(--color-primary);
-    }
-
-    .route-stat .stat-value {
-      font-size: var(--text-lg);
-      font-weight: 700;
-      color: var(--color-heading);
-      display: block;
-    }
-
-    .route-stat .stat-label {
-      font-size: var(--text-xs);
-      color: var(--color-muted);
-    }
-
-    .delivery-sequence {
-      display: flex;
-      align-items: center;
-      gap: var(--space-3);
-      margin-bottom: var(--space-3);
-      padding: var(--space-3);
-      background: color-mix(in oklab, var(--color-primary) 5%, var(--bg-light));
-      border-radius: var(--radius-md);
-      border-left: 4px solid var(--color-primary);
-    }
-
-    .sequence-number {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: var(--text-lg);
-      flex-shrink: 0;
-    }
-
-    .sequence-current {
-      background: var(--color-success);
-      color: white;
-    }
-
-    .sequence-next {
-      background: var(--color-warning);
-      color: white;
-    }
-
-    .sequence-later {
-      background: var(--color-muted);
-      color: white;
-    }
-
-    .sequence-current i {
-      font-size: var(--text-sm);
-    }
-
-    .sequence-info {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-1);
-    }
-
-    .sequence-label {
-      font-weight: 600;
-      color: var(--color-heading);
-      font-size: var(--text-sm);
-    }
-
-    .sequence-sequence {
-      font-size: var(--text-xs);
-      color: var(--color-muted);
-    }
-
-    /* Enhanced delivery card for route optimization */
-    .delivery-card.primary-delivery {
-      border-left: 4px solid var(--color-success);
-      background: color-mix(in oklab, var(--color-success) 3%, var(--bg-light));
-    }
-
-    .delivery-card.primary-delivery .delivery-sequence {
-      border-left-color: var(--color-success);
-      background: color-mix(in oklab, var(--color-success) 8%, var(--bg-light));
-    }
-
     /* Responsive */
     @media (max-width: 768px) {
       .dashboard-header {
@@ -1040,10 +854,6 @@ interface DriverStats {
       }
 
       .stats-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .route-summary {
         grid-template-columns: 1fr;
       }
 
@@ -1065,18 +875,6 @@ interface DriverStats {
 
       .delivery-amount {
         text-align: left;
-      }
-
-      .delivery-sequence {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: var(--space-2);
-      }
-
-      .sequence-info {
-        flex-direction: row;
-        align-items: center;
-        gap: var(--space-2);
       }
     }
   `]
@@ -1110,8 +908,6 @@ export class DriverDashboardComponent implements OnInit {
   workHoursToday = 6.5;
   onlineSince = '08:30';
 
-  
-
   ngOnInit() {
     this.loadDriverData();
     // Refresh orders every 30 seconds when available
@@ -1139,9 +935,7 @@ export class DriverDashboardComponent implements OnInit {
     );
 
     this.activeDeliveries$ = orders$.pipe(
-      map(result => result.activeDeliveries.sort((a, b) =>
-        (a.delivery_sequence || 999) - (b.delivery_sequence || 999)
-      ))
+      map(result => result.activeDeliveries)
     );
   }
 
@@ -1224,51 +1018,6 @@ export class DriverDashboardComponent implements OnInit {
     console.log('View order details:', order);
   }
 
-  openInGoogleMaps(deliveries: any[]) {
-    if (!deliveries || deliveries.length === 0) {
-      this.toastService.info('Keine Route verfügbar', 'Es sind keine aktiven Lieferungen vorhanden.');
-      return;
-    }
-
-    try {
-      // Sort deliveries by sequence (delivery_sequence) to maintain optimized order
-      const sortedDeliveries = [...deliveries].sort((a, b) =>
-        (a.delivery_sequence || 999) - (b.delivery_sequence || 999)
-      );
-
-      // Collect all delivery addresses in correct order
-      const addresses = sortedDeliveries
-        .map(delivery => delivery.delivery_address)
-        .filter(address => address && address.trim() !== '');
-
-      if (addresses.length === 0) {
-        this.toastService.error('Fehler', 'Keine gültigen Lieferadressen gefunden.');
-        return;
-      }
-
-      // Create Google Maps URL with waypoints in optimized order
-      let googleMapsUrl = 'https://www.google.com/maps/dir/';
-
-      // Add all addresses as waypoints (Google Maps will optimize the route)
-      addresses.forEach((address, index) => {
-        if (index > 0) googleMapsUrl += '/';
-        googleMapsUrl += encodeURIComponent(address);
-      });
-
-      // Add driving mode
-      googleMapsUrl += '?travelmode=driving';
-
-      // Open in new tab
-      window.open(googleMapsUrl, '_blank');
-
-      this.toastService.success('Route geöffnet', `Route mit ${addresses.length} Stationen in Google Maps geöffnet.`);
-
-    } catch (error) {
-      console.error('Error opening Google Maps:', error);
-      this.toastService.error('Fehler', 'Route konnte nicht in Google Maps geöffnet werden.');
-    }
-  }
-
   refreshOrders() {
     if (this.refreshing) return;
 
@@ -1298,83 +1047,4 @@ export class DriverDashboardComponent implements OnInit {
     };
     return icons[status] || 'fa-circle';
   }
-
-  // Helper methods for route optimization display
-  getSequenceClass(index: number): string {
-    if (index === 0) return 'sequence-current';
-    if (index === 1) return 'sequence-next';
-    return 'sequence-later';
-  }
-
-  getTotalEstimatedTime(deliveries: any[]): string {
-    if (deliveries.length === 0) return '0min';
-
-    // Find the latest estimated delivery time from all deliveries
-    const latestTime = deliveries
-      .map(d => d.estimated_delivery_time ? new Date(d.estimated_delivery_time) : null)
-      .filter(time => time !== null)
-      .sort((a, b) => b!.getTime() - a!.getTime())[0];
-
-    if (!latestTime) {
-      // Fallback: Calculate approximate total time based on number of deliveries
-      const baseTimePerDelivery = 15; // 15 minutes per delivery
-      const totalMinutes = deliveries.length * baseTimePerDelivery;
-      const hours = Math.floor(totalMinutes / 60);
-      const minutes = totalMinutes % 60;
-
-      if (hours > 0) {
-        return `${hours}h ${minutes}min`;
-      }
-      return `${minutes}min`;
-    }
-
-    // Calculate time from now until the latest delivery
-    const now = new Date();
-    const diffMs = latestTime.getTime() - now.getTime();
-    const diffMinutes = Math.max(0, Math.round(diffMs / (1000 * 60)));
-
-    const hours = Math.floor(diffMinutes / 60);
-    const minutes = diffMinutes % 60;
-
-    if (hours > 0) {
-      return `${hours}h ${minutes}min`;
-    }
-    return `${minutes}min`;
-  }
-
-  getTotalEarnings(deliveries: any[]): number {
-    return deliveries.reduce((total, delivery) => total + (delivery.delivery_fee || 0), 0);
-  }
-
-  // Helper method for template
-  getAverageTimePerDelivery(deliveries: any[]): number {
-    if (deliveries.length === 0) return 15;
-    return Math.round((deliveries.length * 15) / deliveries.length);
-  }
-
-  // Helper method to format individual delivery time
-  getDeliveryTimeText(delivery: any): string {
-    if (!delivery.estimated_delivery_time) {
-      return 'Zeit nicht verfügbar';
-    }
-
-    const deliveryTime = new Date(delivery.estimated_delivery_time);
-    const now = new Date();
-    const diffMs = deliveryTime.getTime() - now.getTime();
-    const diffMinutes = Math.round(diffMs / (1000 * 60));
-
-    if (diffMinutes < 0) {
-      return 'Überfällig';
-    } else if (diffMinutes === 0) {
-      return 'Jetzt';
-    } else if (diffMinutes < 60) {
-      return `In ${diffMinutes}min`;
-    } else {
-      const hours = Math.floor(diffMinutes / 60);
-      const minutes = diffMinutes % 60;
-      return `In ${hours}h ${minutes}min`;
-    }
-  }
-
-  
 }

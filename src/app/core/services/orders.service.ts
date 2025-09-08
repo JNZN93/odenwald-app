@@ -39,8 +39,6 @@ export interface Order {
   updated_at: string;
   driver_id?: string;
   driver_name?: string;
-  delivery_sequence?: number; // Sequence number for route optimization
-  estimated_delivery_time?: string; // Estimated delivery time
 }
 
 export interface OrderWithItems {
