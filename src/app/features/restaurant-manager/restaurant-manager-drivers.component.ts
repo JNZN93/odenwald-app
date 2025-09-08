@@ -8,6 +8,9 @@ import { OrdersService, Order } from '../../core/services/orders.service';
 import { RestaurantManagerService } from '../../core/services/restaurant-manager.service';
 import { environment } from '../../../environments/environment';
 import { Subscription, interval } from 'rxjs';
+import { DriversService } from '../../core/services/drivers.service';
+import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
+import { RestaurantsService } from '../../core/services/restaurants.service';
 
 export interface Driver {
   id: string;
@@ -45,7 +48,7 @@ export interface Driver {
 @Component({
   selector: 'app-restaurant-manager-drivers',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DragDropModule],
   template: `
     <div class="drivers-management-container">
       <!-- Header -->
@@ -203,6 +206,29 @@ export interface Driver {
                   <i class="fa-solid fa-spinner fa-spin"></i>
                   Zuweisen...
                 </span>
+              </button>
+              <button
+                class="btn btn-outline-primary"
+                *ngIf="selectedDriver"
+                (click)="optimizeTourForSelectedDriver()"
+                [disabled]="isOptimizing"
+              >
+                <span *ngIf="!isOptimizing">
+                  <i class="fa-solid fa-route"></i>
+                  Tour optimieren
+                </span>
+                <span *ngIf="isOptimizing">
+                  <i class="fa-solid fa-spinner fa-spin"></i>
+                  Optimieren...
+                </span>
+              </button>
+              <button
+                class="btn btn-success"
+                *ngIf="selectedDriver && manualSequence.length > 0"
+                (click)="saveManualTour()"
+              >
+                <i class="fa-solid fa-save"></i>
+                Tour speichern
               </button>
             </div>
           </div>
@@ -482,48 +508,144 @@ export interface Driver {
             </div>
 
             <div class="driver-orders-section">
-              <h5><i class="fa-solid fa-clipboard-list"></i> Zugewiesene Bestellungen</h5>
+              <!-- Tabs -->
+              <div class="tabs-container">
+                <div class="tabs-header">
+                  <button
+                    class="tab-button"
+                    [class.active]="activeTab === 'active'"
+                    (click)="switchTab('active')"
+                  >
+                    <i class="fa-solid fa-route"></i>
+                    Aktive Tour ({{ activeOrdersCount }})
+                  </button>
+                  <button
+                    class="tab-button"
+                    [class.active]="activeTab === 'all'"
+                    (click)="switchTab('all')"
+                  >
+                    <i class="fa-solid fa-list"></i>
+                    Alle Bestellungen ({{ allOrdersCount }})
+                  </button>
+                </div>
+
+                <div class="tab-info" *ngIf="activeTab === 'active'">
+                  <small><i class="fa-solid fa-info-circle"></i> Nur Bestellungen, die für Tour-Optimierung geeignet sind</small>
+                </div>
+              </div>
+
+              <div style="margin: 8px 0;" *ngIf="activeTab === 'active'">
+                <button class="btn btn-outline-primary" (click)="toggleMap()">
+                  <i class="fa-solid fa-map"></i> Karte {{ showMap ? 'ausblenden' : 'anzeigen' }}
+                </button>
+              </div>
+              <div class="map-container" *ngIf="showMap && activeTab === 'active'" style="height: 300px; border: 1px solid var(--color-border); border-radius: 8px; margin-bottom: 12px;">
+                <div id="manager-route-map" style="height: 100%; width: 100%;"></div>
+              </div>
 
               <div class="orders-loading" *ngIf="isLoadingDriverOrders">
                 <i class="fa-solid fa-spinner fa-spin"></i>
                 <span>Lade Bestellungen...</span>
               </div>
 
-              <div class="driver-orders-list" *ngIf="!isLoadingDriverOrders">
-                <div class="order-item" *ngFor="let order of driverAssignedOrders">
-                  <div class="order-header">
-                    <span class="order-id">#{{ order.id }}</span>
-                    <span class="order-status" [class]="order.status">{{ getOrderStatusLabel(order.status) }}</span>
+              <!-- Active Tour Tab Content -->
+              <div *ngIf="activeTab === 'active' && !isLoadingDriverOrders">
+                <div class="driver-orders-list" cdkDropList (cdkDropListDropped)="onAssignedOrdersDrop($event)">
+                  <div class="order-item" *ngFor="let order of currentOrders; let i = index" cdkDrag>
+                    <div class="order-header">
+                      <span class="order-id">#{{ order.id }}</span>
+                      <span class="order-status" [class]="order.status">{{ getOrderStatusLabel(order.status) }}</span>
+                    </div>
+                    <div class="order-details">
+                      <div class="order-customer">
+                        <i class="fa-solid fa-user"></i>
+                        <span>{{ order.customer_name || 'Kunde' }}</span>
+                      </div>
+                      <div class="order-address">
+                        <i class="fa-solid fa-map-marker-alt"></i>
+                        <span>{{ order.delivery_address }}</span>
+                      </div>
+                      <div class="order-value">
+                        <i class="fa-solid fa-euro-sign"></i>
+                        <span>€{{ order.total_price | number:'1.2-2' }}</span>
+                      </div>
+                    </div>
+                    <div class="order-timing">
+                      <div class="order-created">
+                        <i class="fa-solid fa-calendar"></i>
+                        <span>{{ order.created_at | date:'short' }}</span>
+                      </div>
+                      <div class="order-assigned">
+                        <i class="fa-solid fa-clock"></i>
+                        <span>Zugewiesen: {{ order.created_at | date:'short' }}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div class="order-details">
-                    <div class="order-customer">
-                      <i class="fa-solid fa-user"></i>
-                      <span>{{ order.customer_name || 'Kunde' }}</span>
-                    </div>
-                    <div class="order-address">
-                      <i class="fa-solid fa-map-marker-alt"></i>
-                      <span>{{ order.delivery_address }}</span>
-                    </div>
-                    <div class="order-value">
-                      <i class="fa-solid fa-euro-sign"></i>
-                      <span>€{{ order.total_price | number:'1.2-2' }}</span>
-                    </div>
+
+                  <div class="modal-actions" *ngIf="currentOrders.length > 0">
+                    <button class="btn btn-outline-primary" (click)="optimizeTourForSelectedDriver()" [disabled]="isOptimizing">
+                      <span *ngIf="!isOptimizing"><i class="fa-solid fa-route"></i> Tour optimieren</span>
+                      <span *ngIf="isOptimizing"><i class="fa-solid fa-spinner fa-spin"></i> Optimieren...</span>
+                    </button>
+                    <button
+                      *ngIf="activeTab === 'active'"
+                      class="btn btn-success"
+                      (click)="saveManualTour()"
+                      [disabled]="!canSaveSequence || isSaving">
+                      <span *ngIf="!isSaving">
+                        <i class="fa-solid fa-save"></i> Reihenfolge speichern
+                      </span>
+                      <span *ngIf="isSaving">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Speichere...
+                      </span>
+                    </button>
                   </div>
-                  <div class="order-timing">
-                    <div class="order-created">
-                      <i class="fa-solid fa-calendar"></i>
-                      <span>{{ order.created_at | date:'short' }}</span>
-                    </div>
-                    <div class="order-assigned">
-                      <i class="fa-solid fa-clock"></i>
-                      <span>Zugewiesen: {{ order.created_at | date:'short' }}</span>
-                    </div>
+
+                  <div class="no-orders" *ngIf="currentOrders.length === 0">
+                    <i class="fa-solid fa-inbox"></i>
+                    <span>Keine aktiven Bestellungen für Tour-Optimierung</span>
                   </div>
                 </div>
+              </div>
 
-                <div class="no-orders" *ngIf="driverAssignedOrders.length === 0">
-                  <i class="fa-solid fa-inbox"></i>
-                  <span>Keine zugewiesenen Bestellungen</span>
+              <!-- All Orders Tab Content -->
+              <div *ngIf="activeTab === 'all' && !isLoadingDriverOrders">
+                <div class="driver-orders-list">
+                  <div class="order-item" *ngFor="let order of currentOrders; let i = index">
+                    <div class="order-header">
+                      <span class="order-id">#{{ order.id }}</span>
+                      <span class="order-status" [class]="order.status">{{ getOrderStatusLabel(order.status) }}</span>
+                    </div>
+                    <div class="order-details">
+                      <div class="order-customer">
+                        <i class="fa-solid fa-user"></i>
+                        <span>{{ order.customer_name || 'Kunde' }}</span>
+                      </div>
+                      <div class="order-address">
+                        <i class="fa-solid fa-map-marker-alt"></i>
+                        <span>{{ order.delivery_address }}</span>
+                      </div>
+                      <div class="order-value">
+                        <i class="fa-solid fa-euro-sign"></i>
+                        <span>€{{ order.total_price | number:'1.2-2' }}</span>
+                      </div>
+                    </div>
+                    <div class="order-timing">
+                      <div class="order-created">
+                        <i class="fa-solid fa-calendar"></i>
+                        <span>{{ order.created_at | date:'short' }}</span>
+                      </div>
+                      <div class="order-assigned">
+                        <i class="fa-solid fa-clock"></i>
+                        <span>Zugewiesen: {{ order.created_at | date:'short' }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="no-orders" *ngIf="currentOrders.length === 0">
+                    <i class="fa-solid fa-inbox"></i>
+                    <span>Keine Bestellungen gefunden</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1279,6 +1401,51 @@ export interface Driver {
       font-weight: 500;
     }
 
+    /* Tabs */
+    .tabs-container {
+      margin-bottom: var(--space-4);
+    }
+
+    .tabs-header {
+      display: flex;
+      gap: var(--space-2);
+      margin-bottom: var(--space-2);
+    }
+
+    .tab-button {
+      background: var(--bg-light);
+      border: 1px solid var(--color-border);
+      color: var(--color-text);
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      font-weight: 500;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--text-sm);
+    }
+
+    .tab-button:hover {
+      background: var(--color-surface);
+    }
+
+    .tab-button.active {
+      background: var(--gradient-primary);
+      color: white;
+      border-color: var(--color-primary);
+    }
+
+    .tab-info {
+      color: var(--color-muted);
+      font-size: var(--text-xs);
+      margin-bottom: var(--space-2);
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+    }
+
     .driver-orders-section h5 {
       margin: 0 0 var(--space-4) 0;
       color: var(--color-heading);
@@ -1381,6 +1548,8 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
   private toastService = inject(ToastService);
   private ordersService = inject(OrdersService);
   private restaurantManagerService = inject(RestaurantManagerService);
+  private driversService = inject(DriversService);
+  private restaurantsService = inject(RestaurantsService);
   private subscriptions: Subscription[] = [];
 
   drivers: Driver[] = [];
@@ -1395,7 +1564,18 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
   showDriverDetailsModal = false;
   selectedDriverForDetails: Driver | null = null;
   driverAssignedOrders: Order[] = [];
+  driverAllOrders: Order[] = [];
   isLoadingDriverOrders = false;
+  manualSequence: string[] = [];
+  isOptimizing = false;
+  isSaving = false;
+  activeTab: 'active' | 'all' = 'active';
+  // Map state
+  showMap = false;
+  private map: any = null;
+  private orderCoords: Map<string, { lat: number; lon: number }> = new Map();
+  private startCoords: { lat: number; lon: number } | null = null;
+  private managedRestaurantId: string | null = null;
 
   // Add driver modal state
   showAddDriverModal = false;
@@ -1461,6 +1641,7 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
           if (restaurants?.length > 0) {
             // Get orders for the first restaurant (same as orders component)
             const restaurantId = restaurants[0].restaurant_id;
+            this.managedRestaurantId = String(restaurantId);
 
             // Load orders with different statuses to find pending ones
             const allOrders = await this.ordersService.getRestaurantOrders(restaurantId).toPromise();
@@ -1764,6 +1945,71 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
     }
   }
 
+  optimizeTourForSelectedDriver() {
+    // Use the correct driver variable based on context
+    const driver = this.selectedDriverForDetails || this.selectedDriver;
+    if (!driver) return;
+
+    this.isOptimizing = true;
+    // Determine restaurant id from manager context
+    this.restaurantManagerService.getManagedRestaurants().subscribe({
+      next: (restaurants: any[]) => {
+        const restaurantId = restaurants?.[0]?.restaurant_id;
+        if (!restaurantId) {
+          this.toastService.error('Fehler', 'Kein Restaurant gefunden');
+          this.isOptimizing = false;
+          return;
+        }
+        this.driversService.optimizeTour(driver.id, String(restaurantId)).subscribe({
+          next: (res) => {
+            this.manualSequence = res.route.orderIdsInSequence || [];
+            this.toastService.success('Erfolg', 'Tour optimiert');
+
+            // Always reload driver orders to ensure we have the latest data
+            if (driver) {
+              this.loadDriverAssignedOrders(driver.id);
+            }
+
+            this.isOptimizing = false;
+          },
+          error: (err) => {
+            console.error('Optimize tour error', err);
+            this.toastService.error('Fehler', 'Optimierung fehlgeschlagen');
+            this.isOptimizing = false;
+          }
+        });
+      },
+      error: () => {
+        this.toastService.error('Fehler', 'Manager-Restaurant konnte nicht geladen werden');
+        this.isOptimizing = false;
+      }
+    });
+  }
+
+  saveManualTour() {
+    // Use the correct driver variable based on context
+    const driver = this.selectedDriverForDetails || this.selectedDriver;
+    if (!driver || this.manualSequence.length === 0) return;
+
+    this.isSaving = true;
+    this.driversService.saveTour(driver.id, this.manualSequence).subscribe({
+      next: () => {
+        this.toastService.success('Erfolg', 'Tour gespeichert');
+
+        // Reload driver orders to ensure we have the latest data
+        if (driver) {
+          this.loadDriverAssignedOrders(driver.id);
+        }
+      },
+      error: (err) => {
+        console.error('Save tour error', err);
+        this.toastService.error('Fehler', 'Tour konnte nicht gespeichert werden');
+      }
+    }).add(() => {
+      this.isSaving = false;
+    });
+  }
+
   // Getter for template
   get selectedDriver(): Driver | null {
     return this.assignmentSelectedDriver;
@@ -1774,17 +2020,45 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
     try {
       this.isLoadingDriverOrders = true;
 
+      // Load all orders for the driver
       const response = await this.http.get<{ orders: Order[] }>(
         `${environment.apiUrl}/drivers/${driverId}/orders`
       ).toPromise();
 
-      this.driverAssignedOrders = response?.orders || [];
+      this.driverAllOrders = response?.orders || [];
+
+      // Filter active orders for tour optimization (same logic as backend)
+      this.driverAssignedOrders = this.driverAllOrders.filter(order =>
+        ['ready', 'picked_up', 'confirmed', 'preparing'].includes(order.status)
+      );
+
+      // Sort active orders by delivery_sequence if available, otherwise by created_at
+      this.driverAssignedOrders.sort((a, b) => {
+        const aSeq = (a as any).delivery_sequence || 999999;
+        const bSeq = (b as any).delivery_sequence || 999999;
+        if (aSeq !== bSeq) return aSeq - bSeq;
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      });
+
+      this.manualSequence = this.driverAssignedOrders.map(o => o.id);
+      if (this.showMap) {
+        this.updateMap();
+      }
     } catch (error: any) {
       console.error('Error loading driver orders:', error);
       this.toastService.error('Fehler', 'Bestellungen konnten nicht geladen werden');
       this.driverAssignedOrders = [];
+      this.driverAllOrders = [];
     } finally {
       this.isLoadingDriverOrders = false;
+    }
+  }
+
+  onAssignedOrdersDrop(event: CdkDragDrop<any[]>) {
+    moveItemInArray(this.driverAssignedOrders, event.previousIndex, event.currentIndex);
+    this.manualSequence = this.driverAssignedOrders.map(o => o.id);
+    if (this.showMap) {
+      this.updateMap();
     }
   }
 
@@ -1792,6 +2066,32 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
     this.showDriverDetailsModal = false;
     this.selectedDriverForDetails = null;
     this.driverAssignedOrders = [];
+    this.driverAllOrders = [];
+    this.activeTab = 'active';
+  }
+
+  switchTab(tab: 'active' | 'all') {
+    this.activeTab = tab;
+    if (this.showMap) {
+      this.updateMap();
+    }
+  }
+
+  get currentOrders(): Order[] {
+    return this.activeTab === 'active' ? this.driverAssignedOrders : this.driverAllOrders;
+  }
+
+  get canSaveSequence(): boolean {
+    const driver = this.selectedDriverForDetails || this.selectedDriver;
+    return this.activeTab === 'active' && this.manualSequence.length > 0 && !!driver;
+  }
+
+  get activeOrdersCount(): number {
+    return this.driverAssignedOrders.length;
+  }
+
+  get allOrdersCount(): number {
+    return this.driverAllOrders.length;
   }
 
   getOrderStatusLabel(status: string): string {
@@ -1805,5 +2105,110 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
       cancelled: 'Storniert'
     };
     return labels[status] || status;
+  }
+
+  // Map
+  toggleMap() {
+    this.showMap = !this.showMap;
+    if (this.showMap) {
+      setTimeout(() => this.updateMap(), 0);
+    }
+  }
+
+  private updateMap() {
+    const L = (window as any).L;
+    const ensureLeaflet = (cb: () => void) => {
+      if (L) return cb();
+      if (!document.querySelector('link[href*="leaflet.css"]')) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(link);
+      }
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = () => cb();
+      document.head.appendChild(script);
+    };
+
+    // Ensure we have restaurant start coordinates, then render
+    this.computeStartCoords().then(() => ensureLeaflet(() => this.renderMap()));
+  }
+
+  private renderMap() {
+    const container = document.getElementById('manager-route-map');
+    if (!container) return;
+    const L = (window as any).L;
+    if (this.map) {
+      this.map.remove();
+      this.map = null;
+    }
+    // Center on restaurant if available, else fallback
+    const center: [number, number] = this.startCoords ? [this.startCoords.lat, this.startCoords.lon] : [49.5, 8.4];
+    this.map = L.map('manager-route-map').setView(center, 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(this.map);
+
+    const markers: any[] = [];
+    const addMarker = (lat: number, lon: number, label: string) => {
+      const m = L.marker([lat, lon]).addTo(this.map).bindPopup(label);
+      markers.push(m);
+      return m;
+    };
+
+    // Add start marker (restaurant)
+    if (this.startCoords) {
+      addMarker(this.startCoords.lat, this.startCoords.lon, 'Restaurant Start');
+    }
+
+    // Best-effort order markers by geocoding quickly
+    const addOrderMarkers = async () => {
+      const path: Array<[number, number]> = [];
+      if (this.startCoords) path.push([this.startCoords.lat, this.startCoords.lon]);
+      for (const order of this.driverAssignedOrders) {
+        try {
+          const res: any = await this.http.get(`${environment.apiUrl}/geocoding/search?q=${encodeURIComponent(order.delivery_address)}`).toPromise();
+          if (res && typeof res.latitude === 'number' && typeof res.longitude === 'number') {
+            addMarker(res.latitude, res.longitude, `#${order.id}<br>${order.delivery_address}`);
+            path.push([res.latitude, res.longitude]);
+          }
+        } catch {
+          // ignore
+        }
+      }
+      if (this.startCoords) path.push([this.startCoords.lat, this.startCoords.lon]);
+      if (path.length >= 2) {
+        L.polyline(path, { color: '#ff8c00', weight: 4, opacity: 0.85 }).addTo(this.map);
+      }
+      if (markers.length > 0) {
+        const group = L.featureGroup(markers);
+        const b = group.getBounds();
+        if (b.isValid()) this.map.fitBounds(b.pad(0.2));
+      }
+    };
+
+    addOrderMarkers();
+  }
+
+  private async computeStartCoords(): Promise<void> {
+    if (this.startCoords || !this.managedRestaurantId) return;
+    try {
+      const restaurant: any = await this.restaurantsService.getRestaurantById(this.managedRestaurantId).toPromise();
+      const coords = restaurant?.address?.coordinates;
+      if (coords && typeof coords.latitude === 'number' && typeof coords.longitude === 'number') {
+        this.startCoords = { lat: coords.latitude, lon: coords.longitude };
+        return;
+      }
+      // Fallback: geocode textual address
+      const addrParts = restaurant?.address;
+      const addrStr = addrParts ? `${addrParts.street || ''}, ${addrParts.postal_code || ''} ${addrParts.city || ''}, ${addrParts.country || ''}` : '';
+      if (addrStr.trim().length > 0) {
+        const res: any = await this.http.get(`${environment.apiUrl}/geocoding/search?q=${encodeURIComponent(addrStr)}`).toPromise();
+        if (res && typeof res.latitude === 'number' && typeof res.longitude === 'number') {
+          this.startCoords = { lat: res.latitude, lon: res.longitude };
+        }
+      }
+    } catch {
+      // ignore
+    }
   }
 }
