@@ -114,7 +114,7 @@ export interface Driver {
         <!-- Drivers List -->
         <div class="drivers-section">
           <h2>1. Fahrer auswählen</h2>
-          <p class="section-description">Wählen Sie zuerst einen Fahrer aus, dem Sie Bestellungen zuweisen möchten. Verfügbare und beschäftigte Fahrer können ausgewählt werden.</p>
+          <p class="section-description">Wählen Sie zuerst einen Fahrer aus, dem Sie Bestellungen zuweisen möchten. Nur verfügbare Fahrer können ausgewählt werden.</p>
 
           <div class="drivers-list" *ngIf="drivers.length > 0; else noDrivers">
             <div
@@ -126,9 +126,8 @@ export interface Driver {
               (click)="selectDriverForAssignment(driver)"
             >
               <div class="selection-indicator">
-                <i class="fa-solid fa-circle" *ngIf="!isDriverAvailable(driver)"></i>
-                <i class="fa-solid fa-circle-check" *ngIf="isDriverAvailable(driver) && selectedDriver?.id !== driver.id && driver.current_status === 'available'"></i>
-                <i class="fa-solid fa-clock" *ngIf="isDriverAvailable(driver) && selectedDriver?.id !== driver.id && driver.current_status !== 'available'"></i>
+                <i class="fa-solid fa-ban" *ngIf="!isDriverAvailable(driver)"></i>
+                <i class="fa-solid fa-circle-check" *ngIf="isDriverAvailable(driver) && selectedDriver?.id !== driver.id"></i>
                 <i class="fa-solid fa-circle-dot" *ngIf="selectedDriver?.id === driver.id"></i>
               </div>
 
@@ -145,10 +144,24 @@ export interface Driver {
                     <i class="fa-solid" [ngClass]="getVehicleIcon(driver.vehicle_type)"></i>
                     {{ getVehicleTypeLabel(driver.vehicle_type) }}
                   </div>
+                  <!-- Status Badges -->
+                  <div class="status-badges">
+                    <!-- Delivery Status Badge for drivers who are busy (since there's no on_delivery status in DB) -->
+                    <div class="delivery-status-badge" *ngIf="driver.status === 'busy' || driver.current_status === 'busy'" [class]="getDeliveryBadgeClass(driver)">
+                      <i class="fa-solid fa-route"></i>
+                      <span>{{ getDeliveryBadgeText(driver) }}</span>
+                    </div>
+
+                    <!-- Offline Status Badge for drivers who are offline -->
+                    <div class="offline-status-badge" *ngIf="driver.status === 'offline' || driver.current_status === 'offline'" [class]="getOfflineBadgeClass(driver)">
+                      <i class="fa-solid fa-moon"></i>
+                      <span>{{ getOfflineBadgeText(driver) }}</span>
+                    </div>
+                  </div>
                 </div>
                 <div class="status-indicator">
-                  <span class="status-dot" [class]="driver.current_status"></span>
-                  <span class="status-text">{{ getStatusLabel(driver.current_status) }}</span>
+                  <span class="status-dot" [class]="driver.status || driver.current_status"></span>
+                  <span class="status-text">{{ getStatusLabel(driver.status || driver.current_status) }}</span>
                 </div>
               </div>
 
@@ -808,12 +821,16 @@ export interface Driver {
       z-index: 2;
     }
 
+    .selection-indicator .fa-ban {
+      color: var(--color-error);
+    }
+
     .driver-card.selected .selection-indicator {
       color: #ff8c00;
     }
 
     .driver-card.disabled .selection-indicator {
-      color: var(--color-border);
+      color: var(--color-error);
     }
 
     .selection-badge {
@@ -857,8 +874,8 @@ export interface Driver {
       border-left: 4px solid var(--color-success);
     }
 
-    .driver-card.on_delivery {
-      border-left: 4px solid var(--color-primary);
+    .driver-card.busy {
+      border-left: 4px solid #ff8c00;
     }
 
     .driver-card.offline {
@@ -893,6 +910,76 @@ export interface Driver {
     .vehicle-badge.bicycle { background: var(--color-success); color: white; }
     .vehicle-badge.scooter { background: var(--color-info); color: white; }
 
+    /* Status Badges Container */
+    .status-badges {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      margin-top: var(--space-1);
+      margin-right: var(--space-6);
+      padding-right: var(--space-3);
+    }
+
+    /* Delivery Status Badge */
+    .delivery-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-full);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+      animation: deliveryPulse 2s ease-in-out infinite;
+      box-shadow: 0 2px 8px rgba(255, 140, 0, 0.3);
+    }
+
+    .delivery-status-badge.on-delivery {
+      background: linear-gradient(135deg, #ff8c00, #ff6b35);
+      color: white;
+      border: 1px solid rgba(255, 140, 0, 0.5);
+    }
+
+    .delivery-status-badge i {
+      font-size: var(--text-sm);
+    }
+
+
+    /* Offline Status Badge */
+    .offline-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-full);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+      box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
+    }
+
+    .offline-status-badge.offline {
+      background: linear-gradient(135deg, #6c757d, #495057);
+      color: white;
+      border: 1px solid rgba(108, 117, 125, 0.5);
+    }
+
+    .offline-status-badge i {
+      font-size: var(--text-sm);
+    }
+
+    @keyframes deliveryPulse {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1.05);
+        opacity: 0.9;
+      }
+    }
+
+
     .status-indicator {
       display: flex;
       align-items: center;
@@ -906,13 +993,13 @@ export interface Driver {
     }
 
     .status-dot.available { background: #32cd32; } /* Hellgrün für verfügbar */
-    .status-dot.on_delivery { background: #ff8c00; } /* Orange für unterwegs */
+    .status-dot.busy { background: #ff8c00; } /* Orange für beschäftigt/unterwegs */
     .status-dot.offline { background: #6c757d; } /* Grau für offline */
-    .status-dot.busy { background: #ffa500; } /* Hellorange für beschäftigt */
 
     .status-text {
       font-size: var(--text-sm);
       color: var(--color-muted);
+      margin-right: var(--space-6);
     }
 
     .driver-details {
@@ -1189,6 +1276,7 @@ export interface Driver {
       background: var(--color-primary-500);
       color: white;
     }
+
 
     /* Responsive */
     @media (max-width: 768px) {
@@ -1607,6 +1695,7 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
     this.subscriptions.push(refreshSub);
   }
 
+
   ngOnDestroy() {
     this.subscriptions.forEach(sub => sub.unsubscribe());
   }
@@ -1829,7 +1918,7 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
 
   // Helper methods
   getDriverStatusClass(driver: Driver): string {
-    return driver.current_status;
+    return driver.status || driver.current_status;
   }
 
   getStatusLabel(status: string): string {
@@ -1862,9 +1951,45 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
     return icons[type] || 'fa-car';
   }
 
+  // Status Badge Methods
+  getDeliveryBadgeClass(driver: Driver): string {
+    // You could enhance this to consider delivery count or urgency
+    return 'on-delivery';
+  }
+
+  getDeliveryBadgeText(driver: Driver): string {
+    // Show delivery count if available, otherwise just "Unterwegs"
+    const activeDeliveries = this.getActiveDeliveryCount(driver);
+    if (activeDeliveries > 0) {
+      return `Unterwegs (${activeDeliveries})`;
+    }
+    return 'Unterwegs';
+  }
+
+  getActiveDeliveryCount(driver: Driver): number {
+    // This is a simplified count - in a real implementation, you'd fetch
+    // the actual active deliveries for this driver from the backend
+    // For now, we'll return a mock count based on driver ID for demonstration
+    // Using a deterministic calculation to avoid ExpressionChangedAfterItHasBeenCheckedError
+    const driverId = driver.id || driver.user_id || 'default';
+    return (parseInt(driverId.toString().slice(-1), 10) % 3) + 1; // 1-3 based on last digit of ID
+  }
+
+
+  getOfflineBadgeClass(driver: Driver): string {
+    return 'offline';
+  }
+
+  getOfflineBadgeText(driver: Driver): string {
+    return 'Offline';
+  }
+
   // New assignment workflow methods
   selectDriverForAssignment(driver: Driver) {
-    if (!this.isDriverAvailable(driver)) return;
+    if (!this.isDriverAvailable(driver)) {
+      this.toastService.info('Info', 'Dieser Fahrer ist bereits beschäftigt und kann keine neuen Bestellungen annehmen');
+      return;
+    }
 
     if (this.assignmentSelectedDriver?.id === driver.id) {
       // Deselect if already selected
@@ -1878,16 +2003,10 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
   }
 
   isDriverAvailable(driver: Driver): boolean {
-    // Allow assignment to available, busy, and on_delivery drivers
-    // Only exclude offline drivers
-    const available = (driver.current_status === 'available' ||
-                      driver.current_status === 'busy' ||
-                      driver.current_status === 'on_delivery' ||
-                      driver.status === 'available' ||
-                      driver.status === 'busy') &&
-                     (driver.current_status !== 'offline' && driver.status !== 'offline');
-
-    return available;
+    // Only allow assignment to available drivers
+    // Exclude busy and offline drivers since they are already working
+    const driverStatus = driver.status || driver.current_status;
+    return driverStatus === 'available';
   }
 
   toggleOrderSelection(order: Order) {

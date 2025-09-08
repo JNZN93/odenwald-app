@@ -1,8 +1,9 @@
 import { Component, inject, OnInit, OnDestroy } from '@angular/core';
-import { NgForOf, AsyncPipe, NgIf } from '@angular/common';
+import { NgForOf, AsyncPipe, NgIf, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { RestaurantsService, RestaurantDTO } from '../../core/services/restaurants.service';
+import { ReviewsService } from '../../core/services/reviews.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { GeocodingService, GeocodeResult } from '../../core/services/geocoding.service';
 import { ImageFallbackDirective } from '../../core/image-fallback.directive';
@@ -13,7 +14,7 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
 @Component({
   selector: 'app-customer-restaurants',
   standalone: true,
-  imports: [NgForOf, AsyncPipe, NgIf, ImageFallbackDirective, FormsModule],
+  imports: [NgForOf, AsyncPipe, NgIf, ImageFallbackDirective, FormsModule, DatePipe],
   template: `
     <section class="customer-restaurants-section">
       <!-- Hero Header -->
@@ -206,15 +207,19 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
                   </div>
                   
                   <div class="restaurant-metrics">
-                    <div class="rating-container">
+                    <button class="rating-container" type="button" (click)="openReviews(r)">
                       <div class="stars">
-                        <i class="fa-solid fa-star star" 
-                           *ngFor="let star of [1,2,3,4,5]" 
-                           [class.filled]="star <= (r.rating || 0)"></i>
+                        <i class="fa-solid fa-star star"
+                           *ngFor="let star of [1,2,3,4,5]"
+                           [class.filled]="star <= (r.rating || 0)"
+                           [class.half]="star - 0.5 <= (r.rating || 0) && star > (r.rating || 0)"></i>
                       </div>
-                      <span class="rating-text">{{ r.rating || '–' }}</span>
-                      <span class="reviews-count">({{ r.total_reviews || 0 }} Bewertungen)</span>
-                    </div>
+                      <div class="rating-info">
+                        <div class="rating-score">{{ (+(r.rating || 0)).toFixed(1) }}</div>
+                        <div class="rating-details">{{ r.total_reviews || 0 }} Bewertungen</div>
+                      </div>
+                      <i class="fa-solid fa-chevron-right rating-arrow"></i>
+                    </button>
                     
                                       <div class="delivery-metrics">
                     <div class="metric-item">
@@ -291,11 +296,188 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
         </div>
       </div>
     </section>
+
+    <!-- Reviews Modal -->
+    <div class="reviews-modal-backdrop" *ngIf="reviewsModalOpen" (click)="closeReviews()"></div>
+    <div class="reviews-modal" *ngIf="reviewsModalOpen" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title-section">
+          <h3>Bewertungen & Rezensionen</h3>
+          <div class="restaurant-info">
+            <span class="restaurant-name">{{ activeRestaurant?.name }}</span>
+            <span class="cuisine-badge" *ngIf="activeRestaurant?.cuisine_type">{{ activeRestaurant?.cuisine_type }}</span>
+          </div>
+        </div>
+        <button class="close-btn" (click)="closeReviews()" type="button">
+          <i class="fa-solid fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-content" *ngIf="reviewsSummary && reviewsList">
+        <!-- Overall Rating Summary -->
+        <div class="rating-summary">
+          <div class="overall-rating">
+            <div class="rating-score">{{ (+(reviewsSummary?.average_rating || 0)).toFixed(1) }}</div>
+            <div class="rating-stars">
+              <i class="fa-solid fa-star star"
+                 *ngFor="let star of [1,2,3,4,5]"
+                 [class.filled]="star <= (reviewsSummary?.average_rating || 0)"
+                 [class.half]="star - 0.5 <= (reviewsSummary?.average_rating || 0) && star > (reviewsSummary?.average_rating || 0)"></i>
+            </div>
+            <div class="rating-count">{{ reviewsSummary?.total_reviews }} Bewertungen</div>
+          </div>
+
+          <!-- Rating Distribution -->
+          <div class="rating-distribution">
+            <h4>Bewertungsverteilung</h4>
+            <div class="distribution-bars">
+              <div class="distribution-item" *ngFor="let star of [5,4,3,2,1]">
+                <span class="star-label">{{ star }} <i class="fa-solid fa-star"></i></span>
+                <div class="bar-container">
+                  <div class="bar-fill"
+                       [style.width.%]="(reviewsSummary?.distribution[star.toString()] || 0) / (reviewsSummary?.total_reviews || 1) * 100"></div>
+                </div>
+                <span class="count">{{ reviewsSummary?.distribution[star.toString()] || 0 }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Category Ratings -->
+          <div class="category-ratings">
+            <h4>Durchschnittliche Bewertungen</h4>
+            <div class="category-grid">
+              <div class="category-item">
+                <span class="category-label">Essen</span>
+                <div class="category-stars">
+                  <i class="fa-solid fa-star star-mini"
+                     *ngFor="let star of [1,2,3,4,5]"
+                     [class.filled]="star <= (reviewsSummary?.average_food_quality || 0)"></i>
+                  <span class="category-score">{{ (+(reviewsSummary?.average_food_quality || 0)).toFixed(1) }}</span>
+                </div>
+              </div>
+              <div class="category-item">
+                <span class="category-label">Lieferzeit</span>
+                <div class="category-stars">
+                  <i class="fa-solid fa-star star-mini"
+                     *ngFor="let star of [1,2,3,4,5]"
+                     [class.filled]="star <= (reviewsSummary?.average_delivery_time || 0)"></i>
+                  <span class="category-score">{{ (+(reviewsSummary?.average_delivery_time || 0)).toFixed(1) }}</span>
+                </div>
+              </div>
+              <div class="category-item">
+                <span class="category-label">Verpackung</span>
+                <div class="category-stars">
+                  <i class="fa-solid fa-star star-mini"
+                     *ngFor="let star of [1,2,3,4,5]"
+                     [class.filled]="star <= (reviewsSummary?.average_packaging || 0)"></i>
+                  <span class="category-score">{{ (+(reviewsSummary?.average_packaging || 0)).toFixed(1) }}</span>
+                </div>
+              </div>
+              <div class="category-item">
+                <span class="category-label">Service</span>
+                <div class="category-stars">
+                  <i class="fa-solid fa-star star-mini"
+                     *ngFor="let star of [1,2,3,4,5]"
+                     [class.filled]="star <= (reviewsSummary?.average_service || 0)"></i>
+                  <span class="category-score">{{ (+(reviewsSummary?.average_service || 0)).toFixed(1) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter Controls -->
+        <div class="review-filters">
+          <button class="filter-btn" [class.active]="!showCommentsOnly" (click)="toggleCommentsOnly(false)">
+            Alle Bewertungen
+          </button>
+          <button class="filter-btn" [class.active]="showCommentsOnly" (click)="toggleCommentsOnly(true)">
+            Nur mit Kommentaren
+          </button>
+        </div>
+
+        <!-- Reviews List -->
+        <div class="reviews-section">
+          <div class="reviews-header">
+            <h4>Kundenbewertungen</h4>
+            <span class="reviews-count-badge">{{ reviewsList.length }} angezeigt</span>
+          </div>
+
+          <div class="reviews-list" *ngIf="reviewsList.length > 0; else noReviews">
+            <div class="review-card" *ngFor="let rev of reviewsList; trackBy: trackByReviewId">
+              <div class="review-header">
+                <div class="review-rating">
+                  <div class="stars-small">
+                    <i class="fa-solid fa-star star"
+                       *ngFor="let star of [1,2,3,4,5]"
+                       [class.filled]="star <= (rev.restaurant_rating || 0)"
+                       [class.half]="star - 0.5 <= (rev.restaurant_rating || 0) && star > (rev.restaurant_rating || 0)"></i>
+                  </div>
+                  <span class="rating-number">{{ rev.restaurant_rating }}</span>
+                </div>
+                <div class="review-date">{{ rev.created_at | date:'dd.MM.yyyy' }}</div>
+              </div>
+
+              <!-- Review Comment -->
+              <div class="review-comment" *ngIf="rev.restaurant_comment">
+                <p>{{ rev.restaurant_comment }}</p>
+              </div>
+
+              <!-- Review Categories (if available) -->
+              <div class="review-categories" *ngIf="rev.food_quality_rating || rev.delivery_time_rating || rev.packaging_rating || rev.service_rating">
+                <div class="category-breakdown">
+                  <div class="category-breakdown-item" *ngIf="rev.food_quality_rating">
+                    <span class="category-name">Essen:</span>
+                    <div class="category-stars">
+                      <i class="fa-solid fa-star star-tiny"
+                         *ngFor="let star of [1,2,3,4,5]"
+                         [class.filled]="star <= rev.food_quality_rating"></i>
+                    </div>
+                  </div>
+                  <div class="category-breakdown-item" *ngIf="rev.delivery_time_rating">
+                    <span class="category-name">Lieferzeit:</span>
+                    <div class="category-stars">
+                      <i class="fa-solid fa-star star-tiny"
+                         *ngFor="let star of [1,2,3,4,5]"
+                         [class.filled]="star <= rev.delivery_time_rating"></i>
+                    </div>
+                  </div>
+                  <div class="category-breakdown-item" *ngIf="rev.packaging_rating">
+                    <span class="category-name">Verpackung:</span>
+                    <div class="category-stars">
+                      <i class="fa-solid fa-star star-tiny"
+                         *ngFor="let star of [1,2,3,4,5]"
+                         [class.filled]="star <= rev.packaging_rating"></i>
+                    </div>
+                  </div>
+                  <div class="category-breakdown-item" *ngIf="rev.service_rating">
+                    <span class="category-name">Service:</span>
+                    <div class="category-stars">
+                      <i class="fa-solid fa-star star-tiny"
+                         *ngFor="let star of [1,2,3,4,5]"
+                         [class.filled]="star <= rev.service_rating"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <ng-template #noReviews>
+            <div class="no-reviews">
+              <i class="fa-solid fa-comment-dots"></i>
+              <p>Keine Bewertungen gefunden</p>
+            </div>
+          </ng-template>
+        </div>
+      </div>
+    </div>
   `,
   styleUrls: ['./customer-restaurants.component.scss']
 })
 export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
   private restaurantsService = inject(RestaurantsService);
+  private reviewsService = inject(ReviewsService);
   private authService = inject(AuthService);
   private geocodingService = inject(GeocodingService);
   private router = inject(Router);
@@ -326,6 +508,13 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
   );
 
   private subscriptions: Subscription[] = [];
+
+  // Reviews modal state
+  reviewsModalOpen = false;
+  activeRestaurant: RestaurantDTO | null = null;
+  reviewsSummary: any = null;
+  reviewsList: any[] = [];
+  showCommentsOnly = false;
 
   ngOnInit() {
     console.log('CustomerRestaurantsComponent: Initialized');
@@ -514,6 +703,41 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
 
     console.log('✅ All restaurants shown (no additional filtering):', restaurants.length);
     return restaurants;
+  }
+
+  openReviews(r: RestaurantDTO) {
+    this.activeRestaurant = r;
+    this.reviewsModalOpen = true;
+    this.showCommentsOnly = false;
+    const restaurantId = String(r.id);
+    this.reviewsService.getRestaurantSummary(restaurantId).subscribe(summary => this.reviewsSummary = summary);
+    this.loadReviews(restaurantId);
+  }
+
+  closeReviews() {
+    this.reviewsModalOpen = false;
+    this.activeRestaurant = null;
+    this.reviewsSummary = null;
+    this.reviewsList = [];
+    this.showCommentsOnly = false;
+  }
+
+  toggleCommentsOnly(commentsOnly: boolean) {
+    this.showCommentsOnly = commentsOnly;
+    if (this.activeRestaurant) {
+      this.loadReviews(String(this.activeRestaurant.id));
+    }
+  }
+
+  private loadReviews(restaurantId: string) {
+    const params = this.showCommentsOnly
+      ? { with_comments_only: true, limit: 100 }
+      : { limit: 100 };
+    this.reviewsService.getRestaurantReviews(restaurantId, params).subscribe(list => this.reviewsList = list);
+  }
+
+  trackByReviewId(index: number, review: any): string {
+    return review.id;
   }
 
 }
