@@ -13,6 +13,7 @@ export interface Payment {
   currency: string;
   payment_method: 'credit_card' | 'debit_card' | 'paypal' | 'bank_transfer' | 'cash';
   status: 'pending' | 'processing' | 'completed' | 'failed' | 'refunded' | 'cancelled';
+  payout_status?: 'paid_out' | 'pending';
   transaction_id?: string;
   created_at: string;
   processed_at?: string;
@@ -25,10 +26,29 @@ export interface PaymentFilters {
   search: string;
   status: 'all' | 'pending' | 'processing' | 'completed' | 'failed' | 'refunded' | 'cancelled';
   payment_method: 'all' | 'credit_card' | 'debit_card' | 'paypal' | 'bank_transfer' | 'cash';
+  payout_status: 'all' | 'paid_out' | 'pending';
   dateRange: 'all' | 'today' | 'week' | 'month';
   amountRange: 'all' | 'low' | 'medium' | 'high';
   sortBy: 'created_at' | 'amount' | 'customer_name' | 'restaurant_name';
   sortOrder: 'asc' | 'desc';
+}
+
+export interface PayoutCalculation {
+  restaurant_id: number;
+  restaurant_name: string;
+  total_revenue: number;
+  platform_fee: number;
+  stripe_fee: number;
+  payout_amount: number;
+  order_count: number;
+}
+
+export interface PayoutResult {
+  total_restaurants: number;
+  total_amount: number;
+  successful_payouts: number;
+  failed_payouts: number;
+  payouts: any[];
 }
 
 @Component({
@@ -46,10 +66,82 @@ export interface PaymentFilters {
       <!-- Statistics Cards -->
       <div class="stats-grid">
         <div class="stat-card">
+          <i class="stat-icon fa-solid fa-euro-sign"></i>
+          <div class="stat-content">
+            <h3>Auszahlungen bereit</h3>
+            <div class="stat-value">{{ payoutCalculations.length }}</div>
+            <div class="stat-subtext">Restaurants</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <i class="stat-icon fa-solid fa-coins"></i>
+          <div class="stat-content">
+            <h3>Gesamtauszahlung</h3>
+            <div class="stat-value">{{ getTotalPayoutAmount() }}€</div>
+            <div class="stat-subtext">Netto-Betrag</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <i class="stat-icon fa-solid fa-percentage"></i>
+          <div class="stat-content">
+            <h3>Plattform-Provision</h3>
+            <div class="stat-value">{{ getTotalPlatformFee() }}€</div>
+            <div class="stat-subtext">5% von Umsatz</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <i class="stat-icon fa-solid fa-credit-card"></i>
+          <div class="stat-content">
+            <h3>Gesamtumsatz</h3>
+            <div class="stat-value">{{ getTotalRevenueFromPayouts() }}€</div>
+            <div class="stat-subtext">Restaurant-Einnahmen</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payout Calculations Table -->
+      <div *ngIf="payoutCalculations.length > 0" class="payout-calculations-container">
+        <div class="section-header">
+          <h2><i class="fa-solid fa-calculator"></i> Berechnete Auszahlungen</h2>
+          <p>Diese Beträge würden an die Restaurants ausgezahlt werden</p>
+        </div>
+
+        <div class="payouts-table-container">
+          <table class="payouts-table">
+            <thead>
+              <tr>
+                <th>Restaurant</th>
+                <th>Bestellungen</th>
+                <th>Gesamtumsatz</th>
+                <th>Provision (5%)</th>
+                <th>Stripe-Gebühr</th>
+                <th>Auszahlung</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let calc of payoutCalculations" class="payout-row">
+                <td class="restaurant-info">
+                  <div class="restaurant-name">{{ calc.restaurant_name }}</div>
+                  <div class="restaurant-id">#{{ calc.restaurant_id }}</div>
+                </td>
+                <td class="order-count">{{ calc.order_count }}</td>
+                <td class="amount">{{ calc.total_revenue.toFixed(2) }}€</td>
+                <td class="fee">{{ calc.platform_fee.toFixed(2) }}€</td>
+                <td class="fee">{{ calc.stripe_fee.toFixed(2) }}€</td>
+                <td class="payout-amount">{{ calc.payout_amount.toFixed(2) }}€</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Statistics Cards (existing) -->
+      <div class="stats-grid" *ngIf="payoutCalculations.length === 0">
+        <div class="stat-card">
           <i class="stat-icon fa-solid fa-credit-card"></i>
           <div class="stat-content">
             <h3>Gesamt Umsatz</h3>
-            <div class="stat-value">{{ totalRevenue }}€</div>
+            <div class="stat-value">{{ totalRevenue.toFixed(2) }}€</div>
           </div>
         </div>
         <div class="stat-card">
@@ -71,6 +163,13 @@ export interface PaymentFilters {
           <div class="stat-content">
             <h3>Fehlgeschlagene Zahlungen</h3>
             <div class="stat-value">{{ failedPayments }}</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <i class="stat-icon fa-solid fa-money-bill-wave"></i>
+          <div class="stat-content">
+            <h3>Ausgezahlte Zahlungen</h3>
+            <div class="stat-value">{{ paidOutPayments }}</div>
           </div>
         </div>
       </div>
@@ -114,6 +213,12 @@ export interface PaymentFilters {
               <option value="week">Diese Woche</option>
               <option value="month">Diesen Monat</option>
             </select>
+
+            <select [(ngModel)]="filters.payout_status" (change)="applyFilters()">
+              <option value="all">Alle Auszahlungen</option>
+              <option value="paid_out">Ausgezahlt</option>
+              <option value="pending">Ausstehend</option>
+            </select>
             
             <select [(ngModel)]="filters.amountRange" (change)="applyFilters()">
               <option value="all">Alle Beträge</option>
@@ -148,6 +253,20 @@ export interface PaymentFilters {
             <i class="fa-solid fa-refresh"></i>
             Aktualisieren
           </button>
+          <button
+            class="btn btn-warning"
+            (click)="calculatePayouts()"
+            [disabled]="isCalculatingPayouts || isProcessingPayouts">
+            <i class="fa-solid fa-calculator"></i>
+            Auszahlungen berechnen
+          </button>
+          <button
+            class="btn btn-danger"
+            (click)="processBulkPayouts()"
+            [disabled]="isProcessingPayouts || !payoutCalculations || payoutCalculations.length === 0">
+            <i class="fa-solid fa-money-bill-transfer"></i>
+            Alle auszahlen ({{ payoutCalculations.length || 0 }} Restaurants)
+          </button>
         </div>
       </div>
 
@@ -163,6 +282,7 @@ export interface PaymentFilters {
               <th>Betrag</th>
               <th>Methode</th>
               <th>Status</th>
+              <th>Auszahlung</th>
               <th>Transaktion</th>
               <th>Aktionen</th>
             </tr>
@@ -190,9 +310,9 @@ export interface PaymentFilters {
               </td>
               
               <td class="amount-cell">
-                <div class="amount">{{ payment.amount }}€</div>
+                <div class="amount">{{ payment.amount.toFixed(2) }}€</div>
                 <div *ngIf="payment.refund_amount" class="refund-amount">
-                  Erstattet: {{ payment.refund_amount }}€
+                  Erstattet: {{ payment.refund_amount.toFixed(2) }}€
                 </div>
               </td>
               
@@ -212,7 +332,13 @@ export interface PaymentFilters {
                   {{ payment.failure_reason }}
                 </div>
               </td>
-              
+
+              <td class="payout-cell">
+                <span class="payout-badge" [class]="'payout-' + payment.payout_status">
+                  {{ getPayoutLabel(payment.payout_status) }}
+                </span>
+              </td>
+
               <td class="transaction-cell">
                 <div *ngIf="payment.transaction_id; else noTransaction" class="transaction-id">
                   {{ payment.transaction_id }}
@@ -331,7 +457,7 @@ export interface PaymentFilters {
     /* Statistics Grid */
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: var(--space-6);
       margin-bottom: var(--space-8);
     }
@@ -587,6 +713,31 @@ export interface PaymentFilters {
       margin-top: var(--space-1);
     }
 
+    /* Payout Column */
+    .payout-cell {
+      text-align: center;
+    }
+
+    .payout-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-1) var(--space-3);
+      border-radius: var(--radius-full);
+      font-size: var(--text-sm);
+      font-weight: 500;
+    }
+
+    .payout-paid_out {
+      background: color-mix(in oklab, #10b981 15%, white);
+      color: #059669;
+    }
+
+    .payout-pending {
+      background: color-mix(in oklab, #6b7280 15%, white);
+      color: #374151;
+    }
+
     /* Transaction Column */
     .transaction-id {
       font-family: monospace;
@@ -629,6 +780,104 @@ export interface PaymentFilters {
     .empty-state h3 {
       margin: 0 0 var(--space-2) 0;
       color: var(--color-heading);
+    }
+
+    /* Payout Calculations */
+    .payout-calculations-container {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      margin-bottom: var(--space-6);
+    }
+
+    .section-header h2 {
+      font-size: var(--text-xl);
+      color: var(--color-heading);
+      margin-bottom: var(--space-2);
+    }
+
+    .section-header p {
+      color: var(--color-muted);
+      margin: 0;
+    }
+
+    .payouts-table-container {
+      margin-top: var(--space-4);
+      overflow-x: auto;
+    }
+
+    .payouts-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .payouts-table th {
+      background: var(--bg-light-green);
+      padding: var(--space-4) var(--space-3);
+      text-align: left;
+      font-weight: 600;
+      color: var(--color-heading);
+      border-bottom: 1px solid var(--color-border);
+      font-size: var(--text-sm);
+    }
+
+    .payouts-table td {
+      padding: var(--space-4) var(--space-3);
+      border-bottom: 1px solid var(--color-border);
+      vertical-align: top;
+    }
+
+    .payout-row:hover {
+      background: var(--bg-light-green);
+    }
+
+    .restaurant-info {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .restaurant-name {
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .restaurant-id {
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+      font-family: monospace;
+    }
+
+    .order-count {
+      text-align: center;
+      font-weight: 500;
+    }
+
+    .amount {
+      text-align: right;
+      font-weight: 600;
+      color: var(--color-success);
+    }
+
+    .fee {
+      text-align: right;
+      color: var(--color-warning);
+      font-size: var(--text-sm);
+    }
+
+    .payout-amount {
+      text-align: right;
+      font-weight: 700;
+      color: var(--color-primary-600);
+      font-size: var(--text-lg);
+    }
+
+    /* Stat subtext */
+    .stat-subtext {
+      font-size: var(--text-xs);
+      color: var(--color-muted);
+      margin-top: var(--space-1);
     }
 
     /* Pagination */
@@ -697,6 +946,7 @@ export class PaymentsAdminComponent implements OnInit {
     search: '',
     status: 'all',
     payment_method: 'all',
+    payout_status: 'all',
     dateRange: 'all',
     amountRange: 'all',
     sortBy: 'created_at',
@@ -713,6 +963,12 @@ export class PaymentsAdminComponent implements OnInit {
   successfulPayments = 0;
   pendingPayments = 0;
   failedPayments = 0;
+  paidOutPayments = 0;
+
+  // Payouts
+  payoutCalculations: PayoutCalculation[] = [];
+  isCalculatingPayouts = false;
+  isProcessingPayouts = false;
 
   ngOnInit() {
     this.loadPayments();
@@ -721,9 +977,8 @@ export class PaymentsAdminComponent implements OnInit {
 
   async loadPayments() {
     try {
-      // TODO: Replace with actual API call
-      const response = await this.http.get<Payment[]>(`${environment.apiUrl}/payments`).toPromise();
-      this.payments = response || [];
+      const response = await this.http.get<{count: number, payments: Payment[]}>(`${environment.apiUrl}/payments`).toPromise();
+      this.payments = response?.payments || [];
       this.applyFilters();
     } catch (error) {
       console.error('Error loading payments:', error);
@@ -735,9 +990,14 @@ export class PaymentsAdminComponent implements OnInit {
 
   async loadStatistics() {
     try {
-      // TODO: Replace with actual API call
-      const stats = await this.http.get(`${environment.apiUrl}/payments/stats`).toPromise();
-      // Update statistics based on API response
+      const response = await this.http.get<{stats: any}>(`${environment.apiUrl}/payments/stats`).toPromise();
+      if (response?.stats) {
+        // Update statistics based on API response
+        this.totalRevenue = parseFloat(response.stats.total_amount) || 0;
+        this.successfulPayments = response.stats.successful_payments || 0;
+        this.pendingPayments = response.stats.total_payments - response.stats.successful_payments - response.stats.failed_payments || 0;
+        this.failedPayments = response.stats.failed_payments || 0;
+      }
     } catch (error) {
       console.error('Error loading statistics:', error);
       // Calculate from local data
@@ -766,6 +1026,11 @@ export class PaymentsAdminComponent implements OnInit {
     // Payment method filter
     if (this.filters.payment_method !== 'all') {
       filtered = filtered.filter(payment => payment.payment_method === this.filters.payment_method);
+    }
+
+    // Payout status filter
+    if (this.filters.payout_status !== 'all') {
+      filtered = filtered.filter(payment => payment.payout_status === this.filters.payout_status);
     }
 
     // Date range filter
@@ -872,10 +1137,11 @@ export class PaymentsAdminComponent implements OnInit {
     this.totalRevenue = this.payments
       .filter(p => p.status === 'completed')
       .reduce((sum, p) => sum + p.amount, 0);
-    
+
     this.successfulPayments = this.payments.filter(p => p.status === 'completed').length;
     this.pendingPayments = this.payments.filter(p => ['pending', 'processing'].includes(p.status)).length;
     this.failedPayments = this.payments.filter(p => p.status === 'failed').length;
+    this.paidOutPayments = this.payments.filter(p => p.payout_status === 'paid_out').length;
   }
 
   getMethodLabel(method: Payment['payment_method']): string {
@@ -933,6 +1199,14 @@ export class PaymentsAdminComponent implements OnInit {
     return icons[status];
   }
 
+  getPayoutLabel(status?: 'paid_out' | 'pending'): string {
+    const labels = {
+      paid_out: 'Ausgezahlt',
+      pending: 'Ausstehend'
+    };
+    return labels[status || 'pending'];
+  }
+
   // Action Methods
   viewPaymentDetails(payment: Payment) {
     console.log('View payment details:', payment);
@@ -966,6 +1240,67 @@ export class PaymentsAdminComponent implements OnInit {
     this.loadStatistics();
   }
 
+  // Payout Methods
+  async calculatePayouts() {
+    this.isCalculatingPayouts = true;
+    try {
+      const response = await this.http.get<{
+        count: number;
+        calculations: PayoutCalculation[];
+      }>(`${environment.apiUrl}/payments/payouts/calculate`).toPromise();
+
+      this.payoutCalculations = response?.calculations || [];
+      console.log('Payout calculations:', this.payoutCalculations);
+    } catch (error) {
+      console.error('Error calculating payouts:', error);
+      alert('Fehler beim Berechnen der Auszahlungen');
+    } finally {
+      this.isCalculatingPayouts = false;
+    }
+  }
+
+  async processBulkPayouts() {
+    if (!confirm(`Möchten Sie wirklich ${this.payoutCalculations.length} Restaurants auszahlen? Dies kann nicht rückgängig gemacht werden.`)) {
+      return;
+    }
+
+    this.isProcessingPayouts = true;
+    try {
+      const response = await this.http.post<{
+        message: string;
+        result: PayoutResult;
+      }>(`${environment.apiUrl}/payments/payouts/process`, {}).toPromise();
+
+      alert(response?.message || 'Auszahlungen erfolgreich verarbeitet');
+      console.log('Payout result:', response?.result);
+
+      // Reset calculations and refresh data
+      this.payoutCalculations = [];
+      this.refreshData();
+    } catch (error) {
+      console.error('Error processing bulk payouts:', error);
+      alert('Fehler beim Verarbeiten der Auszahlungen');
+    } finally {
+      this.isProcessingPayouts = false;
+    }
+  }
+
+  // Helper methods for payout calculations
+  getTotalPayoutAmount(): string {
+    const total = this.payoutCalculations.reduce((sum, calc) => sum + calc.payout_amount, 0);
+    return total.toFixed(2);
+  }
+
+  getTotalPlatformFee(): string {
+    const total = this.payoutCalculations.reduce((sum, calc) => sum + calc.platform_fee, 0);
+    return total.toFixed(2);
+  }
+
+  getTotalRevenueFromPayouts(): string {
+    const total = this.payoutCalculations.reduce((sum, calc) => sum + calc.total_revenue, 0);
+    return total.toFixed(2);
+  }
+
   // Mock data for development
   private getMockPayments(): Payment[] {
     return [
@@ -978,6 +1313,7 @@ export class PaymentsAdminComponent implements OnInit {
         currency: 'EUR',
         payment_method: 'credit_card',
         status: 'completed',
+        payout_status: 'paid_out',
         transaction_id: 'TXN123456789',
         created_at: '2025-08-27T19:30:00Z',
         processed_at: '2025-08-27T19:31:00Z'
@@ -991,6 +1327,7 @@ export class PaymentsAdminComponent implements OnInit {
         currency: 'EUR',
         payment_method: 'paypal',
         status: 'pending',
+        payout_status: 'pending',
         created_at: '2025-08-27T19:15:00Z'
       }
     ];
