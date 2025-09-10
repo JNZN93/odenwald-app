@@ -587,6 +587,41 @@ export class RestaurantsService {
     );
   }
 
+  // Stripe Connect: create Express account
+  createStripeAccount(restaurantId: string): Observable<{ stripe_account_id: string }> {
+    return this.http.post<{ message: string; stripe_account_id: string }>(
+      `${this.baseUrl}/${restaurantId}/stripe/account`,
+      {}
+    ).pipe(
+      map(resp => ({ stripe_account_id: resp.stripe_account_id }))
+    );
+  }
+
+  // Stripe Connect: create onboarding link and return URL
+  createStripeOnboardingLink(restaurantId: string): Observable<{ url: string; expires_at?: number }> {
+    return this.http.post<{ url: string; expires_at?: number }>(
+      `${this.baseUrl}/${restaurantId}/stripe/account-link`,
+      {}
+    );
+  }
+
+  // Stripe Connect: sync and fetch status
+  getStripeStatus(restaurantId: string): Observable<{
+    stripe_account_id: string;
+    charges_enabled: boolean;
+    payouts_enabled: boolean;
+    details_submitted: boolean;
+    onboarding_status: 'pending' | 'created' | 'onboarding' | 'completed' | 'restricted';
+  }> {
+    return this.http.get<{
+      stripe_account_id: string;
+      charges_enabled: boolean;
+      payouts_enabled: boolean;
+      details_submitted: boolean;
+      onboarding_status: 'pending' | 'created' | 'onboarding' | 'completed' | 'restricted';
+    }>(`${this.baseUrl}/${restaurantId}/stripe/status`);
+  }
+
   searchRestaurantCustomers(restaurantId: string, email: string): Observable<RestaurantCustomer> {
     return this.http.get<{ customer: RestaurantCustomer }>(
       `${this.baseUrl}/${restaurantId}/customers/search?email=${encodeURIComponent(email)}`

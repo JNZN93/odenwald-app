@@ -54,6 +54,13 @@ export interface Restaurant {
   is_active: boolean;
   is_immediately_closed: boolean;
   is_verified: boolean;
+  // Stripe Connect (optional)
+  stripe_account_id?: string | null;
+  stripe_onboarding_status?: 'pending' | 'created' | 'onboarding' | 'completed' | 'restricted';
+  stripe_payouts_enabled?: boolean;
+  stripe_charges_enabled?: boolean;
+  stripe_details_submitted?: boolean;
+  stripe_connect_data?: Record<string, any>;
   owner_name?: string;
   owner_email?: string;
   registration_status?: 'pending' | 'approved' | 'rejected';

@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map, catchError, of, BehaviorSubject } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { RestaurantDTO } from './restaurants.service';
 
 export interface RestaurantManager {
   id: string;
@@ -75,6 +76,17 @@ export class RestaurantManagerService {
       catchError(error => {
         console.error('Error fetching managed restaurants:', error);
         return of([]);
+      })
+    );
+  }
+
+  // Get full restaurant details by restaurant ID
+  getRestaurantDetails(restaurantId: string): Observable<RestaurantDTO> {
+    return this.http.get<{ restaurant: RestaurantDTO }>(`${environment.apiUrl}/restaurants/${restaurantId}`).pipe(
+      map(response => response.restaurant),
+      catchError(error => {
+        console.error('Error fetching restaurant details:', error);
+        throw error;
       })
     );
   }

@@ -68,6 +68,9 @@ export const routes: Routes = [
   { path: 'restaurant/:id', component: RestaurantDetailComponent },
   { path: 'restaurants', component: RestaurantsComponent },
   { path: 'checkout', loadComponent: () => import('./features/checkout/checkout.component').then(m => m.CheckoutComponent) },
+  // Stripe Connect onboarding redirects
+  { path: 'onboarding/refresh', loadComponent: () => import('./features/restaurant-manager/stripe-onboarding-redirect.component').then(m => m.StripeOnboardingRedirectComponent) },
+  { path: 'onboarding/complete', loadComponent: () => import('./features/restaurant-manager/stripe-onboarding-redirect.component').then(m => m.StripeOnboardingRedirectComponent) },
   { path: 'order-confirmation/:id', loadComponent: () => import('./features/order-confirmation/order-confirmation.component').then(m => m.OrderConfirmationComponent), canActivate: [authGuard, roleGuard(['customer', 'manager'])] },
   { path: 'review', loadComponent: () => import('./features/reviews/review-flow.component').then(m => m.ReviewFlowComponent) },
   { path: 'driver-dashboard', loadComponent: () => import('./features/driver/driver-dashboard.component').then(m => m.DriverDashboardComponent), canActivate: [authGuard, roleGuard(['driver'])] },

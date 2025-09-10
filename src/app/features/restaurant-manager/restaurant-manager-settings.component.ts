@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { RouterModule, ActivatedRoute } from '@angular/router';
 import { RestaurantsService, RestaurantDTO } from '../../core/services/restaurants.service';
 import { AuthService, User } from '../../core/auth/auth.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -465,6 +465,29 @@ import { Subscription } from 'rxjs';
                 </div>
               </form>
             </div>
+          </div>
+        </div>
+
+        <!-- Stripe Connect Settings -->
+        <div *ngIf="activeTab === 'stripe'" class="settings-section">
+          <h2>Stripe Connect</h2>
+          <p>Verbinden Sie Ihr Stripe-Konto, um Zahlungen direkt zu empfangen.</p>
+
+          <div class="info-card" style="margin-bottom:16px;">
+            <div>
+              <p><strong>Account-ID:</strong> {{ currentRestaurant?.stripe_account_id || '–' }}</p>
+              <p><strong>Status:</strong> {{ stripeStatusText }}</p>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <button class="btn-primary" type="button" (click)="startStripeOnboarding()" [disabled]="isLoading">
+              <i class="fa-brands fa-stripe"></i>
+              {{ currentRestaurant?.stripe_account_id ? 'Onboarding fortsetzen' : 'Stripe-Konto erstellen' }}
+            </button>
+            <button class="btn-secondary" type="button" (click)="refreshStripeStatus()" [disabled]="isLoading">
+              Status aktualisieren
+            </button>
           </div>
         </div>
 
@@ -1416,6 +1439,7 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
   private restaurantsService = inject(RestaurantsService);
   private authService = inject(AuthService);
   private toastService = inject(ToastService);
+  private route = inject(ActivatedRoute);
   private subscriptions: Subscription[] = [];
 
   activeTab: string = 'general';
@@ -1443,6 +1467,7 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
     { id: 'delivery', title: 'Lieferung', icon: 'fa-solid fa-truck' },
     { id: 'notifications', title: 'Benachrichtigungen', icon: 'fa-solid fa-bell' },
     { id: 'payment', title: 'Zahlung', icon: 'fa-solid fa-credit-card' },
+    { id: 'stripe', title: 'Stripe Connect', icon: 'fa-brands fa-stripe' },
     { id: 'password', title: 'Passwort', icon: 'fa-solid fa-lock' }
   ];
 
@@ -1485,9 +1510,17 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
     paypal: false
   };
 
+  stripeStatusText: string = '–';
+
   ngOnInit() {
     this.loadCurrentUser();
     this.loadRestaurantData();
+
+    // Check for tab parameter in URL
+    const tabParam = this.route.snapshot.queryParamMap.get('tab');
+    if (tabParam && this.settingsTabs.some(tab => tab.id === tabParam)) {
+      this.activeTab = tabParam;
+    }
   }
 
   ngOnDestroy() {
@@ -1515,6 +1548,12 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
       next: (restaurant: any) => {
         this.currentRestaurant = restaurant;
         this.populateFormData(restaurant);
+
+        // Auto-switch to Stripe tab if no account exists and no tab parameter
+        if (!restaurant.stripe_account_id && !this.route.snapshot.queryParamMap.has('tab')) {
+          this.activeTab = 'stripe';
+        }
+
         this.isLoading = false;
         console.log('Restaurant data loaded:', restaurant);
       },
@@ -1577,6 +1616,13 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
     console.log('Restaurant data loaded:', restaurant);
     console.log('is_immediately_closed:', restaurant.is_immediately_closed);
     this.isImmediatelyClosed = restaurant.is_immediately_closed || false;
+
+    // Stripe status text
+    const parts: string[] = [];
+    if ((restaurant as any).stripe_charges_enabled) parts.push('Zahlungen aktiv');
+    if ((restaurant as any).stripe_payouts_enabled) parts.push('Auszahlungen aktiv');
+    if ((restaurant as any).stripe_details_submitted) parts.push('Details übermittelt');
+    this.stripeStatusText = parts.length ? parts.join(' • ') : 'Noch nicht verbunden';
   }
 
   saveGeneralSettings() {
@@ -1783,6 +1829,59 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
       }
     });
     this.subscriptions.push(sub);
+  }
+
+  startStripeOnboarding() {
+    if (!this.currentRestaurant) return;
+    this.isLoading = true;
+    const restaurantId = this.currentRestaurant.id;
+
+    const proceed = () => {
+      this.restaurantsService.createStripeOnboardingLink(restaurantId).subscribe({
+        next: ({ url }) => {
+          window.location.href = url;
+        },
+        error: (err) => {
+          console.error('Error creating onboarding link:', err);
+          this.toastService.error('Stripe', 'Onboarding-Link konnte nicht erstellt werden');
+          this.isLoading = false;
+        }
+      });
+    };
+
+    if (!this.currentRestaurant.stripe_account_id) {
+      this.restaurantsService.createStripeAccount(restaurantId).subscribe({
+        next: () => proceed(),
+        error: (err) => {
+          console.error('Error creating Stripe account:', err);
+          this.toastService.error('Stripe', 'Konto konnte nicht erstellt werden');
+          this.isLoading = false;
+        }
+      });
+    } else {
+      proceed();
+    }
+  }
+
+  refreshStripeStatus() {
+    if (!this.currentRestaurant) return;
+    this.isLoading = true;
+    this.restaurantsService.getStripeStatus(this.currentRestaurant.id).subscribe({
+      next: (status) => {
+        const parts: string[] = [];
+        if (status.charges_enabled) parts.push('Zahlungen aktiv');
+        if (status.payouts_enabled) parts.push('Auszahlungen aktiv');
+        if (status.details_submitted) parts.push('Details übermittelt');
+        this.stripeStatusText = parts.length ? parts.join(' • ') : status.onboarding_status;
+        this.toastService.success('Stripe', 'Status aktualisiert');
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error('Error refreshing Stripe status:', err);
+        this.toastService.error('Stripe', 'Status konnte nicht aktualisiert werden');
+        this.isLoading = false;
+      }
+    });
   }
 
   // Image Upload Methods

@@ -14,6 +14,7 @@ export interface ManagerMenuItem {
   description: string;
   icon: string;
   route: string;
+  queryParams: Record<string, any>;
   color: string;
   badge?: string;
 }
@@ -31,6 +32,7 @@ export interface ManagerMenuItem {
           <a
             *ngFor="let menuItem of managerMenuItems"
             [routerLink]="menuItem.route"
+             [queryParams]="menuItem.queryParams"
             routerLinkActive="active"
             class="nav-item"
           >
@@ -414,6 +416,8 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
   isLoadingStats: boolean = false;
   pendingOrdersCount: number = 0;
   pendingWholesalerOrdersCount: number = 0;
+  currentRestaurant: any = null;
+  needsStripeSetup: boolean = false;
 
 
   managerMenuItems: ManagerMenuItem[] = [];
@@ -463,6 +467,7 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
           // Speichere das erste Restaurant im Service
           this.restaurantManagerService.setSelectedRestaurant(this.managedRestaurants[0]);
           this.loadRestaurantStats(this.selectedRestaurantId);
+          this.loadRestaurantDetails(this.selectedRestaurantId);
         }
       },
       error: (error) => {
@@ -501,6 +506,23 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
     this.subscriptions.push(sub);
   }
 
+  private loadRestaurantDetails(restaurantId: string) {
+    const sub = this.restaurantManagerService.getRestaurantDetails(restaurantId).subscribe({
+      next: (restaurant) => {
+        this.currentRestaurant = restaurant;
+        this.needsStripeSetup = !restaurant.stripe_account_id;
+        this.updateMenuBadges();
+        console.log('Restaurant details loaded:', restaurant);
+      },
+      error: (error) => {
+        console.error('Error loading restaurant details:', error);
+        this.needsStripeSetup = false;
+        this.updateMenuBadges();
+      }
+    });
+    this.subscriptions.push(sub);
+  }
+
   onRestaurantChange() {
     if (this.selectedRestaurantId) {
       // Finde das ausgewählte Restaurant und speichere es im Service
@@ -509,6 +531,7 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
         this.restaurantManagerService.setSelectedRestaurant(selectedRestaurant);
       }
       this.loadRestaurantStats(this.selectedRestaurantId);
+      this.loadRestaurantDetails(this.selectedRestaurantId);
       this.loadBadgeCounts(); // Reload badge counts when restaurant changes
     }
   }
@@ -550,6 +573,8 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
         item.badge = this.pendingOrdersCount > 0 ? this.pendingOrdersCount.toString() : undefined;
       } else if (item.id === 'wholesale') {
         item.badge = this.pendingWholesalerOrdersCount > 0 ? this.pendingWholesalerOrdersCount.toString() : undefined;
+      } else if (item.id === 'settings' && this.needsStripeSetup) {
+        item.badge = '!';
       }
     });
   }
@@ -569,6 +594,7 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
         description: 'Dashboard und Statistiken',
         icon: 'overview-icon',
         route: '/restaurant-manager/overview',
+        queryParams: {},
         color: '#4aa96c'
       },
       {
@@ -577,6 +603,7 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
         description: 'Bestellungen verwalten',
         icon: 'orders-icon',
         route: '/restaurant-manager/orders',
+        queryParams: {},
         color: '#f59e0b',
         badge: this.pendingOrdersCount > 0 ? this.pendingOrdersCount.toString() : undefined
       },
@@ -586,6 +613,7 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
         description: 'Fahrer verwalten & zuweisen',
         icon: 'drivers-icon',
         route: '/restaurant-manager/drivers',
+        queryParams: {},
         color: '#06b6d4'
       },
       {
@@ -594,6 +622,7 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
         description: 'Menu bearbeiten',
         icon: 'menu-icon',
         route: '/restaurant-manager/menu',
+        queryParams: {},
         color: '#3B82F6'
       },
       {
@@ -602,6 +631,7 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
         description: 'Berichte & Statistiken',
         icon: 'analytics-icon',
         route: '/restaurant-manager/analytics',
+        queryParams: {},
         color: '#ef4444'
       },
       {
@@ -610,6 +640,7 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
         description: 'Kunden verwalten',
         icon: 'customers-icon',
         route: '/restaurant-manager/customers',
+        queryParams: {},
         color: '#ec4899'
       },
       {
@@ -618,6 +649,7 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
         description: 'Restaurant-Einstellungen',
         icon: 'settings-icon',
         route: '/restaurant-manager/settings',
+        queryParams: { tab: 'stripe' },
         color: '#8b5cf6'
       },
       {
@@ -626,6 +658,7 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
         description: 'Zutaten und Waren bestellen',
         icon: 'wholesale-icon',
         route: '/restaurant-manager/wholesale',
+        queryParams: {},
         color: '#10b981',
         badge: this.pendingWholesalerOrdersCount > 0 ? this.pendingWholesalerOrdersCount.toString() : undefined
       }
