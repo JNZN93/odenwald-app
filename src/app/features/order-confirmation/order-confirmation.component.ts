@@ -1,9 +1,11 @@
 import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { OrdersService, Order } from '../../core/services/orders.service';
 import { Observable, interval, Subscription, BehaviorSubject } from 'rxjs';
 import { take } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-order-confirmation',
@@ -478,6 +480,7 @@ export class OrderConfirmationComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private ordersService = inject(OrdersService);
+  private http = inject(HttpClient);
 
   private orderSubject = new BehaviorSubject<Order | null>(null);
   order$: Observable<Order | null> = this.orderSubject.asObservable();
@@ -556,13 +559,21 @@ export class OrderConfirmationComponent implements OnInit, OnDestroy {
   }
 
   private refreshOrder(orderId: string, stopOnPaid = false) {
-    this.ordersService.getOrderById(orderId).subscribe(order => {
-      this.orderSubject.next(order);
-      if (stopOnPaid && (order.payment_status === 'paid' || order.payment_status === 'failed')) {
-        if (this.pollingSubscription) {
-          this.pollingSubscription.unsubscribe();
-          this.pollingSubscription = null;
+    // Use the public confirmation endpoint that doesn't require authentication
+    this.http.get<{ order: any }>(`${environment.apiUrl}/orders/confirmation/${orderId}`).subscribe({
+      next: (response) => {
+        const order = this.ordersService['normalizeOrder'](response.order);
+        this.orderSubject.next(order);
+        if (stopOnPaid && (order.payment_status === 'paid' || order.payment_status === 'failed')) {
+          if (this.pollingSubscription) {
+            this.pollingSubscription.unsubscribe();
+            this.pollingSubscription = null;
+          }
         }
+      },
+      error: (error) => {
+        console.error('Error loading order:', error);
+        this.orderSubject.next(null);
       }
     });
   }
