@@ -822,11 +822,15 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
       next: (response) => {
         console.log('Status update response:', response);
 
-        // Update local order - make sure we have a deep copy
+        // Update local order - preserve existing data and only update status
         const index = this.orders.findIndex(o => String(o.id) === String(orderId));
         if (index !== -1) {
-          // Create a deep copy to ensure change detection works
-          this.orders[index] = { ...response.order, id: String(response.order.id) };
+          // Preserve all existing data, only update status and updated_at
+          this.orders[index] = {
+            ...this.orders[index], // Keep all existing data
+            status: response.order.status,
+            updated_at: response.order.updated_at || this.orders[index].updated_at
+          };
           console.log('Updated local order:', this.orders[index]);
         } else {
           console.warn('Order not found in local array:', orderId);
@@ -880,7 +884,12 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
 
           const index = this.orders.findIndex(o => String(o.id) === String(orderId));
           if (index !== -1) {
-            this.orders[index] = { ...response.order, id: String(response.order.id) };
+            // Preserve all existing data, only update status and updated_at
+            this.orders[index] = {
+              ...this.orders[index], // Keep all existing data
+              status: response.order.status,
+              updated_at: response.order.updated_at || this.orders[index].updated_at
+            };
             console.log('Updated cancelled order:', this.orders[index]);
           } else {
             console.warn('Cancelled order not found in local array:', orderId);
@@ -932,10 +941,15 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
         next: (response) => {
           console.log('Payment status update response:', response);
 
-          // Update local order
+          // Update local order - preserve existing data and only update payment_status
           const index = this.orders.findIndex(o => String(o.id) === String(orderId));
           if (index !== -1) {
-            this.orders[index] = { ...response.order, id: String(response.order.id) };
+            // Preserve all existing data, only update payment_status and updated_at
+            this.orders[index] = {
+              ...this.orders[index], // Keep all existing data
+              payment_status: 'paid',
+              updated_at: response.order.updated_at || this.orders[index].updated_at
+            };
             console.log('Updated order payment status:', this.orders[index]);
           } else {
             console.warn('Order not found in local array:', orderId);
@@ -994,7 +1008,17 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
   }
 
   formatOrderTime(orderTime: string): string {
+    if (!orderTime) {
+      return 'Unbekanntes Datum';
+    }
+
     const date = new Date(orderTime);
+
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return 'Ungültiges Datum';
+    }
+
     const now = new Date();
     const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
 
