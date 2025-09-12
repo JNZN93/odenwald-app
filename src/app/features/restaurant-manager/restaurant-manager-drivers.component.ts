@@ -95,7 +95,7 @@ export interface Driver {
           </div>
           <div class="stat-content">
             <h3>Unterwegs</h3>
-            <div class="stat-value">{{ driverStats.delivering_drivers }}</div>
+            <div class="stat-value">{{ driverStats?.delivering_drivers || 0 }}</div>
           </div>
         </div>
         <div class="stat-card">
@@ -104,7 +104,7 @@ export interface Driver {
           </div>
           <div class="stat-content">
             <h3>Durchschnittsbewertung</h3>
-            <div class="stat-value">{{ driverStats.average_rating | number:'1.1-1' }}/5</div>
+            <div class="stat-value">{{ (driverStats?.average_rating || 5.0) | number:'1.1-1' }}/5</div>
           </div>
         </div>
       </div>
@@ -1788,7 +1788,12 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
         `${environment.apiUrl}/drivers/stats`
       ).toPromise();
 
+      console.log('Driver stats response:', response);
+      console.log('Response stats property:', (response as any)?.stats);
       this.driverStats = (response as any)?.stats;
+      console.log('Driver stats set to:', this.driverStats);
+      console.log('Average rating value:', this.driverStats?.average_rating);
+      console.log('Average rating type:', typeof this.driverStats?.average_rating);
     } catch (error: any) {
       console.error('Error loading driver stats:', error);
       if (error.status === 500) {

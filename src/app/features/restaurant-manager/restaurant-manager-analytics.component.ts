@@ -159,8 +159,24 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
         <div class="chart-card">
           <div class="chart-header">
             <h3>Stoßzeiten</h3>
+            <div class="peak-hours-toggle">
+              <button
+                [class.active]="!showPeakHoursByDay"
+                (click)="showPeakHoursByDay = false"
+                class="toggle-btn">
+                Nach Uhrzeit
+              </button>
+              <button
+                [class.active]="showPeakHoursByDay"
+                (click)="showPeakHoursByDay = true"
+                class="toggle-btn">
+                Nach Wochentag
+              </button>
+            </div>
           </div>
-          <div class="peak-hours">
+
+          <!-- Peak Hours by Time Only -->
+          <div *ngIf="!showPeakHoursByDay" class="peak-hours">
             <div *ngFor="let hour of peakHours" class="hour-bar">
               <div class="hour-label">{{ hour.hour }}:00</div>
               <div class="hour-bar-container">
@@ -170,6 +186,29 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
             </div>
 
             <div *ngIf="peakHours.length === 0" class="no-data">
+              <p>Keine Bestellungsdaten für diesen Zeitraum verfügbar</p>
+            </div>
+          </div>
+
+          <!-- Peak Hours by Day and Time -->
+          <div *ngIf="showPeakHoursByDay" class="peak-hours-by-day">
+            <div *ngFor="let dayData of peakHoursByDay" class="day-peak-hours">
+              <h4 class="day-title">{{ dayData.dayName }}</h4>
+              <div class="day-hours-list">
+                <div *ngFor="let hour of dayData.hours" class="hour-bar">
+                  <div class="hour-label">{{ hour.hour }}:00</div>
+                  <div class="hour-bar-container">
+                    <div class="hour-bar-fill" [style.width.%]="hour.percentage"></div>
+                  </div>
+                  <div class="hour-count">{{ hour.orders }}</div>
+                </div>
+                <div *ngIf="dayData.hours.length === 0" class="no-hours">
+                  <p>Keine Bestellungen</p>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="peakHoursByDay.length === 0" class="no-data">
               <p>Keine Bestellungsdaten für diesen Zeitraum verfügbar</p>
             </div>
           </div>
@@ -405,6 +444,37 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
       font-size: var(--text-lg);
     }
 
+    .peak-hours-toggle {
+      display: flex;
+      gap: var(--space-2);
+      background: var(--color-muted-100);
+      border-radius: var(--radius-md);
+      padding: var(--space-1);
+    }
+
+    .toggle-btn {
+      background: transparent;
+      border: none;
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-sm);
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .toggle-btn:hover {
+      background: var(--color-muted-200);
+      color: var(--color-text);
+    }
+
+    .toggle-btn.active {
+      background: white;
+      color: var(--color-text);
+      box-shadow: var(--shadow-sm);
+    }
+
     .chart-placeholder {
       padding: var(--space-8);
       text-align: center;
@@ -527,6 +597,45 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
     .no-data p {
       margin: 0;
       font-size: var(--text-sm);
+    }
+
+    /* Peak Hours by Day */
+    .peak-hours-by-day {
+      padding: var(--space-6);
+    }
+
+    .day-peak-hours {
+      margin-bottom: var(--space-6);
+    }
+
+    .day-peak-hours:last-child {
+      margin-bottom: 0;
+    }
+
+    .day-title {
+      margin: 0 0 var(--space-4) 0;
+      color: var(--color-text);
+      font-size: var(--text-lg);
+      font-weight: 600;
+      padding-bottom: var(--space-2);
+      border-bottom: 2px solid var(--color-primary-500);
+    }
+
+    .day-hours-list {
+      display: grid;
+      gap: var(--space-3);
+    }
+
+    .no-hours {
+      text-align: center;
+      padding: var(--space-4);
+      color: var(--color-muted);
+    }
+
+    .no-hours p {
+      margin: 0;
+      font-size: var(--text-sm);
+      font-style: italic;
     }
 
     /* Reports Section */
@@ -816,9 +925,14 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
   error: string | null = null;
   selectedRestaurantId: string | null = null;
   managedRestaurants: any[] = [];
+  showPeakHoursByDay: boolean = false;
 
   get peakHours() {
     return this.currentStats?.peak_hours || [];
+  }
+
+  get peakHoursByDay() {
+    return this.currentStats?.peak_hours_by_day || [];
   }
 
   private refreshSubscription?: Subscription;

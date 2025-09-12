@@ -214,7 +214,13 @@ export interface ManagerMenuItem {
       border-radius: var(--radius-full);
       font-size: var(--text-xs);
       font-weight: 600;
-      margin-left: var(--space-1);
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
     }
 
     .restaurant-selector {
@@ -374,9 +380,15 @@ export interface ManagerMenuItem {
       }
     }
 
+    @media (max-width: 1024px) {
+      .manager-content {
+        padding: 0;
+      }
+    }
+
     @media (max-width: 768px) {
       .manager-content {
-        padding: var(--space-4);
+        padding: 0;
       }
 
       .nav-brand h1 {

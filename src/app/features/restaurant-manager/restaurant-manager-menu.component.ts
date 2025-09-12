@@ -446,7 +446,7 @@ interface CategoryFormData {
       justify-content: space-between;
       align-items: center;
       padding: var(--space-6);
-      background: var(--bg-light-green);
+      background: white;
       border-bottom: 1px solid var(--color-border);
     }
 

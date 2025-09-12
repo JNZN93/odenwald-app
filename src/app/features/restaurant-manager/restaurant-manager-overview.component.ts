@@ -84,6 +84,12 @@ import { RestaurantsService } from '../../core/services/restaurants.service';
                 <span [ngClass]="getOrderStatusClass(order.status)" class="status-badge">
                   {{ getOrderStatusText(order.status) }}
                 </span>
+                <span *ngIf="order.payment_status === 'paid'" class="payment-indicator" title="Bezahlt">
+                  <i class="fa-solid fa-credit-card"></i>
+                </span>
+                <span *ngIf="order.payment_status === 'pending'" class="payment-indicator temp" title="Zahlung ausstehend">
+                  <i class="fa-solid fa-clock"></i>
+                </span>
               </div>
               <div class="order-amount">{{ getOrderAmountDisplay(order.total) }}</div>
             </div>
@@ -408,6 +414,28 @@ import { RestaurantsService } from '../../core/services/restaurants.service';
       color: var(--color-danger);
     }
 
+    .payment-indicator {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: var(--space-2);
+      padding: var(--space-1);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-sm);
+      cursor: help;
+    }
+
+    .payment-indicator:not(.temp) {
+      background: var(--color-success-50);
+      color: var(--color-success);
+    }
+
+    .payment-indicator.temp {
+      background: var(--color-warning-50);
+      color: var(--color-warning);
+      border: 1px solid var(--color-warning-200);
+    }
+
     .order-amount {
       font-weight: 600;
       color: var(--color-text);
@@ -692,6 +720,7 @@ export class RestaurantManagerOverviewComponent implements OnInit, OnDestroy {
           customer_name: order.customer_name || 'Unbekannter Kunde',
           order_time: order.created_at,
           status: order.status,
+          payment_status: order.payment_status || 'pending',
           total: order.total_price
         })) || [];
 

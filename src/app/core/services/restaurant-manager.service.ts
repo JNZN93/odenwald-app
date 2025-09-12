@@ -32,6 +32,11 @@ export interface RestaurantStats {
     orders: number;
     percentage: number;
   }>;
+  peak_hours_by_day?: Array<{
+    day: number;
+    dayName: string;
+    hours: Array<{ hour: number; orders: number; percentage: number }>;
+  }>;
 }
 
 @Injectable({ providedIn: 'root' })

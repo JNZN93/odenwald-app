@@ -94,8 +94,19 @@ export class AppComponent implements OnInit {
   // Restaurant Manager specific properties
   showRole: boolean = false;
 
+  // Mobile Navigation
+  isMobileNavOpen: boolean = false;
+
   toggleRoleDisplay() {
     this.showRole = !this.showRole;
+  }
+
+  toggleMobileNav() {
+    this.isMobileNavOpen = !this.isMobileNavOpen;
+  }
+
+  closeMobileNav() {
+    this.isMobileNavOpen = false;
   }
 
   getCurrentUserRole(): string {

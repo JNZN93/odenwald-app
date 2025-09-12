@@ -19,10 +19,23 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
     <section class="customer-restaurants-section">
       <!-- Hero Header -->
       <div class="hero-header">
-        <div class="hero-content">
-          <h1 class="hero-title">Essen bestellen im Odenwald</h1>
-          <p class="hero-subtitle">Entdecke lokale Restaurants und lass dir dein Lieblingsessen nach Hause liefern</p>
-          
+        <!-- Compact Location Bar (when coordinates exist) -->
+        <div class="compact-location-bar" *ngIf="userCoordinates && isCompactMode">
+          <div class="location-info">
+            <i class="fa-solid fa-map-marker-alt location-icon"></i>
+            <span class="location-text">{{ formattedAddress || deliveryAddress }}</span>
+          </div>
+          <button class="change-address-btn" (click)="clearAddress()" type="button">
+            <i class="fa-solid fa-edit"></i>
+            Adresse ändern
+          </button>
+        </div>
+
+        <!-- Full Hero Content (when no coordinates or not compact mode) -->
+        <div class="hero-content" *ngIf="!userCoordinates || !isCompactMode">
+          <h1 class="hero-title" *ngIf="!isCompactMode">Essen bestellen im Odenwald</h1>
+          <p class="hero-subtitle" *ngIf="!isCompactMode">Entdecke lokale Restaurants und lass dir dein Lieblingsessen nach Hause liefern</p>
+
           <!-- Navigation -->
           <div class="navigation-section" *ngIf="isLoggedIn$ | async">
             <button class="nav-btn" (click)="goToDashboard()">
@@ -69,9 +82,9 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
           </style>
 
           <!-- Address Input Section -->
-          <div class="address-section" *ngIf="!userCoordinates">
+          <div class="address-section" *ngIf="showAddressInput">
             <div class="address-container">
-              <h2 class="address-title">Wo möchtest du bestellen?</h2>
+              <h2 class="address-title" *ngIf="!isCompactMode">Wo möchtest du bestellen?</h2>
               <div class="address-input-wrapper">
                 <i class="fa-solid fa-location-dot address-icon"></i>
                 <input
@@ -96,63 +109,37 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
               </div>
 
               <div class="address-examples">
-                <p class="examples-title">Beispiele:</p>
                 <div class="examples-list">
                   <button class="example-btn current-location-btn" (click)="useCurrentLocation()" [disabled]="isGettingLocation" type="button">
                     <i class="fa-solid fa-location-crosshairs" *ngIf="!isGettingLocation"></i>
                     <i class="fa-solid fa-spinner fa-spin" *ngIf="isGettingLocation"></i>
                     {{ isGettingLocation ? 'Standort wird ermittelt...' : 'Meinen aktuellen Standort verwenden' }}
                   </button>
-                  <button class="example-btn" (click)="setExampleAddress('Hauptstr. 123, 10115 Berlin')" type="button">
-                    Hauptstr. 123, Berlin
-                  </button>
-                  <button class="example-btn" (click)="setExampleAddress('Münchner Str. 45, 60329 Frankfurt')" type="button">
-                    Münchner Str. 45, Frankfurt
-                  </button>
-                  <button class="example-btn" (click)="setExampleAddress('Königstr. 78, 70173 Stuttgart')" type="button">
-                    Königstr. 78, Stuttgart
-                  </button>
                 </div>
-              </div>
-
-              <div class="address-hint">
-                <i class="fa-solid fa-info-circle"></i>
-                Nach der Adresseingabe zeigen wir dir alle Restaurants in deiner Nähe an
               </div>
             </div>
           </div>
 
           <!-- Current Location Bar -->
-          <div class="current-location-bar" *ngIf="userCoordinates">
+          <div class="current-location-bar" *ngIf="userCoordinates && !isCompactMode">
             <div class="location-info">
               <i class="fa-solid fa-map-marker-alt location-icon"></i>
-              <span class="location-text">Lieferung nach: {{ formattedAddress || deliveryAddress }}</span>
+              <span class="location-text">{{ formattedAddress || deliveryAddress }}</span>
             </div>
             <button class="change-address-btn" (click)="clearAddress()" type="button">
               <i class="fa-solid fa-edit"></i>
               Adresse ändern
             </button>
           </div>
-
-
-          <!-- Search Section - Vereinfacht für Standort-Suche -->
-          <div class="search-section" *ngIf="userCoordinates">
-            <div class="search-container">
-              <div class="simple-search-notice">
-                <i class="fa-solid fa-info-circle"></i>
-                <span>Zeige alle Restaurants in {{ searchRadius }}km Entfernung zu deiner Adresse</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
+
 
       <!-- Results Section -->
       <div class="results-section" *ngIf="userCoordinates">
         <div class="container">
           <div class="results-header">
-            <h2 class="results-title">Restaurants in deiner Nähe</h2>
-            <p class="results-subtitle">Zeige Restaurants im {{ searchRadius }}km Radius um deine Adresse</p>
+            <h2 class="results-title" *ngIf="!isMobileOrTablet()">Restaurants in deiner Nähe</h2>
           </div>
           
           <ng-container *ngIf="restaurants$ | async as restaurants; else loading">
@@ -516,8 +503,15 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
   reviewsList: any[] = [];
   showCommentsOnly = false;
 
+  // Compact mode for returning users
+  isCompactMode = false;
+  showAddressInput = true;
+
   ngOnInit() {
     console.log('CustomerRestaurantsComponent: Initialized');
+
+    // Check for saved location in localStorage
+    this.checkSavedLocation();
 
     // Start with empty restaurants list (user needs to enter address first)
     this.restaurantsSubject.next([]);
@@ -579,6 +573,11 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
           console.log('📍 Geocoding result:', result);
           this.userCoordinates = result;
           this.formattedAddress = result.formattedAddress || this.deliveryAddress;
+
+          // Save location to localStorage when manually entered
+          this.saveLocationToStorage(result);
+          this.showAddressInput = false; // Hide address input after successful manual entry
+
           this.loadNearbyRestaurants();
         } else {
           console.error('❌ No geocoding result');
@@ -591,13 +590,15 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
     this.userCoordinates = null;
     this.formattedAddress = '';
     this.restaurantsSubject.next([]);
+
+    // Clear localStorage and deactivate compact mode
+    localStorage.removeItem('customer_location');
+    this.isCompactMode = false;
+    this.showAddressInput = true; // Show address input when changing address
+
+    console.log('🗑️ Location cleared from localStorage');
   }
 
-  setExampleAddress(address: string) {
-    this.deliveryAddress = address;
-    // Automatisch suchen nach Klick auf Beispiel für bessere UX
-    setTimeout(() => this.onAddressSubmit(), 100);
-  }
 
   useCurrentLocation() {
     this.isGettingLocation = true;
@@ -632,9 +633,20 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
               if (reverseResult && reverseResult.formattedAddress) {
                 this.userCoordinates = reverseResult;
                 this.formattedAddress = reverseResult.formattedAddress;
-                this.deliveryAddress = this.formattedAddress;
                 console.log('🏙️ Reverse geocoding successful:', reverseResult);
               }
+
+              // Save location to localStorage and activate compact mode
+              if (this.userCoordinates) {
+                this.saveLocationToStorage(this.userCoordinates);
+                this.isCompactMode = true;
+                this.showAddressInput = false; // Hide address input after using current location
+
+                // Format address to show only city and postal code
+                this.formattedAddress = this.formatCompactAddress(this.formattedAddress);
+                this.deliveryAddress = this.formattedAddress;
+              }
+
               this.loadNearbyRestaurants();
             });
         } else {
@@ -738,6 +750,98 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
 
   trackByReviewId(index: number, review: any): string {
     return review.id;
+  }
+
+  isMobileOrTablet(): boolean {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth <= 768; // Tablet und Mobile
+    }
+    return false;
+  }
+
+  private checkSavedLocation() {
+    const savedLocation = localStorage.getItem('customer_location');
+    if (savedLocation) {
+      try {
+        const locationData = JSON.parse(savedLocation);
+        if (locationData && locationData.latitude && locationData.longitude) {
+          // Activate compact mode for returning users
+          this.isCompactMode = true;
+          this.showAddressInput = false; // Hide address input in compact mode
+          this.userCoordinates = locationData;
+          this.formattedAddress = this.formatCompactAddress(locationData.formattedAddress || '');
+          this.deliveryAddress = this.formattedAddress;
+
+          // Load nearby restaurants
+          this.loadNearbyRestaurants();
+
+          console.log('📍 Loaded saved location from localStorage:', locationData);
+        }
+      } catch (error) {
+        console.error('Error loading saved location:', error);
+        localStorage.removeItem('customer_location');
+      }
+    }
+  }
+
+  private saveLocationToStorage(location: GeocodeResult) {
+    try {
+      localStorage.setItem('customer_location', JSON.stringify(location));
+      console.log('💾 Location saved to localStorage');
+    } catch (error) {
+      console.error('Error saving location to localStorage:', error);
+    }
+  }
+
+  private formatCompactAddress(fullAddress: string): string {
+    if (!fullAddress) return '';
+
+    // Extract city and postal code from address
+    const parts = fullAddress.split(',').map(part => part.trim());
+
+    // Look for postal code pattern (German format: 5 digits)
+    const postalCodeMatch = fullAddress.match(/\b\d{5}\b/);
+    const postalCode = postalCodeMatch ? postalCodeMatch[0] : '';
+
+    // Try to find city name
+    let city = '';
+
+    // First, try to find a part that contains both postal code and city
+    for (const part of parts) {
+      if (part.includes(postalCode) && part.length > postalCode.length + 2) {
+        city = part.replace(postalCode, '').trim();
+        break;
+      }
+    }
+
+    // If not found, look for city in other parts
+    if (!city) {
+      for (let i = parts.length - 1; i >= 0; i--) {
+        const part = parts[i];
+        // Skip parts that are just postal codes or too short
+        if (part !== postalCode && part.length > 2 && !/^\d+$/.test(part)) {
+          city = part;
+          break;
+        }
+      }
+    }
+
+    // Clean up city name (remove common suffixes/prefixes)
+    if (city) {
+      city = city.replace(/^(stadt|kreis|landkreis)\s+/i, '');
+      city = city.replace(/\s+(stadt|kreis|landkreis)$/i, '');
+    }
+
+    if (city && postalCode) {
+      return `${postalCode} ${city}`;
+    } else if (city) {
+      return city;
+    } else if (postalCode) {
+      return postalCode;
+    }
+
+    // Fallback to original address if parsing fails
+    return fullAddress;
   }
 
 }
