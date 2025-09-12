@@ -109,11 +109,37 @@ interface DriverStats {
         <div class="active-delivery" *ngIf="activeDeliveries$ | async as activeDeliveries; else availableOrders">
           <div class="delivery-header">
             <h2><i class="fa-solid fa-truck"></i> Aktuelle Lieferungen ({{ activeDeliveries.length }})</h2>
-            <div class="delivery-status">
-              <span class="status-badge status-delivery">
-                <i class="fa-solid fa-route"></i>
-                Unterwegs
-              </span>
+            <div class="delivery-header-actions">
+              <button class="btn btn-secondary maps-btn" (click)="openRouteInGoogleMaps()">
+                <i class="fa-solid fa-map-location-dot"></i>
+                Route in Maps öffnen
+              </button>
+              <div class="delivery-status">
+                <span class="status-badge status-delivery">
+                  <i class="fa-solid fa-route"></i>
+                  Unterwegs
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Progress Indicator -->
+          <div class="route-progress">
+            <div class="progress-header">
+              <span class="progress-label">Route Fortschritt</span>
+              <span class="progress-count">Station 1 von {{ activeDeliveries.length }}</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="(1 / activeDeliveries.length) * 100"></div>
+            </div>
+            <div class="progress-steps">
+              <div class="progress-step" *ngFor="let delivery of activeDeliveries; let i = index"
+                   [class.active]="i === 0"
+                   [class.completed]="false"
+                   [class.upcoming]="i > 0">
+                <div class="step-number">{{ i + 1 }}</div>
+                <div class="step-line" *ngIf="i < activeDeliveries.length - 1"></div>
+              </div>
             </div>
           </div>
 
@@ -121,7 +147,12 @@ interface DriverStats {
           <div *ngFor="let delivery of activeDeliveries; let i = index" class="delivery-card" [class.primary-delivery]="i === 0">
             <div class="delivery-details">
               <div class="delivery-info">
-                <h3>Bestellung #{{ delivery.id }}</h3>
+                <div class="delivery-header-with-badge">
+                  <div class="sequence-badge" [class]="'sequence-' + (i + 1)">
+                    <span class="sequence-number">{{ i + 1 }}</span>
+                  </div>
+                  <h3>Bestellung #{{ delivery.id }}</h3>
+                </div>
                 <p class="restaurant-name">{{ delivery.restaurant_name }}</p>
                 <p class="delivery-address">
                   <i class="fa-solid fa-map-marker-alt"></i>
@@ -452,6 +483,13 @@ interface DriverStats {
       gap: var(--space-2);
     }
 
+    .delivery-header-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: var(--space-3);
+    }
+
     .refresh-btn {
       background: var(--color-surface);
       border: 1px solid var(--color-border);
@@ -527,16 +565,17 @@ interface DriverStats {
     }
 
     .btn {
-      padding: var(--space-3) var(--space-4);
-      border: none;
-      border-radius: var(--radius-lg);
-      cursor: pointer;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--space-2);
-      transition: all var(--transition);
+      padding: 8px 12px !important;
+      border: none !important;
+      border-radius: 6px !important;
+      cursor: pointer !important;
+      font-weight: 500 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 8px !important;
+      transition: all 0.2s ease !important;
+      font-size: 14px !important;
     }
 
     .btn-primary {
@@ -565,6 +604,25 @@ interface DriverStats {
 
     .btn-warning:hover:not(:disabled) {
       background: color-mix(in oklab, var(--color-warning) 20%, black);
+    }
+
+    .btn-secondary {
+      background: #f0f8ff !important;
+      color: #2563eb !important;
+      border: 1px solid #e0e7ff !important;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #e0e7ff !important;
+      border-color: #c7d2fe !important;
+    }
+
+    .maps-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--text-sm);
+      padding: var(--space-2) var(--space-3);
     }
 
     .btn-ghost {
@@ -841,6 +899,258 @@ interface DriverStats {
       font-size: var(--text-sm);
     }
 
+    /* Sequence Badge Styles */
+    .delivery-header-with-badge {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      margin-bottom: var(--space-2);
+    }
+
+    .sequence-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 32px;
+      height: 32px;
+      border-radius: var(--radius-lg);
+      font-weight: 700;
+      color: white;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .sequence-badge::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 50%);
+      border-radius: var(--radius-lg);
+    }
+
+    .sequence-number {
+      font-size: var(--text-xl);
+      line-height: 1;
+      z-index: 1;
+      position: relative;
+    }
+
+    /* Sequence badge colors - erhöhte Spezifität für garantierte Anzeige */
+    .driver-dashboard .sequence-badge.sequence-1 {
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important;
+    }
+
+    .driver-dashboard .sequence-badge.sequence-2 {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+    }
+
+    .driver-dashboard .sequence-badge.sequence-3 {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+    }
+
+    .driver-dashboard .sequence-badge.sequence-4 {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
+    }
+
+    .driver-dashboard .sequence-badge.sequence-5 {
+      background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%) !important;
+    }
+
+    .driver-dashboard .sequence-badge.sequence-6 {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+    }
+
+    .driver-dashboard .sequence-badge.sequence-7 {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+    }
+
+    .driver-dashboard .sequence-badge.sequence-8 {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    }
+
+    .driver-dashboard .sequence-badge.sequence-9 {
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+    }
+
+    .driver-dashboard .sequence-badge.sequence-10 {
+      background: linear-gradient(135deg, #ec4899 0%, #db2777 100%) !important;
+    }
+
+    /* Route Progress Indicator */
+    .route-progress {
+      background: var(--bg-light);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      margin-bottom: var(--space-6);
+      border: 1px solid var(--color-border);
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-3);
+    }
+
+    .progress-label {
+      font-weight: 600;
+      color: var(--color-heading);
+      font-size: var(--text-sm);
+    }
+
+    .progress-count {
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+      font-weight: 500;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: color-mix(in oklab, var(--color-border) 50%, white);
+      border-radius: 4px;
+      margin-bottom: var(--space-4);
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--color-success) 0%, var(--color-primary) 100%);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    .progress-steps {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+      margin-top: var(--space-2);
+    }
+
+    .progress-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      flex: 1;
+      max-width: 60px;
+    }
+
+    .step-number {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+      background: var(--color-surface);
+      border: 2px solid var(--color-border);
+      transition: all var(--transition);
+      position: relative;
+      z-index: 2;
+    }
+
+    .step-line {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      right: -50%;
+      height: 2px;
+      background: var(--color-border);
+      z-index: 1;
+    }
+
+    .progress-step.active .step-number {
+      background: var(--color-primary);
+      color: white;
+      border-color: var(--color-primary);
+      transform: scale(1.1);
+      box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 20%, white);
+    }
+
+    .progress-step.completed .step-number {
+      background: var(--color-success);
+      color: white;
+      border-color: var(--color-success);
+    }
+
+    .progress-step.upcoming .step-number {
+      opacity: 0.6;
+    }
+
+    .progress-step.active ~ .progress-step .step-line {
+      background: color-mix(in oklab, var(--color-border) 50%, white);
+    }
+
+    .progress-step.completed .step-line {
+      background: var(--color-success);
+    }
+
+    /* Responsive adjustments for badges */
+    @media (max-width: 768px) {
+      .delivery-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-4);
+      }
+
+      .delivery-header-actions {
+        flex-direction: row;
+        align-items: center;
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .maps-btn {
+        font-size: var(--text-xs);
+        padding: var(--space-2);
+      }
+
+      .delivery-header-with-badge {
+        gap: var(--space-2);
+      }
+
+      .sequence-badge {
+        min-width: 35px;
+        height: 35px;
+      }
+
+      .sequence-number {
+        font-size: var(--text-sm);
+      }
+
+      .route-progress {
+        padding: var(--space-3);
+      }
+
+      .progress-steps {
+        margin-top: var(--space-2);
+      }
+
+      .progress-step {
+        max-width: 45px;
+      }
+
+      .step-number {
+        width: 28px;
+        height: 28px;
+        font-size: var(--text-xs);
+      }
+
+      .step-line {
+        top: 14px;
+      }
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
       .dashboard-header {
@@ -1016,6 +1326,36 @@ export class DriverDashboardComponent implements OnInit {
   viewOrderDetails(order: Order) {
     // TODO: Implement order details modal
     console.log('View order details:', order);
+  }
+
+  openRouteInGoogleMaps() {
+    // Subscribe to get current value of activeDeliveries$
+    this.activeDeliveries$.subscribe(activeDeliveries => {
+      if (activeDeliveries && activeDeliveries.length > 0) {
+        // Sammle alle Lieferadressen
+        const addresses = activeDeliveries.map((delivery: any) => delivery.delivery_address);
+
+      // Erstelle Google Maps URL mit Wegpunkten
+      let googleMapsUrl = 'https://www.google.com/maps/dir/';
+
+      // Erste Adresse als Startpunkt
+      googleMapsUrl += encodeURIComponent(addresses[0]);
+
+      // Alle weiteren Adressen als Wegpunkte
+      if (addresses.length > 1) {
+        googleMapsUrl += '/';
+        for (let i = 1; i < addresses.length; i++) {
+          googleMapsUrl += encodeURIComponent(addresses[i]);
+          if (i < addresses.length - 1) {
+            googleMapsUrl += '/';
+          }
+        }
+      }
+
+        // Öffne Google Maps in neuem Tab
+        window.open(googleMapsUrl, '_blank');
+      }
+    });
   }
 
   refreshOrders() {

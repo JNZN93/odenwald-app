@@ -77,7 +77,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
         </div>
 
         <div class="orders-list">
-          <div *ngFor="let order of filteredOrders" class="order-card">
+          <div *ngFor="let order of filteredOrders" class="order-card" [class.paid-pending]="order.payment_status === 'paid' && order.status === 'pending'">
             <div class="order-header">
               <div class="order-info">
                 <div class="order-number">#{{ order.id.slice(-6) }}</div>
@@ -86,6 +86,14 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
               <div class="order-status">
                 <span [ngClass]="getOrderStatusClass(order.status)" class="status-badge">
                   {{ getOrderStatusText(order.status) }}
+                </span>
+                <span *ngIf="order.payment_status === 'paid'" class="payment-indicator">
+                  <i class="fa-solid fa-credit-card"></i>
+                  Bezahlt
+                </span>
+                <span *ngIf="order.payment_status === 'pending'" class="payment-indicator temp">
+                  <i class="fa-solid fa-clock"></i>
+                  Wartet auf Zahlung
                 </span>
               </div>
             </div>
@@ -131,6 +139,17 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                 >
                   <i class="fa-solid fa-check"></i>
                   Bestätigen
+                </button>
+
+                <!-- Payment Button -->
+                <button
+                  *ngIf="order.payment_status !== 'paid'"
+                  class="action-btn payment"
+                  (click)="markOrderAsPaid(order.id)"
+                  [disabled]="updatingOrderId === order.id"
+                >
+                  <i class="fa-solid fa-credit-card"></i>
+                  Als bezahlt markieren
                 </button>
 
                 <button
@@ -344,7 +363,15 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       justify-content: space-between;
       align-items: center;
       padding: var(--space-6);
-      background: var(--bg-light-green);
+      background: var(--color-gray-50);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    /* Highlight paid pending orders */
+    .order-card.paid-pending .order-header {
+      background: linear-gradient(135deg, var(--color-gray-50) 0%, var(--color-success-50) 100%);
+      border-left: 4px solid var(--color-success);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
     .order-info .order-number {
@@ -369,6 +396,29 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
 
     .status-badge.pending { background: var(--color-warning-50); color: var(--color-warning); }
     .status-badge.confirmed { background: var(--color-info-50); color: var(--color-info); }
+
+    .payment-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      margin-left: var(--space-2);
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .payment-indicator:not(.temp) {
+      background: var(--color-success-50);
+      color: var(--color-success);
+    }
+
+    .payment-indicator.temp {
+      background: var(--color-warning-50);
+      color: var(--color-warning);
+      border: 1px solid var(--color-warning-200);
+    }
     .status-badge.preparing { background: var(--color-primary-50); color: var(--color-primary-600); }
     .status-badge.ready { background: var(--color-success-50); color: var(--color-success); }
     .status-badge.picked_up { background: var(--color-accent-50); color: var(--color-accent-600); }
@@ -554,6 +604,16 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
 
     .action-btn.cancel:hover {
       background: var(--color-danger-50);
+    }
+
+    .action-btn.payment {
+      border-color: var(--color-success-500);
+      color: var(--color-success);
+      background: white;
+    }
+
+    .action-btn.payment:hover {
+      background: var(--color-success-50);
     }
 
     .action-btn:disabled {
@@ -857,6 +917,57 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
         error: (error: any) => {
           console.error('Error cancelling order:', error);
           this.toastService.error('Stornierung fehlgeschlagen', 'Fehler beim Stornieren der Bestellung');
+          this.updatingOrderId = null;
+        }
+      });
+    }
+  }
+
+  markOrderAsPaid(orderId: string) {
+    if (confirm('Sind Sie sicher, dass Sie diese Bestellung als bezahlt markieren möchten?')) {
+      this.updatingOrderId = orderId;
+      console.log('Starting payment status update:', { orderId, paymentStatus: 'paid' });
+
+      this.ordersService.updateOrderPaymentStatus(orderId, 'paid').subscribe({
+        next: (response) => {
+          console.log('Payment status update response:', response);
+
+          // Update local order
+          const index = this.orders.findIndex(o => String(o.id) === String(orderId));
+          if (index !== -1) {
+            this.orders[index] = { ...response.order, id: String(response.order.id) };
+            console.log('Updated order payment status:', this.orders[index]);
+          } else {
+            console.warn('Order not found in local array:', orderId);
+          }
+
+          // Force Angular change detection by creating new array reference
+          this.orders = [...this.orders];
+
+          // Force re-filtering with updated data
+          this.applyFilters();
+
+          // If the updated order is no longer visible due to filters, reset to show all
+          const updatedOrderVisible = this.filteredOrders.some(order => String(order.id) === String(orderId));
+          console.log('Order visibility after payment update:', {
+            orderId,
+            visible: updatedOrderVisible,
+            filteredCount: this.filteredOrders.length,
+            currentFilter: this.selectedStatus
+          });
+
+          if (!updatedOrderVisible && this.selectedStatus !== 'all') {
+            console.log(`Order ${orderId} not visible after payment update, resetting status filter`);
+            this.selectedStatus = 'all';
+            this.applyFilters();
+          }
+
+          this.toastService.success('Zahlung bestätigt', 'Die Bestellung wurde als bezahlt markiert');
+          this.updatingOrderId = null;
+        },
+        error: (error: any) => {
+          console.error('Error updating order payment status:', error);
+          this.toastService.error('Zahlung bestätigen', 'Fehler beim Aktualisieren des Zahlungsstatus');
           this.updatingOrderId = null;
         }
       });

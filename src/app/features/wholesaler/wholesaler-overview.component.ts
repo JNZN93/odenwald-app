@@ -22,6 +22,12 @@ interface WholesalerProfile {
   registration_status: string;
 }
 
+interface RecentActivity {
+  title: string;
+  created_at: string;
+  icon: string;
+}
+
 @Component({
   selector: 'app-wholesaler-overview',
   standalone: true,
@@ -473,34 +479,161 @@ export class WholesalerOverviewComponent implements OnInit {
   private http = inject(HttpClient);
 
   stats: DashboardStats | null = null;
-  recentActivities: any[] = [];
+  recentActivities: RecentActivity[] = [];
   profile: WholesalerProfile | null = null;
 
   ngOnInit() {
+    console.log('🚀 Wholesaler Overview Component initialized');
+    console.log('🌐 API Base URL:', environment.apiUrl);
     this.loadDashboardStats();
     this.loadWholesalerProfile();
   }
 
   loadDashboardStats() {
-    // This would load real stats from the API
-    // For now, we'll use placeholder data
-    this.stats = {
-      totalProducts: 0,
-      activeProducts: 0,
-      totalOrders: 0,
-      pendingOrders: 0,
-      totalRevenue: 0,
-      monthlyRevenue: 0
-    };
+    // Load real stats from the API
+    this.loadProductStats();
+    this.loadOrderStats();
+  }
 
-    // Mock some recent activities
-    this.recentActivities = [];
+  private loadProductStats() {
+    console.log('🔍 Loading product stats from:', `${environment.apiUrl}/wholesaler-products`);
+    this.http.get<any>(`${environment.apiUrl}/wholesaler-products`).subscribe({
+      next: (response) => {
+        console.log('✅ Product API response:', response);
+        // Extract products array from response object
+        const products = response?.products || [];
+        const productArray = Array.isArray(products) ? products : [];
+        const totalProducts = productArray.length;
+        const activeProducts = productArray.filter(p => p.is_active !== false).length;
+        console.log('📊 Product stats calculated:', { totalProducts, activeProducts });
+
+        // Update stats while preserving existing values
+        this.stats = {
+          totalProducts,
+          activeProducts,
+          totalOrders: this.stats?.totalOrders || 0,
+          pendingOrders: this.stats?.pendingOrders || 0,
+          totalRevenue: this.stats?.totalRevenue || 0,
+          monthlyRevenue: this.stats?.monthlyRevenue || 0
+        };
+      },
+      error: (error) => {
+        console.error('❌ Product stats API error:', error);
+        console.log('📊 Using fallback values for product stats');
+        // Keep existing values or set to 0 if undefined
+        this.stats = {
+          totalProducts: this.stats?.totalProducts || 0,
+          activeProducts: this.stats?.activeProducts || 0,
+          totalOrders: this.stats?.totalOrders || 0,
+          pendingOrders: this.stats?.pendingOrders || 0,
+          totalRevenue: this.stats?.totalRevenue || 0,
+          monthlyRevenue: this.stats?.monthlyRevenue || 0
+        };
+      }
+    });
+  }
+
+  private loadOrderStats() {
+    console.log('🔍 Loading order stats from:', `${environment.apiUrl}/wholesaler-orders/wholesaler/orders`);
+    this.http.get<any>(`${environment.apiUrl}/wholesaler-orders/wholesaler/orders`).subscribe({
+      next: (response) => {
+        console.log('✅ Order API response:', response);
+        // Extract orders array from response object
+        const orders = response?.orders || [];
+        const orderArray = Array.isArray(orders) ? orders : [];
+        const totalOrders = orderArray.length;
+        const pendingOrders = orderArray.filter(o => o.status === 'pending').length;
+        console.log('📊 Order stats calculated:', { totalOrders, pendingOrders });
+
+        // Calculate revenue from orders
+        const completedOrders = orderArray.filter(o => o.status === 'completed');
+        const totalRevenue = completedOrders
+          .reduce((sum, order) => sum + (order.total_amount || 0), 0);
+
+        // Calculate monthly revenue (current month)
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        const monthlyOrders = orderArray.filter(o => {
+          const orderDate = new Date(o.created_at);
+          return o.status === 'completed' &&
+                 orderDate.getMonth() === currentMonth &&
+                 orderDate.getFullYear() === currentYear;
+        });
+        const monthlyRevenue = monthlyOrders
+          .reduce((sum, order) => sum + (order.total_amount || 0), 0);
+
+        console.log('💰 Revenue calculated:', {
+          completedOrdersCount: completedOrders.length,
+          totalRevenue,
+          monthlyOrdersCount: monthlyOrders.length,
+          monthlyRevenue
+        });
+
+        // Update stats
+        this.stats = {
+          totalProducts: this.stats?.totalProducts || 0,
+          activeProducts: this.stats?.activeProducts || 0,
+          totalOrders,
+          pendingOrders,
+          totalRevenue,
+          monthlyRevenue
+        };
+
+        // Create recent activities from orders
+        this.createRecentActivities(orderArray);
+      },
+      error: (error) => {
+        console.error('❌ Order stats API error:', error);
+        console.log('📊 Using fallback values for order stats');
+        // Keep existing values or set to 0 if undefined
+        this.stats = {
+          totalProducts: this.stats?.totalProducts || 0,
+          activeProducts: this.stats?.activeProducts || 0,
+          totalOrders: this.stats?.totalOrders || 0,
+          pendingOrders: this.stats?.pendingOrders || 0,
+          totalRevenue: this.stats?.totalRevenue || 0,
+          monthlyRevenue: this.stats?.monthlyRevenue || 0
+        };
+        this.recentActivities = [];
+      }
+    });
+  }
+
+  private createRecentActivities(orders: any[]) {
+    // Ensure orders is an array
+    const orderArray = Array.isArray(orders) ? orders : [];
+
+    // Sort orders by creation date (newest first)
+    const sortedOrders = orderArray
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 5); // Only show last 5 activities
+
+    this.recentActivities = sortedOrders.map(order => ({
+      title: `Bestellung #${order.id} - ${order.status}`,
+      created_at: order.created_at,
+      icon: order.status === 'completed' ? 'fa-check-circle' :
+            order.status === 'pending' ? 'fa-clock' : 'fa-info-circle'
+    }));
+
+    // If no orders, show placeholder activity
+    if (this.recentActivities.length === 0) {
+      this.recentActivities = [{
+        title: 'Noch keine Aktivitäten',
+        created_at: new Date().toISOString(),
+        icon: 'fa-info-circle'
+      }];
+    }
   }
 
   loadWholesalerProfile() {
+    console.log('🔍 Loading wholesaler profile from:', `${environment.apiUrl}/wholesalers/profile`);
     this.http.get<WholesalerProfile>(`${environment.apiUrl}/wholesalers/profile`).subscribe({
-      next: (data) => this.profile = data,
-      error: () => {
+      next: (data) => {
+        console.log('✅ Profile API response:', data);
+        this.profile = data;
+      },
+      error: (error) => {
+        console.error('❌ Profile API error:', error);
         this.profile = null;
       }
     });

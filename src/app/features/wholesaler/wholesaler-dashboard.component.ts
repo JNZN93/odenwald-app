@@ -201,7 +201,7 @@ interface WholesalerData {
     }
 
     .nav-link.active {
-      background: var(--color-primary);
+      background: var(--color-primary-600);
       color: white;
     }
 
@@ -455,7 +455,7 @@ export class WholesalerDashboardComponent implements OnInit {
   }
 
   private getApiUrl(): string {
-    return (this.http as any)._defaultOptions?.baseUrl || 'http://localhost:3000/api/v1';
+    return (this.http as any)._defaultOptions?.baseUrl || environment.apiUrl;
   }
 
   logout() {

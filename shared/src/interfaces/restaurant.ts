@@ -160,4 +160,9 @@ export interface RestaurantStats {
     total: number;
     distribution: Record<number, number>;
   };
+  peak_hours?: Array<{
+    hour: number;
+    orders: number;
+    percentage: number;
+  }>;
 }

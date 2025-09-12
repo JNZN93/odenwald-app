@@ -27,6 +27,11 @@ export interface RestaurantStats {
     name: string;
     order_count: number;
   }>;
+  peak_hours?: Array<{
+    hour: number;
+    orders: number;
+    percentage: number;
+  }>;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -116,7 +121,8 @@ export class RestaurantManagerService {
           total_orders_this_month: 0,
           total_revenue_this_month: 0,
           average_order_value: 0,
-          popular_items: []
+          popular_items: [],
+          peak_hours: []
         });
       })
     );
@@ -140,6 +146,28 @@ export class RestaurantManagerService {
       catchError(error => {
         console.error('Error checking manager status:', error);
         return of(false);
+      })
+    );
+  }
+
+  // Get historical data for charts
+  getHistoricalData(restaurantId: string, period: '7d' | '30d' | '90d' = '7d'): Observable<{
+    revenue: Array<{ date: string; amount: number }>;
+    orders: Array<{ date: string; count: number }>;
+  }> {
+    return this.http.get<{
+      data: {
+        revenue: Array<{ date: string; amount: number }>;
+        orders: Array<{ date: string; count: number }>;
+      }
+    }>(`${environment.apiUrl}/orders/restaurant/${restaurantId}/historical?period=${period}`).pipe(
+      map(response => response.data),
+      catchError(error => {
+        console.error('Error fetching historical data:', error);
+        return of({
+          revenue: [],
+          orders: []
+        });
       })
     );
   }

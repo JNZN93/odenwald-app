@@ -162,6 +162,11 @@ export class OrdersService {
     return this.http.patch<{ message: string; order: Order }>(`${this.baseUrl}/${orderId}/status`, { status });
   }
 
+  // Update order payment status
+  updateOrderPaymentStatus(orderId: string, paymentStatus: Order['payment_status']): Observable<{ message: string; order: Order }> {
+    return this.http.patch<{ message: string; order: Order }>(`${this.baseUrl}/${orderId}/payment-status`, { payment_status: paymentStatus });
+  }
+
   // Assign driver to order
   assignDriver(orderId: string, driverId: string, estimatedDeliveryTime?: Date): Observable<{ message: string; order: Order }> {
     const data: any = { driver_id: driverId };
