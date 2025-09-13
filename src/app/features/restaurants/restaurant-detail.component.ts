@@ -262,6 +262,7 @@ interface MenuCategoryWithItems {
   styles: [`
     .restaurant-detail {
       min-height: 100vh;
+      padding-bottom: calc(80px + var(--space-6));
     }
 
     .restaurant-header {
@@ -811,6 +812,10 @@ interface MenuCategoryWithItems {
         flex-direction: column;
         gap: var(--space-3);
         text-align: center;
+      }
+
+      .restaurant-detail {
+        padding-bottom: calc(100px + var(--space-8));
       }
     }
   `]
