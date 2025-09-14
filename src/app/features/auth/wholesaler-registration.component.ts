@@ -123,7 +123,7 @@ import { environment } from '../../../environments/environment';
           <div class="form-navigation">
             <button type="submit" class="btn-primary" [disabled]="loading || !isValid()">
               <span *ngIf="!loading">Registrierung absenden</span>
-              <span *ngIf="loading">Bitte warten...</span>
+              <span *ngIf="loading" class="loading-text">Registrierung wird verarbeitet...</span>
             </button>
           </div>
 
@@ -190,6 +190,18 @@ import { environment } from '../../../environments/environment';
       border: 1px solid var(--color-border);
       margin: var(--space-4) 0;
       overflow: hidden;
+      animation: modalSlideIn 0.3s var(--ease);
+    }
+
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
     }
 
     /* Orange Header Theme */
@@ -377,6 +389,8 @@ import { environment } from '../../../environments/environment';
       color: white;
       box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
       min-width: 200px;
+      position: relative;
+      overflow: hidden;
     }
 
     .btn-primary:hover:not(:disabled) {
@@ -385,10 +399,45 @@ import { environment } from '../../../environments/environment';
       background: linear-gradient(135deg, #ea580c 0%, #dc2626 100%);
     }
 
+    .btn-primary::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    .btn-primary:hover::before {
+      left: 100%;
+    }
+
     .btn-primary:disabled {
       opacity: 0.6;
       cursor: not-allowed;
       transform: none;
+    }
+
+    .loading-text {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .loading-text::after {
+      content: '';
+      width: 16px;
+      height: 16px;
+      border: 2px solid transparent;
+      border-top: 2px solid currentColor;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
     .error-message {

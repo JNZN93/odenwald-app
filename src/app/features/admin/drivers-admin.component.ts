@@ -814,8 +814,8 @@ export class DriversAdminComponent implements OnInit {
   async loadDrivers() {
     try {
       // TODO: Replace with actual API call
-      const response = await this.http.get<Driver[]>(`${environment.apiUrl}/drivers`).toPromise();
-      this.drivers = response || [];
+      const response = await this.http.get<{count: number, drivers: Driver[]}>(`${environment.apiUrl}/admin/drivers`).toPromise();
+      this.drivers = response?.drivers || [];
       this.applyFilters();
     } catch (error) {
       console.error('Error loading drivers:', error);
@@ -828,8 +828,14 @@ export class DriversAdminComponent implements OnInit {
   async loadStatistics() {
     try {
       // TODO: Replace with actual API call
-      const stats = await this.http.get(`${environment.apiUrl}/drivers/stats`).toPromise();
+      const statsResponse = await this.http.get<{stats: any}>(`${environment.apiUrl}/admin/drivers/stats`).toPromise();
       // Update statistics based on API response
+      if (statsResponse?.stats) {
+        this.totalDrivers = statsResponse.stats.total_drivers || 0;
+        this.availableDrivers = statsResponse.stats.available_drivers || 0;
+        this.deliveringDrivers = statsResponse.stats.delivering_drivers || 0;
+        this.averageRating = statsResponse.stats.average_rating || 0;
+      }
     } catch (error) {
       console.error('Error loading statistics:', error);
       // Calculate from local data
@@ -1003,11 +1009,10 @@ export class DriversAdminComponent implements OnInit {
 
   async toggleDriverStatus(driver: Driver) {
     try {
-      // TODO: Replace with actual API call
-      const response = await this.http.patch(`${environment.apiUrl}/drivers/${driver.id}`, {
+      const response = await this.http.patch(`${environment.apiUrl}/admin/drivers/${driver.id}`, {
         is_active: !driver.is_active
       }).toPromise();
-      
+
       driver.is_active = !driver.is_active;
       this.calculateStatistics();
     } catch (error) {

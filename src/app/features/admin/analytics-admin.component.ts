@@ -736,7 +736,7 @@ export class AnalyticsAdminComponent implements OnInit {
   async loadAnalytics() {
     try {
       // TODO: Replace with actual API call
-      const response = await this.http.get<AnalyticsData>(`${environment.apiUrl}/analytics?period=${this.filters.period}&groupBy=${this.filters.groupBy}`).toPromise();
+      const response = await this.http.get<AnalyticsData>(`${environment.apiUrl}/admin/analytics?period=${this.filters.period}&groupBy=${this.filters.groupBy}`).toPromise();
       if (response) {
         this.analyticsData = response;
       } else {

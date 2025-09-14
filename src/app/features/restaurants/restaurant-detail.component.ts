@@ -215,7 +215,7 @@ interface MenuCategoryWithItems {
                         [disabled]="!item.is_available"
                         *ngIf="item.is_available">
                         <i class="fa-solid fa-plus"></i>
-                        Hinzufügen
+                        <span class="btn-text">Hinzufügen</span>
                       </button>
                       <span class="unavailable-text" *ngIf="!item.is_available">Nicht verfügbar</span>
                     </div>
@@ -675,19 +675,24 @@ interface MenuCategoryWithItems {
       gap: var(--space-3);
     }
 
-    .add-to-cart-btn {
-      background: var(--gradient-primary);
-      border: none;
-      border-radius: var(--radius-lg);
-      padding: var(--space-3) var(--space-4);
-      color: white;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all var(--transition);
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-    }
+      .add-to-cart-btn {
+        background: var(--gradient-primary);
+        border: none;
+        border-radius: var(--radius-lg);
+        padding: var(--space-3) var(--space-4);
+        color: white;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all var(--transition);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+      }
+
+      /* Desktop: Text anzeigen */
+      .add-to-cart-btn .btn-text {
+        display: inline;
+      }
 
     .add-to-cart-btn:hover:not(:disabled) {
       box-shadow: 0 4px 12px color-mix(in oklab, var(--color-primary) 25%, transparent);
@@ -777,35 +782,288 @@ interface MenuCategoryWithItems {
       box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
     }
 
-    /* Responsive */
+    /* Responsive - Balanced mobile header (compact but readable) */
     @media (max-width: 768px) {
+      /* Moderate header image height reduction */
+      .header-image {
+        height: 240px;
+      }
+
+      /* Balanced header content padding */
+      .header-content {
+        padding: var(--space-6) 0;
+        margin-top: -40px;
+      }
+
+      /* Well-proportioned back button */
+      .back-btn {
+        padding: var(--space-3) var(--space-4);
+        font-size: var(--text-sm);
+        border-radius: var(--radius-lg);
+      }
+
+      .image-overlay {
+        padding: var(--space-5);
+      }
+
+      /* Readable restaurant name size */
       .restaurant-name {
         font-size: var(--text-2xl);
+        margin-bottom: var(--space-3);
+        line-height: 1.3;
       }
 
+      /* Balanced description */
+      .restaurant-description {
+        font-size: var(--text-base);
+        margin-bottom: var(--space-4);
+        line-height: 1.5;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      /* Improved meta layout with better spacing */
       .restaurant-meta {
-        flex-direction: column;
+        flex-direction: row;
+        flex-wrap: wrap;
         gap: var(--space-3);
+        margin-bottom: var(--space-4);
       }
 
+      .meta-item {
+        font-size: var(--text-sm);
+        gap: var(--space-2);
+      }
+
+      .meta-item i {
+        font-size: 14px;
+      }
+
+      /* Better proportioned ETA badge */
+      .eta-badge {
+        padding: 6px 12px;
+        font-size: var(--text-sm);
+        border-radius: 16px;
+      }
+
+      .eta-badge i {
+        font-size: 12px;
+      }
+
+      /* Well-sized status badge */
+      .status-badge {
+        padding: var(--space-2) var(--space-3);
+        font-size: var(--text-sm);
+        border-radius: var(--radius-lg);
+      }
+
+      .status-badge i {
+        font-size: 12px;
+      }
+
+      /* Balanced restaurant info and status */
+      .restaurant-info {
+        padding: 0 var(--space-4);
+      }
+
+      .restaurant-status {
+        padding: 0 var(--space-4);
+        margin-top: var(--space-3);
+      }
+
+      .container {
+        padding: 0 var(--space-4);
+      }
+
+      .menu-title {
+        font-size: var(--text-2xl);
+        margin-bottom: var(--space-4);
+      }
+
+      .menu-categories {
+        gap: var(--space-4);
+      }
+
+      .menu-category {
+        padding: var(--space-4);
+        border-radius: var(--radius-lg);
+      }
+
+      .category-title {
+        font-size: var(--text-lg);
+        margin-bottom: var(--space-3);
+        padding-bottom: var(--space-1);
+      }
+
+      .menu-items {
+        gap: 0; /* Kein Gap zwischen Items, da margin-bottom verwendet wird */
+      }
+
+      /* Lieferando-ähnliches kompaktes Layout für mobile */
       .menu-item {
-        flex-direction: column;
-        gap: var(--space-3);
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        padding: var(--space-4);
+        gap: var(--space-4);
+        background: white;
+        border-radius: var(--radius-lg);
+        border: 1px solid #e5e7eb;
+        margin-bottom: var(--space-3);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        position: relative;
       }
 
       .item-content {
-        flex-direction: column;
-        gap: var(--space-3);
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: var(--space-4);
+        flex: 1;
+        min-width: 0;
       }
 
-      .item-image-container {
-        width: 60px;
-        height: 60px;
-        align-self: center;
-      }
-
+      /* Text-Content links, Bild rechts wie bei Lieferando */
       .item-info {
-        margin-right: 0;
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+        order: 1;
+      }
+
+      .item-name {
+        font-size: var(--text-base);
+        font-weight: 700;
+        line-height: 1.2;
+        margin: 0 0 var(--space-1) 0;
+        color: var(--color-heading);
+      }
+
+      .item-description {
+        font-size: var(--text-sm);
+        line-height: 1.4;
+        margin: 0 0 var(--space-2) 0;
+        color: var(--color-muted);
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .item-price {
+        font-size: var(--text-base);
+        font-weight: 700;
+        color: var(--color-primary);
+        margin: 0;
+      }
+
+      /* Bild rechts positioniert */
+      .item-image-container {
+        width: 80px;
+        height: 80px;
+        flex-shrink: 0;
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        background: var(--color-border);
+        position: relative;
+        order: 2;
+      }
+
+      /* Button am rechten Rand des Bildes positioniert */
+      .item-actions {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        z-index: 20;
+        pointer-events: auto;
+      }
+
+      .add-to-cart-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        font-size: 14px;
+        font-weight: 700;
+        border: 2px solid white;
+        background: var(--color-primary-600);
+        color: white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        transition: all var(--transition);
+        cursor: pointer;
+        position: relative;
+        z-index: 30;
+      }
+
+      .add-to-cart-btn .btn-text {
+        display: none; /* Verstecke Text auf Mobile */
+      }
+
+      .add-to-cart-btn:hover:not(:disabled) {
+        background: var(--color-primary-700);
+        transform: scale(1.1);
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
+      }
+
+      .add-to-cart-btn:active {
+        transform: scale(1.05);
+        background: var(--color-primary-800);
+      }
+
+      .add-to-cart-btn:focus {
+        outline: 1px solid rgba(79, 169, 108, 0.5);
+        outline-offset: 1px;
+      }
+
+      .unavailable-text {
+        font-size: var(--text-xs);
+        color: var(--color-muted);
+        font-style: italic;
+        text-align: center;
+        padding: var(--space-2);
+        background: #f9fafb;
+        border-radius: var(--radius-md);
+        margin: var(--space-2) 0;
+      }
+
+      /* Deaktivierte Produkte */
+      .menu-item.unavailable {
+        opacity: 0.6;
+        background: #f9fafb;
+        border-color: #e5e7eb;
+      }
+
+      .menu-item.unavailable .item-image-container {
+        opacity: 0.5;
+      }
+
+      .menu-item.unavailable .item-name {
+        color: var(--color-muted);
+      }
+
+      .menu-item.unavailable .item-price {
+        color: var(--color-muted);
+      }
+
+      .menu-item.unavailable .add-to-cart-btn {
+        background: #9ca3af;
+        cursor: not-allowed;
+        opacity: 0.6;
+        border-color: #d1d5db;
+        transform: none;
+      }
+
+      .menu-item.unavailable .add-to-cart-btn:hover {
+        transform: none;
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+        background: #9ca3af;
       }
 
       .cart-content {
@@ -815,7 +1073,48 @@ interface MenuCategoryWithItems {
       }
 
       .restaurant-detail {
-        padding-bottom: calc(100px + var(--space-8));
+        padding-bottom: calc(100px + var(--space-6));
+      }
+
+      /* Additional mobile header improvements for very small screens */
+      @media (max-width: 480px) {
+        .header-image {
+          height: 200px;
+        }
+
+        .header-content {
+          padding: var(--space-4) 0;
+          margin-top: -30px;
+        }
+
+        .restaurant-name {
+          font-size: var(--text-xl);
+          margin-bottom: var(--space-2);
+        }
+
+        .restaurant-description {
+          font-size: var(--text-sm);
+          -webkit-line-clamp: 2;
+        }
+
+        .restaurant-meta {
+          gap: var(--space-2);
+          margin-bottom: var(--space-3);
+        }
+
+        .meta-item {
+          font-size: var(--text-xs);
+        }
+
+        .eta-badge {
+          padding: 4px 8px;
+          font-size: var(--text-xs);
+        }
+
+        .status-badge {
+          padding: var(--space-1) var(--space-2);
+          font-size: var(--text-xs);
+        }
       }
     }
   `]

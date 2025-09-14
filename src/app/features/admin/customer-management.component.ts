@@ -752,8 +752,7 @@ export class CustomerManagementComponent implements OnInit {
 
   async loadCustomers() {
     try {
-      // TODO: Replace with actual API call
-      const response = await this.http.get<Customer[]>(`${environment.apiUrl}/users?role=customer`).toPromise();
+      const response = await this.http.get<Customer[]>(`${environment.apiUrl}/admin/users?role=customer`).toPromise();
       this.customers = response || [];
       this.applyFilters();
     } catch (error) {
@@ -766,9 +765,11 @@ export class CustomerManagementComponent implements OnInit {
 
   async loadStatistics() {
     try {
-      // TODO: Replace with actual API call
-      const stats = await this.http.get(`${environment.apiUrl}/users/stats`).toPromise();
+      const stats: any = await this.http.get(`${environment.apiUrl}/admin/users/stats`).toPromise();
       // Update statistics based on API response
+      this.totalCustomers = stats?.total || 0;
+      this.activeCustomers = stats?.active || 0;
+      this.newCustomers = stats?.inactive || 0; // This would need adjustment based on actual API response
     } catch (error) {
       console.error('Error loading statistics:', error);
       // Calculate from local data
@@ -886,11 +887,10 @@ export class CustomerManagementComponent implements OnInit {
 
   async toggleCustomerStatus(customer: Customer) {
     try {
-      // TODO: Replace with actual API call
-      const response = await this.http.patch(`${environment.apiUrl}/users/${customer.id}`, {
+      const response = await this.http.patch(`${environment.apiUrl}/admin/users/${customer.id}`, {
         is_active: !customer.is_active
       }).toPromise();
-      
+
       customer.is_active = !customer.is_active;
       this.calculateStatistics();
     } catch (error) {

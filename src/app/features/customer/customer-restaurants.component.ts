@@ -7,6 +7,7 @@ import { ReviewsService } from '../../core/services/reviews.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { GeocodingService, GeocodeResult } from '../../core/services/geocoding.service';
 import { ImageFallbackDirective } from '../../core/image-fallback.directive';
+import { RestaurantSkeletonComponent } from '../../shared/components/restaurant-skeleton.component';
 import { Observable, Subscription, combineLatest, BehaviorSubject, of } from 'rxjs';
 import { from } from 'rxjs';
 import { map, startWith, debounceTime, distinctUntilChanged, catchError } from 'rxjs/operators';
@@ -14,7 +15,7 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
 @Component({
   selector: 'app-customer-restaurants',
   standalone: true,
-  imports: [NgForOf, AsyncPipe, NgIf, ImageFallbackDirective, FormsModule, DatePipe],
+  imports: [NgForOf, AsyncPipe, NgIf, ImageFallbackDirective, FormsModule, DatePipe, RestaurantSkeletonComponent],
   template: `
     <section class="customer-restaurants-section">
       <!-- Hero Header -->
@@ -142,8 +143,14 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
             <h2 class="results-title" *ngIf="!isMobileOrTablet()">Restaurants in deiner Nähe</h2>
           </div>
           
-          <ng-container *ngIf="restaurants$ | async as restaurants; else loading">
-            <div class="no-results" *ngIf="restaurants.length === 0">
+          <!-- Show skeleton cards while loading -->
+          <div class="restaurants-grid" *ngIf="isLoadingRestaurants">
+            <app-restaurant-skeleton *ngFor="let i of [0,1,2,3,4,5]" [index]="i" [animate]="true"></app-restaurant-skeleton>
+          </div>
+
+          <!-- Show actual restaurants when loaded -->
+          <ng-container *ngIf="restaurants$ | async as restaurants">
+            <div class="no-results" *ngIf="!isLoadingRestaurants && restaurants.length === 0">
               <svg class="no-results-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <!-- Such-Icon für keine Ergebnisse -->
                 <circle cx="11" cy="11" r="8"/>
@@ -152,8 +159,8 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
               </svg>
               <p>Keine Restaurants gefunden.</p>
             </div>
-            
-            <div class="restaurants-grid" *ngIf="restaurants.length > 0">
+
+            <div class="restaurants-grid" *ngIf="!isLoadingRestaurants && restaurants.length > 0">
               <div *ngFor="let r of restaurants" class="restaurant-card">
                 <div class="card-image-container">
                   <img
@@ -264,22 +271,6 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
               </div>
             </div>
           </ng-container>
-          
-          <ng-template #loading>
-            <div class="loading-state">
-              <svg class="loading-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 2v4"/>
-                <path d="M12 18v4"/>
-                <path d="M4.93 4.93l2.83 2.83"/>
-                <path d="M16.24 16.24l2.83 2.83"/>
-                <path d="M2 12h4"/>
-                <path d="M18 12h4"/>
-                <path d="M4.93 19.07l2.83-2.83"/>
-                <path d="M16.24 7.76l2.83-2.83"/>
-              </svg>
-              <p>Lade Restaurants...</p>
-            </div>
-          </ng-template>
         </div>
       </div>
     </section>
@@ -507,6 +498,9 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
   isCompactMode = false;
   showAddressInput = true;
 
+  // Loading state for skeleton animation
+  isLoadingRestaurants = false;
+
   ngOnInit() {
     console.log('CustomerRestaurantsComponent: Initialized');
 
@@ -658,6 +652,8 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
   private loadNearbyRestaurants() {
     if (!this.userCoordinates) return;
 
+    this.isLoadingRestaurants = true;
+
     console.log('🔍 Loading nearby restaurants with coordinates:', {
       latitude: this.userCoordinates.latitude,
       longitude: this.userCoordinates.longitude,
@@ -680,6 +676,7 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
 
       // Bei einfacher Suche: Zeige alle Restaurants ohne zusätzliche Filter
       this.restaurantsSubject.next(restaurants);
+      this.isLoadingRestaurants = false;
     });
   }
 
