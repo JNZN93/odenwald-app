@@ -367,6 +367,16 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       border-bottom: 1px solid var(--color-border);
     }
 
+    /* Ensure consistent inline order of status + payment indicators */
+    .order-status {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      flex-wrap: nowrap;
+    }
+    .order-status .status-badge { order: 1; }
+    .order-status .payment-indicator { order: 2; }
+
     /* Highlight paid pending orders */
     .order-card.paid-pending .order-header {
       background: linear-gradient(135deg, var(--color-gray-50) 0%, var(--color-success-50) 100%);

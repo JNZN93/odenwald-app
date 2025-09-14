@@ -21,20 +21,27 @@ interface RestaurantCustomerStats {
     <div class="customers-container">
       <!-- Header -->
       <div class="customers-header">
-        <h1>Kunden verwalten</h1>
+        <div class="header-main">
+          <h1>Kunden verwalten</h1>
+          <button class="btn-primary mobile-add-btn" (click)="showAddCustomerModal = true">
+            <i class="fa-solid fa-plus"></i>
+            <span class="btn-text-full">Neuen Kunden</span>
+            <span class="btn-text-mobile">Neu</span>
+          </button>
+        </div>
         <div class="header-actions">
           <div class="search-container">
             <input
               type="text"
               [(ngModel)]="searchEmail"
               (keyup.enter)="searchCustomer()"
-              placeholder="Kunden nach E-Mail suchen..."
+              placeholder="Kunden suchen..."
               class="search-input">
             <button (click)="searchCustomer()" class="btn-secondary">
               <i class="fa-solid fa-search"></i>
             </button>
           </div>
-          <button class="btn-primary" (click)="showAddCustomerModal = true">
+          <button class="btn-primary desktop-add-btn" (click)="showAddCustomerModal = true">
             <i class="fa-solid fa-plus"></i>
             Neuen Kunden
           </button>
@@ -84,8 +91,8 @@ interface RestaurantCustomerStats {
         </div>
       </div>
 
-      <!-- Customers Table -->
-      <div class="customers-table-container">
+      <!-- Desktop Table View -->
+      <div class="customers-table-container desktop-view">
         <table class="customers-table" *ngIf="customers.length > 0; else noCustomers">
           <thead>
             <tr>
@@ -166,6 +173,77 @@ interface RestaurantCustomerStats {
             </button>
           </div>
         </ng-template>
+      </div>
+
+      <!-- Mobile Card View -->
+      <div class="customers-cards-container mobile-view" *ngIf="customers.length > 0">
+        <div class="customer-card" *ngFor="let customer of customers">
+          <div class="card-header">
+            <div class="customer-avatar">
+              <i class="fa-solid fa-user"></i>
+            </div>
+            <div class="customer-info">
+              <div class="customer-name">{{ customer.name }}</div>
+              <div class="customer-email">{{ customer.email }}</div>
+            </div>
+            <span class="status-badge" [class.active]="customer.is_active" [class.inactive]="!customer.is_active">
+              {{ customer.is_active ? 'Aktiv' : 'Inaktiv' }}
+            </span>
+          </div>
+
+          <div class="card-body">
+            <div class="card-row">
+              <div class="card-field">
+                <i class="fa-solid fa-phone"></i>
+                <span>{{ customer.phone || 'Keine Telefonnummer' }}</span>
+              </div>
+            </div>
+
+            <div class="card-stats">
+              <div class="stat-item">
+                <div class="stat-label">Bestellungen</div>
+                <div class="stat-value">{{ customer.total_orders }}</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-label">Gesamtausgaben</div>
+                <div class="stat-value">€{{ (customer.total_spent_cents / 100) | number:'1.2-2' }}</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-label">Letzte Bestellung</div>
+                <div class="stat-value">{{ customer.last_order_at | date:'dd.MM.yyyy' }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-actions">
+            <button class="btn-outline" (click)="viewCustomerDetails(customer)">
+              <i class="fa-solid fa-eye"></i>
+              Details
+            </button>
+            <button class="btn-outline" (click)="editCustomer(customer)">
+              <i class="fa-solid fa-edit"></i>
+              Bearbeiten
+            </button>
+            <button
+              class="btn-outline danger"
+              (click)="toggleCustomerStatus(customer)">
+              <i class="fa-solid" [class]="customer.is_active ? 'fa-ban' : 'fa-check'"></i>
+              {{ customer.is_active ? 'Deaktivieren' : 'Aktivieren' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- No customers for mobile -->
+      <div class="no-customers mobile-view" *ngIf="customers.length === 0">
+        <div class="no-customers-icon">
+          <i class="fa-solid fa-users"></i>
+        </div>
+        <h3>Noch keine Kunden</h3>
+        <p>Hier werden Ihre Restaurant-Kunden angezeigt, sobald sie ihre erste Bestellung aufgeben.</p>
+        <button class="btn-primary" (click)="showAddCustomerModal = true">
+          Ersten Kunden manuell hinzufügen
+        </button>
       </div>
 
       <!-- Customer Details Modal -->
@@ -315,11 +393,17 @@ interface RestaurantCustomerStats {
 
     .customers-header {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      flex-direction: column;
+      gap: 20px;
       margin-bottom: 30px;
       padding-bottom: 20px;
       border-bottom: 1px solid #e0e0e0;
+    }
+
+    .header-main {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     .customers-header h1 {
@@ -331,6 +415,19 @@ interface RestaurantCustomerStats {
       display: flex;
       gap: 15px;
       align-items: center;
+    }
+
+    .mobile-add-btn, .desktop-add-btn {
+      display: none;
+    }
+
+    /* Responsive button text */
+    .btn-text-full {
+      display: inline;
+    }
+
+    .btn-text-mobile {
+      display: none;
     }
 
     .search-container {
@@ -682,6 +779,322 @@ interface RestaurantCustomerStats {
 
     .btn-secondary:hover {
       background: #e9ecef;
+    }
+
+    /* Mobile Card Styles */
+    .customers-cards-container {
+      display: grid;
+      gap: 16px;
+    }
+
+    .customer-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .customer-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .customer-avatar {
+      width: 40px;
+      height: 40px;
+      background: var(--gradient-primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 16px;
+    }
+
+    .card-body {
+      padding: 16px;
+    }
+
+    .card-row {
+      margin-bottom: 12px;
+    }
+
+    .card-field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #666;
+      font-size: 14px;
+    }
+
+    .card-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .stat-item {
+      text-align: center;
+      padding: 8px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      padding: 16px;
+      background: #f8f9fa;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .btn-outline {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      background: white;
+      color: #666;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-outline:hover {
+      background: #f8f9fa;
+      border-color: #bbb;
+    }
+
+    .btn-outline.danger {
+      border-color: #dc3545;
+      color: #dc3545;
+    }
+
+    .btn-outline.danger:hover {
+      background: #f8d7da;
+      border-color: #c82333;
+    }
+
+    /* View toggles */
+    .desktop-view {
+      display: block;
+    }
+
+    .mobile-view {
+      display: none;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1024px) {
+      .customers-container {
+        padding: 16px;
+      }
+
+      .customers-header {
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+      }
+
+      .search-input {
+        width: 200px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .customers-container {
+        padding: 12px;
+      }
+
+      .customers-header {
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .header-main {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .customers-header h1 {
+        font-size: 24px;
+      }
+
+      .header-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .search-container {
+        flex: 1;
+      }
+
+      .search-input {
+        width: 100%;
+        max-width: none;
+      }
+
+      .mobile-add-btn {
+        display: flex !important;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 12px;
+        font-size: 14px;
+      }
+
+      .desktop-add-btn {
+        display: none !important;
+      }
+
+      .btn-text-full {
+        display: none;
+      }
+
+      .btn-text-mobile {
+        display: inline;
+      }
+
+      /* Hide table, show cards */
+      .desktop-view {
+        display: none;
+      }
+
+      .mobile-view {
+        display: block;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .stat-card {
+        padding: 16px;
+      }
+
+      .card-stats {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .card-actions {
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .btn-outline {
+        justify-content: flex-start;
+        padding: 10px 12px;
+        font-size: 14px;
+      }
+
+      /* Modal improvements for mobile */
+      .modal-content {
+        width: 95%;
+        margin: 10px;
+        max-height: 90vh;
+      }
+
+      .modal-header h3 {
+        font-size: 18px;
+      }
+
+      .customer-details-grid {
+        gap: 16px;
+      }
+
+      .detail-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+      }
+
+      .detail-label {
+        font-weight: 600;
+        color: #666;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .detail-value {
+        color: #333;
+        font-size: 14px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .customers-container {
+        padding: 8px;
+      }
+
+      .card-header {
+        padding: 12px;
+        gap: 10px;
+      }
+
+      .card-body {
+        padding: 12px;
+      }
+
+      .card-actions {
+        padding: 12px;
+      }
+
+      .customer-avatar {
+        width: 36px;
+        height: 36px;
+        font-size: 14px;
+      }
+
+      .customer-name {
+        font-size: 16px;
+      }
+
+      .customer-email {
+        font-size: 14px;
+      }
+
+      .stat-value {
+        font-size: 16px;
+      }
+
+      .modal-content {
+        width: 98%;
+        margin: 5px;
+      }
     }
   `]
 })

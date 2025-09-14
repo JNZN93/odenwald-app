@@ -61,11 +61,18 @@ export interface Driver {
       <div class="quick-actions">
         <button class="btn btn-primary" (click)="addDriver()">
           <i class="fa-solid fa-plus"></i>
-          Neuen Fahrer hinzufügen
+          <span class="btn-text-full">Neuen Fahrer hinzufügen</span>
+          <span class="btn-text-mobile">Neuer Fahrer</span>
         </button>
         <button class="btn btn-success" (click)="refreshData()">
           <i class="fa-solid fa-refresh"></i>
-          Aktualisieren
+          <span class="btn-text-full">Aktualisieren</span>
+          <span class="btn-text-mobile">Aktualisieren</span>
+        </button>
+        <button class="btn btn-primary" (click)="optimizeMultiDriverRoutes()" [disabled]="isBulkOptimizing">
+          <i class="fa-solid fa-route"></i>
+          <span class="btn-text-full">Multi-Optimierung</span>
+          <span class="btn-text-mobile">Optimieren</span>
         </button>
       </div>
 
@@ -302,6 +309,15 @@ export interface Driver {
       </div>
 
 
+      <!-- Loading Modal for Multi Optimization -->
+      <div class="modal" *ngIf="isBulkOptimizing" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+        <div class="loading-modal-content" style="background: white; border-radius: 12px; padding: 2rem; display: flex; flex-direction: column; align-items: center; gap: 1rem; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); max-width: 400px; width: 90%;">
+          <div class="loading-spinner"></div>
+          <h3 style="margin: 0; color: #333; font-size: 1.25rem;">Multi-Optimierung läuft...</h3>
+          <p style="margin: 0; color: #666; text-align: center; font-size: 0.9rem;">Die besten Routen für alle verfügbaren Fahrer werden berechnet. Dies kann einen Moment dauern.</p>
+        </div>
+      </div>
+
       <!-- Add Driver Modal -->
       <div class="modal" *ngIf="showAddDriverModal" (click)="closeAddDriverModal()">
         <div class="modal-content add-driver-modal" (click)="$event.stopPropagation()">
@@ -523,22 +539,32 @@ export interface Driver {
             <div class="driver-orders-section">
               <!-- Tabs -->
               <div class="tabs-container">
-                <div class="tabs-header">
+                <div class="tabs">
                   <button
                     class="tab-button"
                     [class.active]="activeTab === 'active'"
                     (click)="switchTab('active')"
                   >
-                    <i class="fa-solid fa-route"></i>
-                    Aktive Tour ({{ activeOrdersCount }})
+                    <div class="tab-content">
+                      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                      </svg>
+                      <span class="tab-text-full">Aktive Tour ({{ activeOrdersCount }})</span>
+                      <span class="tab-text-mobile">Aktiv ({{ activeOrdersCount }})</span>
+                    </div>
                   </button>
                   <button
                     class="tab-button"
                     [class.active]="activeTab === 'all'"
                     (click)="switchTab('all')"
                   >
-                    <i class="fa-solid fa-list"></i>
-                    Alle Bestellungen ({{ allOrdersCount }})
+                    <div class="tab-content">
+                      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                      </svg>
+                      <span class="tab-text-full">Alle Bestellungen ({{ allOrdersCount }})</span>
+                      <span class="tab-text-mobile">Alle ({{ allOrdersCount }})</span>
+                    </div>
                   </button>
                 </div>
 
@@ -1231,6 +1257,15 @@ export interface Driver {
       transition: all var(--transition);
     }
 
+    /* Responsive button text */
+    .btn-text-full {
+      display: inline;
+    }
+
+    .btn-text-mobile {
+      display: none;
+    }
+
     .btn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
@@ -1244,6 +1279,19 @@ export interface Driver {
     .btn-primary:hover:not(:disabled) {
       transform: translateY(-2px);
       box-shadow: 0 4px 12px color-mix(in oklab, var(--color-primary) 25%, transparent);
+    }
+
+    .btn:focus {
+      outline: 2px solid var(--color-primary-300);
+      outline-offset: 2px;
+    }
+
+    /* Touch-friendly focus for mobile */
+    @media (max-width: 768px) {
+      .btn:focus {
+        outline: 3px solid var(--color-primary-300);
+        outline-offset: 1px;
+      }
     }
 
     .btn-success {
@@ -1279,6 +1327,30 @@ export interface Driver {
 
 
     /* Responsive */
+    /* Tablet Styles */
+    @media (max-width: 1024px) and (min-width: 769px) {
+      .quick-actions {
+        gap: var(--space-3);
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .btn {
+        padding: var(--space-3) var(--space-3);
+        font-size: var(--text-sm);
+        min-width: 140px;
+      }
+
+      .btn-text-full {
+        display: inline;
+      }
+
+      .btn-text-mobile {
+        display: none;
+      }
+    }
+
+    /* Mobile Styles */
     @media (max-width: 768px) {
       .main-content-grid {
         grid-template-columns: 1fr;
@@ -1286,7 +1358,28 @@ export interface Driver {
 
       .quick-actions {
         flex-direction: column;
-        align-items: center;
+        align-items: stretch;
+        gap: var(--space-3);
+        width: 100%;
+        max-width: 320px;
+        margin: 0 auto var(--space-4) auto;
+      }
+
+      .btn {
+        padding: var(--space-4) var(--space-3);
+        font-size: var(--text-base);
+        min-height: 48px; /* Better touch target */
+        justify-content: center;
+        width: 100%;
+        white-space: nowrap;
+      }
+
+      .btn-text-full {
+        display: none;
+      }
+
+      .btn-text-mobile {
+        display: inline;
       }
 
       .driver-header {
@@ -1628,6 +1721,239 @@ export interface Driver {
       background: var(--color-surface);
       border-radius: var(--radius-md);
     }
+
+    /* Multi-Driver Optimization Modal Styles */
+    :host ::ng-deep .optimization-summary {
+      background: #f8f9fa;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+
+    :host ::ng-deep .summary-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 1rem;
+      text-align: center;
+    }
+
+    :host ::ng-deep .stat-item {
+      font-size: 0.9rem;
+      color: #666;
+    }
+
+    :host ::ng-deep .stat-item strong {
+      display: block;
+      font-size: 1.5rem;
+      color: #333;
+      margin-bottom: 0.25rem;
+    }
+
+    :host ::ng-deep .assignments-list {
+      margin-bottom: 1rem;
+    }
+
+    :host ::ng-deep .assignments-list h3 {
+      margin-bottom: 0.75rem;
+      color: #333;
+    }
+
+    :host ::ng-deep .assignment-item {
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      background: white;
+    }
+
+    :host ::ng-deep .assignment-header {
+      margin-bottom: 0.5rem;
+      color: #4aa96c;
+      font-weight: 600;
+    }
+
+    :host ::ng-deep .route-sequence {
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: #666;
+      background: #f8f9fa;
+      padding: 0.5rem;
+      border-radius: 4px;
+      word-break: break-all;
+    }
+
+    :host ::ng-deep .unassigned-warning {
+      background: #fff3cd;
+      color: #856404;
+      padding: 0.75rem;
+      border-radius: 6px;
+      border: 1px solid #ffeaa7;
+      margin-top: 1rem;
+    }
+
+:host ::ng-deep .modal-footer {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  padding-top: 1rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+:host ::ng-deep .geocoding-warning {
+  background: #fff3cd;
+  color: #856404;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #ffeaa7;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+/* Loading Modal Animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Modal Base Styles */
+:host ::ng-deep .modal-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  z-index: 10000 !important;
+}
+
+:host ::ng-deep .modal-content {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+:host ::ng-deep .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f8f9fa;
+  border-radius: 8px 8px 0 0;
+}
+
+:host ::ng-deep .modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #333;
+}
+
+:host ::ng-deep .modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+:host ::ng-deep .modal-close:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+:host ::ng-deep .modal-body {
+  padding: 1.5rem;
+}
+
+:host ::ng-deep .modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e0e0e0;
+  background: #f8f9fa;
+  border-radius: 0 0 8px 8px;
+}
+
+:host ::ng-deep .route-details {
+  margin-top: 0.5rem;
+}
+
+:host ::ng-deep .route-stats {
+  margin-top: 0.25rem;
+  color: #666;
+}
+
+:host ::ng-deep .optimization-log {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
+:host ::ng-deep .optimization-log h4 {
+  margin: 0 0 0.75rem 0;
+  color: #333;
+  font-size: 1rem;
+}
+
+:host ::ng-deep .log-entry {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+:host ::ng-deep .log-entry:not(:last-child) {
+  border-bottom: 1px solid #e0e0e0;
+}
+
+:host ::ng-deep .route-addresses {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+:host ::ng-deep .address-item {
+  margin-bottom: 0.25rem;
+  padding: 0.25rem 0;
+}
+
+:host ::ng-deep .address-item:not(:last-child) {
+  border-bottom: 1px solid #e0e0e0;
+}
+
+:host ::ng-deep .address-item strong {
+  color: #4aa96c;
+  margin-right: 0.5rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #ff8c00;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
   `]
 })
 export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
@@ -1656,6 +1982,7 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
   isLoadingDriverOrders = false;
   manualSequence: string[] = [];
   isOptimizing = false;
+  isBulkOptimizing = false;
   isSaving = false;
   activeTab: 'active' | 'all' = 'active';
   // Map state
@@ -2069,6 +2396,278 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
     }
   }
 
+  optimizeMultiDriverRoutes() {
+    if (this.isBulkOptimizing) return;
+
+    this.isBulkOptimizing = true;
+
+    // Get managed restaurants
+    this.restaurantManagerService.getManagedRestaurants().subscribe({
+      next: (restaurants: any[]) => {
+        const restaurantId = restaurants?.[0]?.restaurant_id;
+        if (!restaurantId) {
+          this.toastService.error('Fehler', 'Kein Restaurant gefunden');
+          this.isBulkOptimizing = false;
+          return;
+        }
+
+        // Get all available drivers for this restaurant
+        const availableDriverIds = this.drivers
+          .filter((d: Driver) => d.status === 'available' || d.status === 'busy')
+          .map((d: Driver) => d.id);
+
+
+        if (availableDriverIds.length === 0) {
+          this.toastService.error('Fehler', `Keine verfügbaren Fahrer gefunden. ${this.drivers.length} Fahrer insgesamt, aber keiner mit Status 'available' oder 'busy'.`);
+          this.isBulkOptimizing = false;
+          return;
+        }
+
+        // Call multi-driver optimization API
+        this.http.post(`${environment.apiUrl}/restaurants/${restaurantId}/optimize-multi-driver`, {
+          driver_ids: availableDriverIds
+        }).subscribe({
+          next: (result: any) => {
+            console.log('Multi-driver optimization result:', result);
+            console.log('Assignments:', result.assignments?.length || 0);
+
+            // Always show modal - even if no assignments
+            this.showMultiDriverOptimizationModal(result);
+
+            // Show additional toast if needed
+            if (!result.assignments || result.assignments.length === 0) {
+              if (result.geocoding_issues > 0) {
+                this.toastService.warning('Hinweis', `${result.geocoding_issues} Bestellung(en) konnten nicht geocodiert werden. Details im Modal.`);
+              } else if (result.orders_total === 0) {
+                this.toastService.info('Hinweis', 'Keine bereitstehenden Bestellungen gefunden. Details im Modal.');
+              } else {
+                this.toastService.warning('Hinweis', 'Keine sinnvollen Zuweisungen gefunden. Details im Modal.');
+              }
+            }
+
+            this.isBulkOptimizing = false;
+          },
+          error: (error) => {
+            console.error('Multi-driver optimization error:', error);
+            this.toastService.error('Fehler', `Multi-Optimierung fehlgeschlagen: ${error.error?.error || error.message}`);
+            this.isBulkOptimizing = false;
+          }
+        });
+      },
+      error: () => {
+        this.toastService.error('Fehler', 'Manager-Restaurant konnte nicht geladen werden');
+        this.isBulkOptimizing = false;
+      }
+    });
+  }
+
+  private showMultiDriverOptimizationModal(result: any) {
+    try {
+      console.log('Creating modal...');
+      const assignments = result.assignments || [];
+      const totalDistance = Math.round((result.total_distance || 0) / 1000); // Convert to km
+      const totalDuration = Math.round((result.total_duration || 0) / 60); // Convert to minutes
+
+      console.log('Assignments for modal:', assignments.length);
+
+      const modalHtml = `
+      <div class="modal" id="multiOptimizationModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+        <div class="modal-content" style="background: white; border-radius: 8px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); max-height: 90vh; overflow-y: auto; max-width: 600px; width: 90%;">
+          <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid #e0e0e0; background: #f8f9fa; border-radius: 8px 8px 0 0;">
+            <h2 style="margin: 0; font-size: 1.25rem; color: #333;"><i class="fa-solid fa-route"></i> Multi-Driver Routen-Optimierung</h2>
+            <button class="close-btn" onclick="window.closeMultiOptimizationModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">&times;</button>
+          </div>
+          <div class="modal-body" style="padding: 1.5rem;">
+            <div class="optimization-summary" style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+              <div class="summary-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; text-align: center;">
+                <div class="stat-item" style="font-size: 0.9rem; color: #666;">
+                  <strong style="display: block; font-size: 1.5rem; color: #333; margin-bottom: 0.25rem;">${result.drivers_used}</strong> Fahrer eingesetzt
+                </div>
+                <div class="stat-item" style="font-size: 0.9rem; color: #666;">
+                  <strong style="display: block; font-size: 1.5rem; color: #333; margin-bottom: 0.25rem;">${result.orders_assigned}/${result.orders_total}</strong> Bestellungen zugewiesen
+                </div>
+                <div class="stat-item" style="font-size: 0.9rem; color: #666;">
+                  <strong style="display: block; font-size: 1.5rem; color: #333; margin-bottom: 0.25rem;">${totalDistance} km</strong> Gesamtstrecke
+                </div>
+                <div class="stat-item" style="font-size: 0.9rem; color: #666;">
+                  <strong style="display: block; font-size: 1.5rem; color: #333; margin-bottom: 0.25rem;">${totalDuration} min</strong> Gesamtdauer
+                </div>
+              </div>
+              ${result.geocoding_issues > 0 ? `
+                <div class="geocoding-warning" style="background: #fff3cd; color: #856404; padding: 0.75rem; border-radius: 6px; border: 1px solid #ffeaa7; margin-top: 1rem; font-size: 0.9rem;">
+                  <i class="fa-solid fa-exclamation-triangle"></i>
+                  ${result.geocoding_issues} Bestellung(en) konnten nicht geocodiert werden und wurden übersprungen.
+                </div>
+              ` : ''}
+            </div>
+
+            <div class="assignments-list" style="margin-bottom: 1rem;">
+              <h3 style="margin-bottom: 0.75rem; color: #333;">Routen-Zuweisungen:</h3>
+              ${assignments.map((assignment: any, index: number) => `
+                <div class="assignment-item" style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 0.75rem; margin-bottom: 1rem; background: white;">
+                  <div class="assignment-header" style="margin-bottom: 0.75rem; color: #4aa96c; font-weight: 600; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                      <strong>Fahrer ${index + 1}:</strong> ${assignment.route.orderIdsInSequence.length} Bestellungen
+                      ${assignment.route.distanceMeters ? ` (${Math.round(assignment.route.distanceMeters / 1000)} km)` : ''}
+                    </div>
+                    <button class="toggle-map-btn" onclick="toggleDriverMap(${index})" style="padding: 0.25rem 0.5rem; border: 1px solid #4aa96c; border-radius: 4px; background: transparent; color: #4aa96c; cursor: pointer; font-size: 0.8rem;">
+                      <i class="fa-solid fa-map"></i> Karte anzeigen
+                    </button>
+                  </div>
+                  
+                  <!-- Route Map Container -->
+                  <div class="route-map-container" id="driverMap${index}" style="display: none; margin-bottom: 0.75rem;">
+                    <div class="map-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                      <h4 style="margin: 0; color: #333; font-size: 0.9rem;">Route für Fahrer ${index + 1}</h4>
+                      <button class="close-map-btn" onclick="toggleDriverMap(${index})" style="background: none; border: none; color: #666; cursor: pointer; font-size: 1.2rem;">&times;</button>
+                    </div>
+                    <div class="driver-route-map" id="driverRouteMap${index}" style="height: 300px; width: 100%; border: 1px solid #e0e0e0; border-radius: 4px;"></div>
+                  </div>
+                  
+                  <div class="route-details" style="margin-top: 0.5rem;">
+                    <div class="route-sequence" style="font-family: monospace; font-size: 0.85rem; color: #666; background: #f8f9fa; padding: 0.5rem; border-radius: 4px; word-break: break-all;">
+                      <strong>Route:</strong> ${assignment.route.orderIdsInSequence.join(' → ')}
+                    </div>
+                    ${assignment.route.orderDetails ? `
+                      <div class="route-addresses" style="margin-top: 0.5rem; padding: 0.5rem; background: #f8f9fa; border-radius: 4px; font-size: 0.85rem;">
+                        ${assignment.route.orderDetails.map((order: any, idx: number) => `
+                          <div class="address-item" style="margin-bottom: 0.25rem; padding: 0.25rem 0;">
+                            <strong style="color: #4aa96c; margin-right: 0.5rem;">${idx + 1}.</strong> ${order.address}
+                          </div>
+                        `).join('')}
+                      </div>
+                    ` : ''}
+                    <div class="route-stats" style="margin-top: 0.25rem; color: #666;">
+                      <small>
+                        ${assignment.route.distanceMeters ? `Distanz: ${Math.round(assignment.route.distanceMeters / 1000)} km` : ''}
+                        ${assignment.route.durationSeconds ? ` • Dauer: ${Math.round(assignment.route.durationSeconds / 60)} min` : ''}
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+
+              <div class="optimization-log" style="margin-top: 1.5rem; padding: 1rem; background: #f8f9fa; border-radius: 6px; border: 1px solid #e0e0e0;">
+                <h4 style="margin: 0 0 0.75rem 0; color: #333; font-size: 1rem;">Optimierung Details:</h4>
+                <div class="log-entry" style="display: flex; justify-content: space-between; padding: 0.25rem 0; font-size: 0.9rem;">
+                  <strong>Gefundene Bestellungen:</strong> ${result.orders_total || 0}
+                </div>
+                <div class="log-entry" style="display: flex; justify-content: space-between; padding: 0.25rem 0; font-size: 0.9rem;">
+                  <strong>Geocodierte Adressen:</strong> ${result.orders_geocoded || 0}
+                </div>
+                <div class="log-entry" style="display: flex; justify-content: space-between; padding: 0.25rem 0; font-size: 0.9rem;">
+                  <strong>Zuweisungsprobleme:</strong> ${result.geocoding_issues || 0}
+                </div>
+                <div class="log-entry" style="display: flex; justify-content: space-between; padding: 0.25rem 0; font-size: 0.9rem;">
+                  <strong>Eingesetzte Fahrer:</strong> ${result.drivers_used || 0}
+                </div>
+                <div class="log-entry" style="display: flex; justify-content: space-between; padding: 0.25rem 0; font-size: 0.9rem;">
+                  <strong>Gesamtstrecke:</strong> ${result.total_distance ? Math.round(result.total_distance / 1000) + ' km' : 'N/A'}
+                </div>
+                <div class="log-entry" style="display: flex; justify-content: space-between; padding: 0.25rem 0; font-size: 0.9rem;">
+                  <strong>Gesamtdauer:</strong> ${result.total_duration ? Math.round(result.total_duration / 60) + ' min' : 'N/A'}
+                </div>
+              </div>
+            </div>
+
+            ${result.unassigned_jobs?.length > 0 ? `
+              <div class="unassigned-warning" style="background: #fff3cd; color: #856404; padding: 0.75rem; border-radius: 6px; border: 1px solid #ffeaa7; margin-top: 1rem;">
+                <i class="fa-solid fa-exclamation-triangle"></i>
+                ${result.unassigned_jobs.length} Bestellungen konnten nicht zugewiesen werden
+              </div>
+            ` : ''}
+          </div>
+          <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid #e0e0e0; background: #f8f9fa; border-radius: 0 0 8px 8px; display: flex; gap: 0.75rem; justify-content: flex-end;">
+            <button class="btn btn-ghost" onclick="window.closeMultiOptimizationModal()" style="padding: 0.5rem 1rem; border: 1px solid #e0e0e0; border-radius: 6px; cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.2s; background: transparent; color: #666;">
+              Abbrechen
+            </button>
+            <button class="btn btn-primary" onclick="window.applyMultiOptimization(${JSON.stringify(assignments).replace(/"/g, '&quot;')})" style="padding: 0.5rem 1rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.2s; background: linear-gradient(135deg, #ff8c00, #ff6b35); color: white;">
+              Zuweisungen anwenden
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    // Add global functions for map management
+    (window as any).toggleDriverMap = (driverIndex: number) => {
+      const mapContainer = document.getElementById(`driverMap${driverIndex}`);
+      const toggleBtn = document.querySelector(`button[onclick="toggleDriverMap(${driverIndex})"]`);
+      
+      if (mapContainer && toggleBtn) {
+        const isVisible = mapContainer.style.display !== 'none';
+        mapContainer.style.display = isVisible ? 'none' : 'block';
+        
+        if (isVisible) {
+          // Hide map and clean up
+          toggleBtn.innerHTML = '<i class="fa-solid fa-map"></i> Karte anzeigen';
+          if (this.driverMaps.has(driverIndex)) {
+            const map = this.driverMaps.get(driverIndex);
+            if (map) {
+              map.remove();
+              this.driverMaps.delete(driverIndex);
+            }
+          }
+        } else {
+          // Show map and initialize
+          toggleBtn.innerHTML = '<i class="fa-solid fa-map"></i> Karte ausblenden';
+          // Small delay to ensure DOM is ready
+          setTimeout(() => {
+            this.initializeDriverMap(driverIndex, assignments[driverIndex]);
+          }, 100);
+        }
+      }
+    };
+
+    (window as any).applyMultiOptimization = (assignments: any[]) => {
+      this.applyMultiDriverOptimization(assignments);
+      this.cleanupAllDriverMaps();
+      const modal = document.getElementById('multiOptimizationModal');
+      if (modal) {
+        modal.remove();
+      }
+    };
+
+    // Add cleanup function for modal close
+    (window as any).closeMultiOptimizationModal = () => {
+      this.cleanupAllDriverMaps();
+      const modal = document.getElementById('multiOptimizationModal');
+      if (modal) {
+        modal.remove();
+      }
+    };
+
+    console.log('Modal HTML created successfully');
+    } catch (error) {
+      console.error('Error creating modal:', error);
+      this.toastService.error('Fehler', 'Modal konnte nicht angezeigt werden: ' + (error instanceof Error ? error.message : String(error)));
+    }
+  }
+
+  private applyMultiDriverOptimization(assignments: any[]) {
+    this.restaurantManagerService.getManagedRestaurants().subscribe({
+      next: (restaurants: any[]) => {
+        const restaurantId = restaurants?.[0]?.restaurant_id;
+        if (!restaurantId) return;
+
+        this.http.post(`${environment.apiUrl}/restaurants/${restaurantId}/apply-multi-driver-optimization`, {
+          assignments
+        }).subscribe({
+          next: (result: any) => {
+            this.toastService.success('Erfolg', `Zuweisungen angewendet: ${result.orders_assigned} Bestellungen`);
+            this.refreshData();
+          },
+          error: (error) => {
+            console.error('Apply optimization error:', error);
+            this.toastService.error('Fehler', 'Zuweisungen konnten nicht angewendet werden');
+          }
+        });
+      }
+    });
+  }
+
   optimizeTourForSelectedDriver() {
     // Use the correct driver variable based on context
     const driver = this.selectedDriverForDetails || this.selectedDriver;
@@ -2334,5 +2933,123 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
     } catch {
       // ignore
     }
+  }
+
+  private driverMaps: Map<number, any> = new Map();
+
+  private async initializeDriverMap(driverIndex: number, assignment: any) {
+    const mapContainer = document.getElementById(`driverRouteMap${driverIndex}`);
+    if (!mapContainer) return;
+
+    // Clean up existing map if it exists
+    if (this.driverMaps.has(driverIndex)) {
+      const existingMap = this.driverMaps.get(driverIndex);
+      if (existingMap) {
+        existingMap.remove();
+        this.driverMaps.delete(driverIndex);
+      }
+    }
+
+    // Ensure Leaflet is loaded
+    const ensureLeaflet = (cb: () => void) => {
+      if ((window as any).L) return cb();
+      if (!document.querySelector('link[href*="leaflet"]')) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(link);
+      }
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = () => cb();
+      document.head.appendChild(script);
+    };
+
+    ensureLeaflet(() => {
+      const L = (window as any).L;
+      if (!L) return;
+
+      // Clear existing map content completely
+      mapContainer.innerHTML = '';
+
+      // Get restaurant coordinates
+      this.computeStartCoords().then(() => {
+        const center: [number, number] = this.startCoords ? [this.startCoords.lat, this.startCoords.lon] : [49.5, 8.4];
+        
+        // Create new map instance
+        const map = L.map(`driverRouteMap${driverIndex}`, {
+          preferCanvas: false
+        }).setView(center, 12);
+        
+        // Store map reference for cleanup
+        this.driverMaps.set(driverIndex, map);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+          attribution: '© OpenStreetMap contributors' 
+        }).addTo(map);
+
+        const markers: any[] = [];
+        const routePath: Array<[number, number]> = [];
+
+        // Add restaurant marker
+        if (this.startCoords) {
+          const restaurantMarker = L.marker([this.startCoords.lat, this.startCoords.lon])
+            .addTo(map)
+            .bindPopup('<strong>Restaurant Start</strong>');
+          markers.push(restaurantMarker);
+          routePath.push([this.startCoords.lat, this.startCoords.lon]);
+        }
+
+        // Add order markers and build route
+        const addOrderMarkers = async () => {
+          if (assignment.route.orderDetails) {
+            for (let i = 0; i < assignment.route.orderDetails.length; i++) {
+              const order = assignment.route.orderDetails[i];
+              try {
+                const res: any = await this.http.get(`${environment.apiUrl}/geocoding/search?q=${encodeURIComponent(order.address)}`).toPromise();
+                if (res && typeof res.latitude === 'number' && typeof res.longitude === 'number') {
+                  const orderMarker = L.marker([res.latitude, res.longitude])
+                    .addTo(map)
+                    .bindPopup(`<strong>Bestellung #${order.id}</strong><br/>${order.address}`);
+                  markers.push(orderMarker);
+                  routePath.push([res.latitude, res.longitude]);
+                }
+              } catch (error) {
+                console.warn(`Could not geocode address: ${order.address}`, error);
+              }
+            }
+          }
+
+          // Add route polyline
+          if (routePath.length >= 2) {
+            L.polyline(routePath, { 
+              color: '#ff8c00', 
+              weight: 4, 
+              opacity: 0.85 
+            }).addTo(map);
+          }
+
+          // Fit map to show all markers
+          if (markers.length > 0) {
+            const group = L.featureGroup(markers);
+            const bounds = group.getBounds();
+            if (bounds.isValid()) {
+              map.fitBounds(bounds.pad(0.2));
+            }
+          }
+        };
+
+        addOrderMarkers();
+      });
+    });
+  }
+
+  private cleanupAllDriverMaps() {
+    this.driverMaps.forEach((map, driverIndex) => {
+      if (map) {
+        map.remove();
+      }
+    });
+    this.driverMaps.clear();
   }
 }

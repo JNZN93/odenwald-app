@@ -49,7 +49,7 @@ import { ImageFallbackDirective } from '../../core/image-fallback.directive';
             </div>
             
             <div class="supplier-rating">
-              <span class="rating-value">Bewertung: {{ supplier.rating }}/5</span>
+              <span class="rating-value">Bewertung: {{ supplier.rating.toFixed(1) }}/5</span>
             </div>
           </div>
         </div>

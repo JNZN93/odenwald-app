@@ -119,16 +119,43 @@ interface OrderData {
           </div>
           <div class="header-stats">
             <div class="stat">
-              <span class="stat-number">{{ suppliers.length }}</span>
-              <span class="stat-label">Großhändler</span>
+              <div class="stat-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <rect x="7" y="7" width="3" height="3"/>
+                  <rect x="14" y="7" width="3" height="3"/>
+                  <rect x="7" y="14" width="3" height="3"/>
+                  <rect x="14" y="14" width="3" height="3"/>
+                </svg>
+              </div>
+              <div class="stat-content">
+                <span class="stat-number">{{ suppliers.length }}</span>
+                <span class="stat-label">Großhändler</span>
+              </div>
             </div>
             <div class="stat">
-              <span class="stat-number">{{ myOrdersCount }}</span>
-              <span class="stat-label">Meine Bestellungen</span>
+              <div class="stat-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 12l2 2 4-4"/>
+                  <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
+                </svg>
+              </div>
+              <div class="stat-content">
+                <span class="stat-number">{{ myOrdersCount }}</span>
+                <span class="stat-label">Meine Bestellungen</span>
+              </div>
             </div>
             <div class="stat">
-              <span class="stat-number">€{{ (totalOrderValue || 0).toFixed(2) }}</span>
-              <span class="stat-label">Bestellwert</span>
+              <div class="stat-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="1" x2="12" y2="23"/>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+              </div>
+              <div class="stat-content">
+                <span class="stat-number">€{{ (totalOrderValue || 0).toFixed(2) }}</span>
+                <span class="stat-label">Bestellwert</span>
+              </div>
             </div>
           </div>
         </div>
@@ -141,38 +168,47 @@ interface OrderData {
             class="tab-button"
             [class.active]="activeTab === 'browse'"
             (click)="setActiveTab('browse')">
-            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-              <rect x="7" y="7" width="3" height="3"/>
-              <rect x="14" y="7" width="3" height="3"/>
-              <rect x="7" y="14" width="3" height="3"/>
-              <rect x="14" y="14" width="3" height="3"/>
-            </svg>
-            <span>Großhändler durchsuchen</span>
+            <div class="tab-content">
+              <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <rect x="7" y="7" width="3" height="3"/>
+                <rect x="14" y="7" width="3" height="3"/>
+                <rect x="7" y="14" width="3" height="3"/>
+                <rect x="14" y="14" width="3" height="3"/>
+              </svg>
+              <span class="tab-text-full">Großhändler durchsuchen</span>
+              <span class="tab-text-mobile">Durchsuchen</span>
+            </div>
           </button>
           <button
             class="tab-button"
             [class.active]="activeTab === 'orders'"
             (click)="setActiveTab('orders')">
-            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M9 12l2 2 4-4"/>
-              <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
-            </svg>
-            <span>Meine Bestellungen</span>
-            <span *ngIf="pendingOrdersCount > 0" class="tab-badge">{{ pendingOrdersCount }}</span>
+            <div class="tab-content">
+              <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 12l2 2 4-4"/>
+                <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
+              </svg>
+              <span class="tab-text-full">Meine Bestellungen</span>
+              <span class="tab-text-mobile">Bestellungen</span>
+              <span *ngIf="pendingOrdersCount > 0" class="tab-badge">{{ pendingOrdersCount }}</span>
+            </div>
           </button>
           <button
             class="tab-button"
             [class.active]="activeTab === 'invoices'"
             (click)="setActiveTab('invoices')">
-            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14,2 14,8 20,8"/>
-              <line x1="16" y1="13" x2="8" y2="13"/>
-              <line x1="16" y1="17" x2="8" y2="17"/>
-              <polyline points="10,9 9,9 8,9"/>
-            </svg>
-            <span>Rechnungen</span>
+            <div class="tab-content">
+              <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14,2 14,8 20,8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10,9 9,9 8,9"/>
+              </svg>
+              <span class="tab-text-full">Rechnungen</span>
+              <span class="tab-text-mobile">Rechnungen</span>
+            </div>
           </button>
         </div>
       </div>
@@ -222,7 +258,7 @@ interface OrderData {
                   <span class="category">{{ supplier.category }}</span>
                   <div class="rating">
                     <span class="stars">★★★★☆</span>
-                    <span class="rating-value">{{ supplier.rating }}</span>
+                    <span class="rating-value">{{ supplier.rating.toFixed(1) }}</span>
                   </div>
                 </div>
               </div>
@@ -625,7 +661,23 @@ interface OrderData {
 
     .stat {
       display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-2) var(--space-4);
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-lg);
+      min-width: 120px;
+    }
+
+    .stat-icon {
+      opacity: 0.9;
+      flex-shrink: 0;
+    }
+
+    .stat-content {
+      display: flex;
       flex-direction: column;
+      align-items: center;
     }
 
     .stat-number {
@@ -667,12 +719,18 @@ interface OrderData {
       overflow: hidden;
       transition: all var(--transition);
       box-shadow: var(--shadow-sm);
+      position: relative;
     }
 
     .supplier-card:hover {
       transform: translateY(-2px);
       box-shadow: var(--shadow-md);
       border-color: var(--color-primary-300);
+    }
+
+    .supplier-card:active {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
     }
 
     .supplier-header {
@@ -938,6 +996,96 @@ interface OrderData {
       border-bottom: none;
     }
 
+    /* Tab Navigation */
+    .tabs-section {
+      margin-bottom: var(--space-8);
+    }
+
+    .tabs {
+      display: flex;
+      background: var(--color-surface);
+      border-radius: var(--radius-xl);
+      padding: var(--space-1);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--color-border);
+    }
+
+    .tab-button {
+      flex: 1;
+      padding: var(--space-3) var(--space-4);
+      border: none;
+      background: transparent;
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: all var(--transition);
+      position: relative;
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tab-content {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      justify-content: center;
+      width: 100%;
+    }
+
+    .tab-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      transition: transform var(--transition);
+    }
+
+    .tab-button:hover {
+      background: var(--color-surface-2);
+      transform: translateY(-1px);
+    }
+
+    .tab-button:active {
+      transform: translateY(0);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .tab-button.active {
+      background: var(--gradient-primary);
+      color: white;
+      box-shadow: var(--shadow-sm);
+      transform: translateY(-1px);
+    }
+
+    .tab-button.active svg {
+      stroke: white;
+      transform: scale(1.1);
+    }
+
+    .tab-button.active:hover {
+      background: var(--gradient-primary);
+      transform: translateY(-1px);
+    }
+
+    .tab-badge {
+      background: var(--color-danger);
+      color: white;
+      font-size: var(--text-xs);
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 10px;
+      margin-left: var(--space-1);
+    }
+
+    /* Responsive button text */
+    .tab-text-full {
+      display: inline;
+    }
+
+    .tab-text-mobile {
+      display: none;
+    }
+
     /* Responsive Design */
     @media (max-width: 1024px) {
       .header-content {
@@ -948,10 +1096,25 @@ interface OrderData {
 
       .header-stats {
         justify-content: center;
+        flex-wrap: wrap;
+        gap: var(--space-4);
+      }
+
+      .stat {
+        min-width: 100px;
+        padding: var(--space-2) var(--space-3);
       }
 
       .suppliers-grid {
         grid-template-columns: 1fr;
+      }
+
+      .tabs {
+        gap: var(--space-1);
+      }
+
+      .tab-button {
+        padding: var(--space-3) var(--space-2);
       }
     }
 
@@ -962,20 +1125,347 @@ interface OrderData {
 
       .header-section {
         padding: var(--space-6) var(--space-4);
+        margin-bottom: var(--space-6);
       }
 
+      .header-stats {
+        flex-direction: column;
+        gap: var(--space-3);
+        align-items: stretch;
+      }
+
+      .stat {
+        min-width: unset;
+        justify-content: center;
+        padding: var(--space-3) var(--space-4);
+      }
+
+      .stat-content {
+        align-items: center;
+      }
+
+      /* Mobile tabs */
+      .tabs {
+        flex-direction: column;
+        gap: var(--space-2);
+        padding: var(--space-2);
+        border-radius: var(--radius-lg);
+      }
+
+      .tab-button {
+        width: 100%;
+        padding: var(--space-4) var(--space-3);
+        min-height: 60px;
+        justify-content: flex-start;
+        border-radius: var(--radius-md);
+        margin-bottom: var(--space-1);
+      }
+
+      .tab-content {
+        justify-content: flex-start;
+        gap: var(--space-3);
+        width: 100%;
+      }
+
+      .tab-icon {
+        width: 28px;
+        height: 28px;
+        flex-shrink: 0;
+      }
+
+      .tab-text-full {
+        display: none;
+      }
+
+      .tab-text-mobile {
+        display: inline;
+        font-weight: 600;
+      }
+
+      .tab-badge {
+        margin-left: auto;
+        align-self: center;
+      }
+
+      /* Supplier cards mobile */
       .supplier-header {
         flex-direction: column;
         align-items: flex-start;
-        gap: var(--space-2);
+        gap: var(--space-3);
+        padding: var(--space-4);
+      }
+
+      .supplier-info {
+        width: 100%;
+      }
+
+      .supplier-logo {
+        width: 50px;
+        height: 50px;
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        flex-shrink: 0;
       }
 
       .supplier-actions {
         flex-direction: column;
+        gap: var(--space-3);
+        width: 100%;
+        padding: var(--space-4);
+        background: var(--color-surface-2);
+        border-top: 1px solid var(--color-border);
       }
 
+      .supplier-actions button {
+        width: 100%;
+        justify-content: center;
+        min-height: 48px;
+        border-radius: var(--radius-lg);
+        font-weight: 600;
+        transition: all var(--transition);
+      }
+
+      .supplier-actions button:first-child {
+        background: var(--color-surface);
+        border: 2px solid var(--color-primary);
+        color: var(--color-primary);
+      }
+
+      .supplier-actions button:first-child:hover {
+        background: var(--color-primary);
+        color: white;
+      }
+
+      .supplier-actions button:last-child {
+        background: var(--gradient-primary);
+        border: none;
+        color: white;
+      }
+
+      .supplier-actions button:last-child:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+      }
+
+      .suppliers-grid {
+        gap: var(--space-4);
+      }
+
+      .supplier-card {
+        border-radius: var(--radius-lg);
+      }
+
+      /* Order cards mobile */
+      .order-card {
+        border-radius: var(--radius-lg);
+        padding: var(--space-4);
+        margin-bottom: var(--space-3);
+      }
+
+      .order-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-3);
+        margin-bottom: var(--space-4);
+      }
+
+      .order-info {
+        width: 100%;
+      }
+
+      .order-info h3 {
+        font-size: var(--text-xl);
+        margin-bottom: var(--space-2);
+      }
+
+      .order-meta {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+      }
+
+      .order-actions {
+        width: 100%;
+        justify-content: center;
+        gap: var(--space-3);
+        margin-top: var(--space-4);
+      }
+
+      .order-actions button {
+        flex: 1;
+        min-height: 48px;
+        border-radius: var(--radius-lg);
+        font-weight: 600;
+        transition: all var(--transition);
+      }
+
+      .btn-primary-outline {
+        background: var(--color-surface);
+        border: 2px solid var(--color-primary);
+        color: var(--color-primary);
+      }
+
+      .btn-primary-outline:hover {
+        background: var(--color-primary);
+        color: white;
+        transform: translateY(-1px);
+      }
+
+      .order-summary {
+        text-align: center;
+        padding: var(--space-4);
+        background: var(--color-surface-2);
+        border-radius: var(--radius-lg);
+        border-top: 1px solid var(--color-border);
+        margin-top: var(--space-4);
+      }
+
+      .total-amount {
+        font-size: var(--text-xl);
+        font-weight: 700;
+        color: var(--color-primary);
+      }
+
+      /* Info section mobile */
       .info-section {
         grid-template-columns: 1fr;
+        gap: var(--space-6);
+      }
+
+      .info-card {
+        padding: var(--space-6);
+      }
+
+      /* Modal improvements */
+      .modal-content {
+        width: 95%;
+        margin: var(--space-4);
+        max-height: 90vh;
+      }
+
+      .modal-header {
+        padding: var(--space-4) var(--space-6);
+      }
+
+      .modal-body {
+        padding: var(--space-4) var(--space-6);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .wholesale-container {
+        padding: 0 var(--space-3);
+      }
+
+      .header-section {
+        padding: var(--space-4) var(--space-3);
+        border-radius: var(--radius-lg);
+        margin-bottom: var(--space-4);
+      }
+
+      .header-text h1 {
+        font-size: var(--text-xl);
+        line-height: 1.2;
+      }
+
+      .header-text p {
+        font-size: var(--text-sm);
+        line-height: 1.4;
+      }
+
+      .header-stats {
+        gap: var(--space-3);
+      }
+
+      .stat {
+        padding: var(--space-2) var(--space-3);
+        min-width: 90px;
+      }
+
+      .stat-icon svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      .tabs {
+        padding: var(--space-2);
+        gap: var(--space-1);
+      }
+
+      .tab-button {
+        min-height: 56px;
+        padding: var(--space-3) var(--space-2);
+        margin-bottom: var(--space-1);
+      }
+
+      .tab-icon {
+        width: 24px;
+        height: 24px;
+      }
+
+      .tab-text-mobile {
+        font-size: var(--text-sm);
+      }
+
+      .supplier-card {
+        margin-bottom: var(--space-4);
+      }
+
+      .supplier-logo {
+        width: 45px;
+        height: 45px;
+      }
+
+      .supplier-header {
+        padding: var(--space-3);
+        gap: var(--space-2);
+      }
+
+      .supplier-actions {
+        padding: var(--space-3);
+        gap: var(--space-2);
+      }
+
+      .supplier-actions button {
+        min-height: 44px;
+        font-size: var(--text-sm);
+      }
+
+      .order-card {
+        padding: var(--space-3);
+        margin-bottom: var(--space-2);
+      }
+
+      .order-info h3 {
+        font-size: var(--text-lg);
+      }
+
+      .order-actions {
+        gap: var(--space-2);
+        margin-top: var(--space-3);
+      }
+
+      .order-actions button {
+        min-height: 44px;
+        font-size: var(--text-sm);
+      }
+
+      .order-summary {
+        padding: var(--space-3);
+        margin-top: var(--space-3);
+      }
+
+      .modal-content {
+        width: 98%;
+        margin: var(--space-2);
+      }
+
+      .modal-header {
+        padding: var(--space-3) var(--space-4);
+      }
+
+      .modal-body {
+        padding: var(--space-3) var(--space-4);
       }
     }
 
@@ -1161,6 +1651,20 @@ interface OrderData {
       border-radius: var(--radius-lg);
       padding: var(--space-4);
       background: white;
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition);
+      position: relative;
+      cursor: pointer;
+    }
+
+    .order-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--color-primary-300);
+    }
+
+    .order-card:active {
+      transform: translateY(-1px);
       box-shadow: var(--shadow-sm);
     }
 

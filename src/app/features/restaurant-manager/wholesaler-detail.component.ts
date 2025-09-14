@@ -1533,6 +1533,10 @@ interface CartItem {
 
     /* Responsive Design */
     @media (max-width: 1024px) {
+      .wholesaler-detail-container {
+        padding: 0 var(--space-6) var(--space-8) var(--space-6);
+      }
+
       .products-grid {
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
         gap: var(--space-4);
@@ -1558,7 +1562,7 @@ interface CartItem {
 
     @media (max-width: 768px) {
       .wholesaler-detail-container {
-        padding: 0 var(--space-4);
+        padding: 0 var(--space-4) var(--space-12) var(--space-4);
       }
 
       .detail-header {
