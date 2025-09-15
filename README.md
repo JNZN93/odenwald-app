@@ -2,7 +2,7 @@
 
 ## 🚀 Übersicht
 
-Das Frontend der Odenwald-App ist eine moderne Angular 18 Anwendung, die alle Funktionen einer Food-Delivery-Plattform bereitstellt. Die Anwendung nutzt moderne Angular APIs, ist vollständig responsive und bietet eine intuitive Benutzeroberfläche für alle Benutzerrollen.
+Das Frontend der ODNWLD liefert App ist eine moderne Angular 18 Anwendung, die alle Funktionen einer Food-Delivery-Plattform bereitstellt. Die Anwendung nutzt moderne Angular APIs, ist vollständig responsive und bietet eine intuitive Benutzeroberfläche für alle Benutzerrollen.
 
 ## ✨ Hauptmerkmale
 

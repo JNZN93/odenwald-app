@@ -20,6 +20,19 @@ export interface OrderItem {
   }>;
 }
 
+export interface LoyaltyData {
+  restaurant_id: string;
+  restaurant_name: string;
+  customer_id: string;
+  current_stamps: number;
+  lifetime_earned: number;
+  lifetime_redeemed: number;
+  can_redeem: boolean;
+  stamps_required: number;
+  discount_percent: number;
+  last_updated?: string;
+}
+
 export interface Order {
   id: string;
   user_id: string;
@@ -31,6 +44,9 @@ export interface Order {
   subtotal: number;
   delivery_fee: number;
   total_price: number;
+  loyalty_discount_amount?: number;
+  loyalty_redeemed?: boolean;
+  loyalty_redemption_stamps_used?: number;
   status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked_up' | 'delivered' | 'cancelled' | 'open' | 'in_progress' | 'out_for_delivery';
   payment_status: 'pending' | 'paid' | 'failed';
   delivery_address: string;
@@ -95,6 +111,9 @@ export class OrdersService {
     subtotal: Number(raw.subtotal) || 0,
     delivery_fee: Number(raw.delivery_fee) || 0,
     total_price: Number(raw.total_price) || 0,
+    loyalty_discount_amount: raw.loyalty_discount_amount != null ? Number(raw.loyalty_discount_amount) : undefined,
+    loyalty_redeemed: raw.loyalty_redeemed != null ? !!raw.loyalty_redeemed : undefined,
+    loyalty_redemption_stamps_used: raw.loyalty_redemption_stamps_used != null ? Number(raw.loyalty_redemption_stamps_used) : undefined,
     status: raw.status,
     payment_status: raw.payment_status,
     delivery_address: raw.delivery_address,
@@ -248,6 +267,11 @@ export class OrdersService {
     return this.http.get<{ count: number; orders: any[] }>(`${this.baseUrl}/available`).pipe(
       map(response => (response.orders || []).map(o => this.normalizeOrder(o)))
     );
+  }
+
+  // Get current user's loyalty data across all restaurants
+  getMyLoyalty(): Observable<{ count: number; loyalty: LoyaltyData[] }> {
+    return this.http.get<{ count: number; loyalty: any[] }>(`${this.baseUrl}/my-loyalty`);
   }
 
   // Get order statistics

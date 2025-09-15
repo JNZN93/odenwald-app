@@ -1,6 +1,6 @@
-# Restaurant-Bilder für die Odenwald-App
+# Restaurant-Bilder für die ODNWLD liefert App
 
-Diese Sammlung von hochwertigen Stock-Fotos wird für die Darstellung der verschiedenen Restaurant-Typen in der Odenwald-App verwendet.
+Diese Sammlung von hochwertigen Stock-Fotos wird für die Darstellung der verschiedenen Restaurant-Typen in der ODNWLD liefert App verwendet.
 
 ## Verfügbare Bilder
 

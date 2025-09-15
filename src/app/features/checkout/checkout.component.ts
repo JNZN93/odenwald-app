@@ -2,6 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { trigger, state, style, transition, animate } from '@angular/animations';
 import { CartService, Cart, CartItem } from '../../core/services/supplier.service';
 import { OrdersService } from '../../core/services/orders.service';
 import { PaymentsService } from '../../core/services/payments.service';
@@ -27,6 +28,18 @@ interface CustomerInfo {
   selector: 'app-checkout',
   standalone: true,
   imports: [CommonModule, FormsModule, ImageFallbackDirective],
+  animations: [
+    trigger('fadeInOut', [
+      state('in', style({ opacity: 1, transform: 'translateY(0)' })),
+      transition('void => *', [
+        style({ opacity: 0, transform: 'translateY(-10px)' }),
+        animate('300ms ease-in')
+      ]),
+      transition('* => void', [
+        animate('200ms ease-out', style({ opacity: 0, transform: 'translateY(-10px)' }))
+      ])
+    ])
+  ],
   template: `
     <div class="checkout-container">
       <div class="checkout-header">
@@ -269,9 +282,56 @@ interface CustomerInfo {
               <span>{{ cart.delivery_fee | currency:'EUR':'symbol':'1.2-2':'de' }}</span>
             </div>
 
+            <!-- Loyalty redemption section -->
+            <div class="loyalty-section" *ngIf="loyaltyAvailable">
+              <div class="loyalty-header" [class.active]="useLoyaltyReward">
+                <div class="loyalty-icon">
+                  <i class="fa-solid fa-gift"></i>
+                </div>
+                <div class="loyalty-info">
+                  <div class="loyalty-title">Stempelkarten-Rabatt verfügbar!</div>
+                  <div class="loyalty-subtitle">{{ loyaltySettings.stamps_required }} Stempel = {{ loyaltySettings.discount_percent }}% Rabatt</div>
+                </div>
+                <div class="loyalty-status">
+                  <div class="stamps-indicator" [class.can-redeem]="canRedeem">
+                    <i class="fa-solid fa-star"></i>
+                    <span>{{ currentUserStamps || 0 }}/{{ loyaltySettings.stamps_required }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="loyalty-action" *ngIf="canRedeem">
+                <button
+                  class="loyalty-redeem-btn"
+                  [class.active]="useLoyaltyReward"
+                  (click)="toggleLoyalty()"
+                >
+                  <i class="fa-solid" [class]="useLoyaltyReward ? 'fa-times' : 'fa-gift'"></i>
+                  {{ useLoyaltyReward ? 'Rabatt entfernen' : 'Jetzt einlösen!' }}
+                </button>
+              </div>
+
+              <div class="loyalty-preview" *ngIf="useLoyaltyReward" [@fadeInOut]>
+                <div class="discount-applied">
+                  <i class="fa-solid fa-check-circle"></i>
+                  <span class="discount-text">
+                    {{ loyaltySettings.discount_percent }}% Rabatt angewendet
+                  </span>
+                  <span class="discount-amount">
+                    -{{ getLoyaltyDiscount(cart) | currency:'EUR':'symbol':'1.2-2':'de' }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="loyalty-notice" *ngIf="!canRedeem">
+                <i class="fa-solid fa-info-circle"></i>
+                <span>Sammle noch {{ loyaltySettings.stamps_required - (currentUserStamps || 0) }} Stempel für den nächsten Rabatt!</span>
+              </div>
+            </div>
+
             <div class="summary-row total">
               <span>Gesamt:</span>
-              <span>{{ cart.total | currency:'EUR':'symbol':'1.2-2':'de' }}</span>
+              <span>{{ getDisplayedTotal(cart) | currency:'EUR':'symbol':'1.2-2':'de' }}</span>
             </div>
 
             <!-- Minimum Order Warning -->
@@ -802,6 +862,203 @@ interface CustomerInfo {
         justify-content: space-between;
       }
     }
+
+    /* ===== LOYALTY STYLES ===== */
+
+    .loyalty-section {
+      margin: var(--space-4) 0;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+      border: 2px solid #e8efff;
+      transition: all var(--transition);
+    }
+
+    .loyalty-section:hover {
+      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
+      transform: translateY(-2px);
+    }
+
+    /* Loyalty Header */
+    .loyalty-header {
+      display: flex;
+      align-items: center;
+      padding: var(--space-4);
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      color: white;
+      transition: all var(--transition);
+    }
+
+    .loyalty-header.active {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    }
+
+    .loyalty-icon {
+      font-size: 2rem;
+      margin-right: var(--space-3);
+      opacity: 0.9;
+    }
+
+    .loyalty-info {
+      flex: 1;
+    }
+
+    .loyalty-title {
+      font-size: var(--text-lg);
+      font-weight: 700;
+      margin-bottom: var(--space-1);
+    }
+
+    .loyalty-subtitle {
+      font-size: var(--text-sm);
+      opacity: 0.9;
+      font-weight: 500;
+    }
+
+    .loyalty-status {
+      margin-left: var(--space-3);
+    }
+
+    .stamps-indicator {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      background: rgba(255, 255, 255, 0.2);
+      padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-full);
+      font-weight: 600;
+      font-size: var(--text-sm);
+      transition: all var(--transition);
+    }
+
+    .stamps-indicator.can-redeem {
+      background: rgba(255, 255, 255, 0.3);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+      animation: pulse 2s infinite;
+    }
+
+    .stamps-indicator i {
+      color: #fbbf24;
+    }
+
+    /* Loyalty Action */
+    .loyalty-action {
+      padding: var(--space-4);
+      text-align: center;
+    }
+
+    .loyalty-redeem-btn {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+      border: none;
+      padding: var(--space-3) var(--space-6);
+      border-radius: var(--radius-full);
+      font-size: var(--text-base);
+      font-weight: 700;
+      cursor: pointer;
+      transition: all var(--transition);
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .loyalty-redeem-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+    }
+
+    .loyalty-redeem-btn:active {
+      transform: translateY(0);
+    }
+
+    .loyalty-redeem-btn.active {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+    }
+
+    .loyalty-redeem-btn.active:hover {
+      box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
+    }
+
+    /* Loyalty Preview */
+    .loyalty-preview {
+      padding: var(--space-4);
+      background: #f0fdf4;
+      border-top: 1px solid #bbf7d0;
+    }
+
+    .discount-applied {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      color: #166534;
+      font-weight: 600;
+    }
+
+    .discount-applied i {
+      color: #16a34a;
+      font-size: var(--text-lg);
+    }
+
+    .discount-text {
+      flex: 1;
+    }
+
+    .discount-amount {
+      color: #dc2626;
+      font-weight: 700;
+      font-size: var(--text-lg);
+    }
+
+    /* Loyalty Notice */
+    .loyalty-notice {
+      padding: var(--space-4);
+      background: #fef3c7;
+      border-top: 1px solid #fde68a;
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      color: #92400e;
+      font-weight: 600;
+    }
+
+    .loyalty-notice i {
+      color: #d97706;
+      font-size: var(--text-lg);
+    }
+
+    /* Animations */
+    @keyframes pulse {
+      0%, 100% {
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+      }
+      50% {
+        box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.6);
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .loyalty-header {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--space-2);
+      }
+
+      .loyalty-icon {
+        margin-right: 0;
+      }
+
+      .loyalty-status {
+        margin-left: 0;
+      }
+
+      .loyalty-redeem-btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
   `]
 })
 export class CheckoutComponent implements OnInit {
@@ -831,6 +1088,17 @@ export class CheckoutComponent implements OnInit {
   selectedPaymentMethod = 'cash';
   isAuthenticated = false;
   availablePaymentMethods: { cash: boolean; card: boolean; paypal: boolean } | null = null;
+  // Loyalty UI state
+  loyaltyAvailable = false;
+  canRedeem = false; // can be refined with dedicated endpoint later
+  stampsMissing = 0;
+  currentUserStamps = 0;
+  useLoyaltyReward = false;
+  loyaltySettings: { enabled: boolean; discount_percent: number; stamps_required: number; min_subtotal_to_earn?: number } = {
+    enabled: false,
+    discount_percent: 10,
+    stamps_required: 5
+  };
 
   ngOnInit() {
     // Check if cart is empty and redirect if needed
@@ -868,6 +1136,25 @@ export class CheckoutComponent implements OnInit {
         this.availablePaymentMethods = { cash: true, card: true, paypal: true };
       }
     });
+
+    // Load loyalty settings and user stamps
+    this.restaurantsService.getLoyaltySettings(restaurantId).subscribe({
+      next: (settings) => {
+        this.loyaltyAvailable = !!(settings && settings.enabled);
+        this.loyaltySettings = settings || this.loyaltySettings;
+
+        // If loyalty is enabled, check if user has enough stamps
+        if (this.loyaltyAvailable && this.isAuthenticated) {
+          this.checkUserLoyaltyForRestaurant(restaurantId);
+        } else {
+          this.canRedeem = false;
+        }
+      },
+      error: () => {
+        this.loyaltyAvailable = false;
+        this.canRedeem = false;
+      }
+    });
   }
 
   public isPaymentMethodAvailable(method: string): boolean {
@@ -886,6 +1173,37 @@ export class CheckoutComponent implements OnInit {
     if (this.availablePaymentMethods.card) return 'card';
     if (this.availablePaymentMethods.paypal) return 'paypal';
     return 'cash'; // fallback
+  }
+
+  private checkUserLoyaltyForRestaurant(restaurantId: string) {
+    this.ordersService.getMyLoyalty().subscribe({
+      next: (loyaltyResponse) => {
+        // Find loyalty data for current restaurant
+        const restaurantLoyalty = loyaltyResponse.loyalty.find(
+          (loyalty: any) => loyalty.restaurant_id === restaurantId
+        );
+
+        if (restaurantLoyalty) {
+          this.canRedeem = restaurantLoyalty.can_redeem;
+          this.currentUserStamps = restaurantLoyalty.current_stamps || 0;
+          this.stampsMissing = Math.max(0, restaurantLoyalty.stamps_required - this.currentUserStamps);
+          console.log('Loyalty check result:', {
+            restaurantId,
+            currentStamps: restaurantLoyalty.current_stamps,
+            stampsRequired: restaurantLoyalty.stamps_required,
+            canRedeem: restaurantLoyalty.can_redeem
+          });
+        } else {
+          this.canRedeem = false;
+          this.currentUserStamps = 0;
+          this.stampsMissing = this.loyaltySettings.stamps_required;
+        }
+      },
+      error: (error) => {
+        console.error('Error checking user loyalty:', error);
+        this.canRedeem = false;
+      }
+    });
   }
 
   updateQuantity(menuItemId: string, quantity: number) {
@@ -939,7 +1257,7 @@ export class CheckoutComponent implements OnInit {
 
     // Guests can now use online payments (card/paypal)
 
-    this.cartService.createOrder(fullAddress, this.deliveryAddress.instructions, this.selectedPaymentMethod, customerInfo)
+    this.cartService.createOrder(fullAddress, this.deliveryAddress.instructions, this.selectedPaymentMethod, customerInfo, this.useLoyaltyReward)
       .subscribe({
         next: (response) => {
           this.loading = false;
@@ -978,6 +1296,23 @@ export class CheckoutComponent implements OnInit {
       });
   }
 
+  toggleLoyalty() {
+    if (!this.loyaltyAvailable) return;
+    this.useLoyaltyReward = !this.useLoyaltyReward;
+  }
+
+  getLoyaltyDiscount(cart: Cart): number {
+    if (!this.loyaltyAvailable || !this.useLoyaltyReward) return 0;
+    const pct = Math.max(1, Math.min(100, this.loyaltySettings.discount_percent || 10));
+    const discount = (cart.subtotal || 0) * (pct / 100);
+    return Math.round(discount * 100) / 100;
+  }
+
+  getDisplayedTotal(cart: Cart): number {
+    const discount = this.getLoyaltyDiscount(cart);
+    return Math.max(0, (cart.subtotal || 0) - discount + (cart.delivery_fee || 0));
+  }
+
   selectCard() {
     this.selectedPaymentMethod = 'card';
   }
@@ -987,7 +1322,12 @@ export class CheckoutComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/customer']);
+    const cart = this.cartService.getCurrentCart();
+    if (cart && cart.restaurant_id) {
+      this.router.navigate(['/restaurant', cart.restaurant_id]);
+    } else {
+      this.router.navigate(['/customer']);
+    }
   }
 
   goToRestaurants() {

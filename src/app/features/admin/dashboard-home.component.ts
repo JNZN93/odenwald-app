@@ -32,7 +32,7 @@ export interface AdminMenuItem {
       <!-- Welcome Header -->
       <div class="welcome-header">
         <h1>Willkommen im Admin-Bereich</h1>
-        <p>Übersicht und Verwaltung der Odenwald-App Plattform</p>
+        <p>Übersicht und Verwaltung der ODNWLD liefert Plattform</p>
       </div>
 
       <!-- Quick Stats -->

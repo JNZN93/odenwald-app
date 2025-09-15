@@ -15,7 +15,7 @@ import { environment } from '../../../environments/environment';
       <div class="login-card">
         <div class="login-header">
           <h1>Anmelden</h1>
-          <p class="login-subtitle">Willkommen zurück bei Odenwald App</p>
+          <p class="login-subtitle">Willkommen zurück bei ODNWLD liefert</p>
         </div>
         
         <!-- Google Sign In Button -->

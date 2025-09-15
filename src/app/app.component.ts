@@ -7,6 +7,7 @@ import { CommonModule } from '@angular/common';
 import { ToastContainerComponent } from './shared/components/toast-container.component';
 import { ConfirmationDialogComponent } from './shared/components/confirmation-dialog.component';
 import { LoadingSpinnerComponent } from './shared/components/loading-spinner.component';
+import { AIChatWidgetComponent } from './shared/components/ai-chat-widget.component';
 import { LoadingService } from './core/services/loading.service';
 import { environment } from '../environments/environment';
 
@@ -20,7 +21,8 @@ import { environment } from '../environments/environment';
     CommonModule,
     ToastContainerComponent,
     ConfirmationDialogComponent,
-    LoadingSpinnerComponent
+    LoadingSpinnerComponent,
+    AIChatWidgetComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'

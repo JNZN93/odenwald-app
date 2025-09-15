@@ -13,7 +13,7 @@ import { AuthService } from '../../core/auth/auth.service';
       <div class="registration-card">
         <div class="registration-header">
           <h1>Registrieren</h1>
-          <p class="registration-subtitle">Erstelle dein Konto bei Odenwald App</p>
+          <p class="registration-subtitle">Erstelle dein Konto bei ODNWLD liefert</p>
         </div>
 
         <form (ngSubmit)="onSubmit()" #f="ngForm" class="registration-form">

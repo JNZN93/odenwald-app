@@ -29,6 +29,25 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* Desktop Layout: Logo left, navigation right */
+@media (min-width: 1025px) {
+  .header-content {
+    justify-content: space-between;
+  }
+
+  .main-nav {
+    margin-left: auto;
+    margin-right: 1rem;
+  }
+
+  .header-right {
+    margin-left: 0;
+  }
 }
 
 .header-left {
@@ -79,13 +98,31 @@
   color: #fef08a;
 }
 
-.app-title {
-  margin: 0;
-  font-size: var(--text-2xl);
-  font-weight: 700;
+.title-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  margin: 0 0 0.5rem 0;
+}
+
+.title-brand {
   font-family: var(--font-creative);
+  font-weight: 700;
+  font-size: var(--text-2xl);
   color: white;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  line-height: 1;
+}
+
+.title-action {
+  font-family: var(--font-script);
+  font-weight: 400;
+  font-size: 1.1em;
+  opacity: 0.95;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  line-height: 1;
 }
 
 .app-subtitle {
@@ -100,15 +137,16 @@
 
 .main-nav {
   display: flex;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .nav-link {
   color: white !important;
   text-decoration: none;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.75rem;
   border-radius: var(--radius-full);
   font-weight: 500;
+  font-size: 0.9rem;
   transition: all var(--transition);
   border: 1px solid transparent;
   display: flex;
@@ -380,11 +418,17 @@
   gap: 0.75rem;
 }
 
-.mobile-nav-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin: 0;
-  color: white;
+/* Mobile title styles are now handled by .title-container */
+
+/* Mobile adjustments for title */
+@media (max-width: 768px) {
+  .title-brand {
+    font-size: 1.5rem;
+  }
+
+  .title-action {
+    font-size: 1em;
+  }
 }
 
 .mobile-nav-close {

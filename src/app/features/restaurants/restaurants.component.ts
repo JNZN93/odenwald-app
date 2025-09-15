@@ -13,7 +13,7 @@ import { Observable } from 'rxjs';
     <section class="restaurants-section container">
       <header class="section-header">
         <h2 class="section-title">Restaurants</h2>
-        <p class="section-subtitle">Entdecke regionale Küchen im Odenwald</p>
+        <p class="section-subtitle">Entdecke regionale Küchen im ODNWLD</p>
       </header>
 
       <ng-container *ngIf="restaurants$ | async as restaurants; else loading">

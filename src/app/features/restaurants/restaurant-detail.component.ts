@@ -2,11 +2,13 @@ import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AsyncPipe, NgForOf, NgIf, CurrencyPipe, JsonPipe } from '@angular/common';
 import { RestaurantsService, RestaurantDTO } from '../../core/services/restaurants.service';
+import { OrdersService, LoyaltyData } from '../../core/services/orders.service';
+import { AuthService } from '../../core/auth/auth.service';
 import { MenuItemVariantsModalComponent } from './menu-item-variants-modal.component';
 
 import { CartService } from '../../core/services/supplier.service';
 import { ImageFallbackDirective } from '../../core/image-fallback.directive';
-import { Observable, map, switchMap, tap } from 'rxjs';
+import { Observable, map, switchMap, tap, of, catchError } from 'rxjs';
 
 interface MenuItem {
   id: string;
@@ -121,6 +123,21 @@ interface MenuCategoryWithItems {
               <i class="fa-solid" [class.fa-circle-check]="isOpen(restaurant)" [class.fa-circle-xmark]="!isOpen(restaurant)"></i>
               {{ isOpen(restaurant) ? 'Geöffnet' : 'Geschlossen' }}
             </span>
+          </div>
+
+          <!-- Loyalty Status for logged-in users -->
+          <div class="loyalty-status" *ngIf="(isLoggedIn$ | async) && currentLoyaltyData">
+            <div class="loyalty-badge">
+              <i class="fa-solid fa-ticket-alt"></i>
+              <span>{{ currentLoyaltyData.current_stamps }}/{{ currentLoyaltyData.stamps_required }} Stempel</span>
+              <button
+                *ngIf="currentLoyaltyData.can_redeem"
+                class="redeem-btn-small"
+                (click)="onRedeemLoyalty(currentLoyaltyData)"
+              >
+                {{ currentLoyaltyData.discount_percent }}% Rabatt
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -366,6 +383,50 @@ interface MenuCategoryWithItems {
       padding: 0 var(--space-6);
       display: flex;
       justify-content: flex-end;
+    }
+
+    .loyalty-status {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 var(--space-6);
+      display: flex;
+      justify-content: flex-end;
+      margin-top: var(--space-2);
+    }
+
+    .loyalty-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      background: var(--color-success-light);
+      border: 2px solid var(--color-success);
+      border-radius: var(--radius-lg);
+      padding: var(--space-2) var(--space-3);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--color-success);
+    }
+
+    .loyalty-badge i {
+      font-size: var(--text-lg);
+    }
+
+    .redeem-btn-small {
+      background: var(--gradient-primary);
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      border-radius: var(--radius-md);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+      margin-left: var(--space-2);
+    }
+
+    .redeem-btn-small:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
 
     .eta-badge {
@@ -1123,6 +1184,8 @@ export class RestaurantDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private restaurantsService = inject(RestaurantsService);
+  private ordersService = inject(OrdersService);
+  private authService = inject(AuthService);
   private cartService = inject(CartService);
 
   restaurant$!: Observable<RestaurantDTO>;
@@ -1130,6 +1193,9 @@ export class RestaurantDetailComponent implements OnInit {
   cartItemsCount$ = this.cartService.cart$.pipe(
     map(cart => cart ? this.cartService.getItemCount() : 0)
   );
+  isLoggedIn$ = this.authService.currentUser$.pipe(map(user => !!user));
+  currentLoyaltyData: LoyaltyData | null = null;
+
   etaDebug: any | null = null;
   etaModalOpen = false;
   etaSummaryMinutes: number | null = null;
@@ -1185,6 +1251,13 @@ export class RestaurantDetailComponent implements OnInit {
     if (restaurantId) {
       this.fetchEtaSummary(restaurantId);
     }
+
+    // Load loyalty data if user is logged in
+    this.isLoggedIn$.subscribe(isLoggedIn => {
+      if (isLoggedIn && restaurantId) {
+        this.loadLoyaltyData(restaurantId);
+      }
+    });
   }
 
   isOpen(restaurant: RestaurantDTO): boolean {
@@ -1413,5 +1486,24 @@ export class RestaurantDetailComponent implements OnInit {
     if (minutes <= 25) return 'fast';
     if (minutes <= 45) return 'medium';
     return 'slow';
+  }
+
+  private loadLoyaltyData(restaurantId: string) {
+    this.ordersService.getMyLoyalty().pipe(
+      catchError(error => {
+        console.error('Error loading loyalty data:', error);
+        return of({ count: 0, loyalty: [] });
+      })
+    ).subscribe(loyaltyResponse => {
+      // Find loyalty data for current restaurant
+      this.currentLoyaltyData = loyaltyResponse.loyalty.find(
+        loyalty => loyalty.restaurant_id === restaurantId
+      ) || null;
+    });
+  }
+
+  onRedeemLoyalty(loyalty: LoyaltyData) {
+    // TODO: Implement redemption logic for this restaurant
+    alert(`Du kannst ${loyalty.discount_percent}% Rabatt bei ${loyalty.restaurant_name} einlösen!`);
   }
 }

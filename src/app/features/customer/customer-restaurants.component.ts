@@ -34,7 +34,7 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
 
         <!-- Full Hero Content (when no coordinates or not compact mode) -->
         <div class="hero-content" *ngIf="!userCoordinates || !isCompactMode">
-          <h1 class="hero-title" *ngIf="!isCompactMode">Essen bestellen im Odenwald</h1>
+          <h1 class="hero-title" *ngIf="!isCompactMode">Essen bestellen im ODNWLD</h1>
           <p class="hero-subtitle" *ngIf="!isCompactMode">Entdecke lokale Restaurants und lass dir dein Lieblingsessen nach Hause liefern</p>
 
           <!-- Navigation -->
@@ -466,7 +466,7 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
   formattedAddress = '';
   isGeocoding = false;
   isGettingLocation = false;
-  searchRadius = 40; // km - Erhöht für bessere Abdeckung im Odenwald
+  searchRadius = 40; // km - Erhöht für bessere Abdeckung im ODNWLD
 
   // Search and filter properties - vereinfacht für Standort-basierte Suche
   searchTerm = '';

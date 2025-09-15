@@ -429,6 +429,19 @@ export class RestaurantsService {
     );
   }
 
+  // Loyalty settings
+  getLoyaltySettings(restaurantId: string): Observable<any | null> {
+    return this.http.get<{ loyalty_settings: any | null }>(`${this.baseUrl}/${restaurantId}/loyalty-settings`).pipe(
+      map(resp => resp.loyalty_settings ?? null)
+    );
+  }
+
+  updateLoyaltySettings(restaurantId: string, settings: any): Observable<any> {
+    return this.http.put<{ message: string; loyalty_settings: any }>(`${this.baseUrl}/${restaurantId}/loyalty-settings`, settings).pipe(
+      map(resp => resp.loyalty_settings)
+    );
+  }
+
   updateRestaurantPaymentMethods(
     restaurantId: string,
     paymentMethods: { cash: boolean; card: boolean; paypal: boolean }

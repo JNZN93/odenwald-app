@@ -200,7 +200,7 @@ export class CartService {
   }
 
   // Order creation
-  createOrder(deliveryAddress: string, deliveryInstructions?: string, paymentMethod?: string, customerInfo?: any): Observable<any> {
+  createOrder(deliveryAddress: string, deliveryInstructions?: string, paymentMethod?: string, customerInfo?: any, useLoyaltyReward?: boolean): Observable<any> {
     const cart = this.getCurrentCart();
     if (!cart || cart.items.length === 0) {
       throw new Error('Warenkorb ist leer');
@@ -222,6 +222,11 @@ export class CartService {
     // Add customer_info for guest orders
     if (customerInfo) {
       orderData.customer_info = customerInfo;
+    }
+
+    // Apply loyalty flag if requested
+    if (useLoyaltyReward) {
+      orderData.use_loyalty_reward = true;
     }
 
     return this.http.post(`${environment.apiUrl}/orders`, orderData).pipe(

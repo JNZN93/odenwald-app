@@ -6,7 +6,10 @@
           <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
           </svg>
-          <h1 class="app-title">Odenwald App</h1>
+          <div class="title-container">
+            <span class="title-brand">ODNWLD</span>
+            <span class="title-action">liefert</span>
+          </div>
         </div>
         <p class="app-subtitle">Ihre regionale Lieferplattform</p>
       </div>
@@ -56,6 +59,23 @@
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
           <span class="nav-text">Admin</span>
+        </a>
+
+        <!-- Customer Dashboard Link nur für Kunden -->
+        <a *ngIf="hasCustomerRole" routerLink="/dashboard" routerLinkActive="active" class="nav-link">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <path d="M9 9h6v6H9z"/>
+            <path d="M9 1v6"/>
+            <path d="M15 1v6"/>
+            <path d="M9 17v6"/>
+            <path d="M15 17v6"/>
+            <path d="M1 9h6"/>
+            <path d="M17 9h6"/>
+            <path d="M1 15h6"/>
+            <path d="M17 15h6"/>
+          </svg>
+          <span class="nav-text">Mein Dashboard</span>
         </a>
 
         <!-- Driver Dashboard Link nur für Fahrer -->
@@ -130,7 +150,10 @@
           <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
           </svg>
-          <h2 class="mobile-nav-title">Odenwald App</h2>
+          <div class="title-container">
+            <span class="title-brand">ODNWLD</span>
+            <span class="title-action">liefert</span>
+          </div>
         </div>
         <button class="mobile-nav-close" (click)="closeMobileNav()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -174,6 +197,23 @@
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
           <span class="mobile-nav-text">Admin</span>
+        </a>
+
+        <!-- Customer Dashboard Link nur für Kunden -->
+        <a *ngIf="hasCustomerRole" routerLink="/dashboard" routerLinkActive="active" class="mobile-nav-link" (click)="closeMobileNav()">
+          <svg class="mobile-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <path d="M9 9h6v6H9z"/>
+            <path d="M9 1v6"/>
+            <path d="M15 1v6"/>
+            <path d="M9 17v6"/>
+            <path d="M15 17v6"/>
+            <path d="M1 9h6"/>
+            <path d="M17 9h6"/>
+            <path d="M1 15h6"/>
+            <path d="M17 15h6"/>
+          </svg>
+          <span class="mobile-nav-text">Mein Dashboard</span>
         </a>
 
         <!-- Driver Dashboard Link nur für Fahrer -->
@@ -253,4 +293,7 @@
 
   <!-- Global Confirmation Dialog -->
   <app-confirmation-dialog></app-confirmation-dialog>
+
+  <!-- AI Chat Widget (global verfügbar) -->
+  <app-ai-chat-widget></app-ai-chat-widget>
 </div>

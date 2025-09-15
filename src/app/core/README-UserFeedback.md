@@ -2,7 +2,7 @@
 
 ## 📋 Übersicht
 
-Das User Feedback System bietet eine umfassende Lösung für Benutzerinteraktionen in der Odenwald-App. Es umfasst Toast-Nachrichten, Ladezustände, Bestätigungsdialoge und globale Fehlerbehandlung.
+Das User Feedback System bietet eine umfassende Lösung für Benutzerinteraktionen in der ODNWLD liefert App. Es umfasst Toast-Nachrichten, Ladezustände, Bestätigungsdialoge und globale Fehlerbehandlung.
 
 ## 🏗️ Architektur
 
@@ -443,4 +443,4 @@ export const LOADING_CONFIG = {
 };
 ```
 
-Das User Feedback System ist vollständig in die Odenwald-App integriert und bietet eine professionelle, benutzerfreundliche Erfahrung für alle Interaktionen.
+Das User Feedback System ist vollständig in die ODNWLD liefert App integriert und bietet eine professionelle, benutzerfreundliche Erfahrung für alle Interaktionen.

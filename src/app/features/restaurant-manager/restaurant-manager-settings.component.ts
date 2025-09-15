@@ -468,6 +468,45 @@ import { Subscription } from 'rxjs';
           </div>
         </div>
 
+        <!-- Loyalty Settings -->
+        <div *ngIf="activeTab === 'loyalty'" class="settings-section">
+          <h2>Stempelkarten</h2>
+          <form (ngSubmit)="saveLoyaltySettings()" #loyaltyForm="ngForm">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" [(ngModel)]="loyaltySettings.enabled" name="loyaltyEnabled">
+                  <span class="checkmark"></span>
+                  Stempelkarten aktivieren
+                </label>
+              </div>
+
+              <div class="form-group">
+                <label for="stampsRequired">Bestellungen für Rabatt</label>
+                <input id="stampsRequired" type="number" min="1" [(ngModel)]="loyaltySettings.stamps_required" name="stampsRequired">
+              </div>
+
+              <div class="form-group">
+                <label for="discountPercent">Rabatt in %</label>
+                <input id="discountPercent" type="number" min="1" max="100" [(ngModel)]="loyaltySettings.discount_percent" name="discountPercent">
+              </div>
+
+              <div class="form-group">
+                <label for="minSubtotal">Mindestwarenkorb für Stempel (€)</label>
+                <input id="minSubtotal" type="number" step="0.01" min="0" [(ngModel)]="loyaltySettings.min_subtotal_to_earn" name="minSubtotal">
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn-primary" [disabled]="isLoading">
+                <i class="fa-solid fa-spinner fa-spin" *ngIf="isLoading"></i>
+                <i class="fa-solid fa-save" *ngIf="!isLoading"></i>
+                {{ isLoading ? 'Wird gespeichert...' : 'Stempelkarten speichern' }}
+              </button>
+            </div>
+          </form>
+        </div>
+
         <!-- Stripe Connect Settings -->
         <div *ngIf="activeTab === 'stripe'" class="settings-section">
           <h2>Stripe Connect</h2>
@@ -1467,6 +1506,7 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
     { id: 'delivery', title: 'Lieferung', icon: 'fa-solid fa-truck' },
     { id: 'notifications', title: 'Benachrichtigungen', icon: 'fa-solid fa-bell' },
     { id: 'payment', title: 'Zahlung', icon: 'fa-solid fa-credit-card' },
+    { id: 'loyalty', title: 'Stempelkarten', icon: 'fa-solid fa-ticket' },
     { id: 'stripe', title: 'Stripe Connect', icon: 'fa-brands fa-stripe' },
     { id: 'password', title: 'Passwort', icon: 'fa-solid fa-lock' }
   ];
@@ -1508,6 +1548,13 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
     cash: true,
     card: true,
     paypal: false
+  };
+
+  loyaltySettings: any = {
+    enabled: false,
+    stamps_required: 5,
+    discount_percent: 10,
+    min_subtotal_to_earn: 0
   };
 
   stripeStatusText: string = '–';
@@ -1616,6 +1663,16 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
     console.log('Restaurant data loaded:', restaurant);
     console.log('is_immediately_closed:', restaurant.is_immediately_closed);
     this.isImmediatelyClosed = restaurant.is_immediately_closed || false;
+
+    // Loyalty settings
+    if ((restaurant as any).loyalty_settings) {
+      this.loyaltySettings = {
+        enabled: !!(restaurant as any).loyalty_settings.enabled,
+        stamps_required: (restaurant as any).loyalty_settings.stamps_required || 5,
+        discount_percent: (restaurant as any).loyalty_settings.discount_percent || 10,
+        min_subtotal_to_earn: (restaurant as any).loyalty_settings.min_subtotal_to_earn || 0
+      };
+    }
 
     // Stripe status text
     const parts: string[] = [];
@@ -1825,6 +1882,24 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
       error: (error) => {
         console.error('Error saving payment settings:', error);
         this.toastService.error('Fehler', 'Zahlungsmethoden konnten nicht gespeichert werden');
+        this.isLoading = false;
+      }
+    });
+    this.subscriptions.push(sub);
+  }
+
+  saveLoyaltySettings() {
+    if (!this.currentRestaurant) return;
+    this.isLoading = true;
+    const sub = this.restaurantsService.updateLoyaltySettings(this.currentRestaurant.id, this.loyaltySettings).subscribe({
+      next: (updated) => {
+        (this.currentRestaurant as any).loyalty_settings = updated;
+        this.toastService.success('Erfolg', 'Stempelkarten-Einstellungen wurden gespeichert');
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error saving loyalty settings:', error);
+        this.toastService.error('Fehler', 'Stempelkarten-Einstellungen konnten nicht gespeichert werden');
         this.isLoading = false;
       }
     });

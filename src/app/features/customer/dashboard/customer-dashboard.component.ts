@@ -1,17 +1,19 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { OrdersService, Order } from '../../../core/services/orders.service';
 import { CartService } from '../../../core/services/supplier.service';
 import { ImageFallbackDirective } from '../../../core/image-fallback.directive';
 import { PasswordChangeComponent } from '../../../shared/components/password-change.component';
+import { LoyaltyCardsComponent } from '../../../shared/components/loyalty-cards.component';
 import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
 
 @Component({
   selector: 'app-customer-dashboard',
   standalone: true,
-  imports: [CommonModule, ImageFallbackDirective, PasswordChangeComponent],
+  imports: [CommonModule, FormsModule, ImageFallbackDirective, PasswordChangeComponent, LoyaltyCardsComponent],
   template: `
     <div class="customer-dashboard">
       <div class="dashboard-header">
@@ -101,6 +103,10 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
             </ng-container>
           </div>
 
+        <!-- Loyalty Cards -->
+        <app-loyalty-cards></app-loyalty-cards>
+
+
         <!-- Favorite Restaurants -->
         <div class="dashboard-section">
           <div class="section-header">
@@ -182,6 +188,148 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
           </div>
           <div class="modal-body">
             <app-password-change (passwordChanged)="onPasswordChanged()"></app-password-change>
+          </div>
+        </div>
+      </div>
+
+      <!-- Order Details Modal -->
+      <div *ngIf="showOrderDetailsModal && selectedOrder" class="modal-overlay" (click)="closeOrderDetailsModal()">
+        <div class="modal-content order-details-modal" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>Bestellungsdetails #{{ selectedOrder.id }}</h3>
+            <button class="close-btn" (click)="closeOrderDetailsModal()">
+              <i class="fa-solid fa-times"></i>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="order-details-content">
+              <!-- Order Header Info -->
+              <div class="order-info-section">
+                <div class="info-row">
+                  <span class="label">Restaurant:</span>
+                  <span class="value">{{ selectedOrder.restaurant_name }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Bestelldatum:</span>
+                  <span class="value">{{ selectedOrder.created_at | date:'dd.MM.yyyy HH:mm' }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Status:</span>
+                  <span class="status-badge" [class]="'status-' + selectedOrder.status">
+                    {{ getStatusLabel(selectedOrder.status) }}
+                  </span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Gesamtpreis:</span>
+                  <span class="value total-price">{{ selectedOrder.total_price | currency:'EUR':'symbol':'1.2-2':'de' }}</span>
+                </div>
+              </div>
+
+              <!-- Order Items -->
+              <div class="order-items-section">
+                <h4>Bestellte Artikel</h4>
+                <div class="order-items-list">
+                  <div class="order-item-detail" *ngFor="let item of (selectedOrder.items || [])">
+                    <div class="item-info">
+                      <span class="item-name">{{ item.name }}</span>
+                      <span class="item-quantity">× {{ item.quantity }}</span>
+                    </div>
+                    <div class="item-price">
+                      {{ item.total_price | currency:'EUR':'symbol':'1.2-2':'de' }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Delivery Information -->
+              <div class="delivery-section" *ngIf="selectedOrder.delivery_address">
+                <h4>Lieferadresse</h4>
+                <div class="address-info">
+                  <p>{{ selectedOrder.delivery_address }}</p>
+                  <p *ngIf="selectedOrder.delivery_instructions">{{ selectedOrder.delivery_instructions }}</p>
+                </div>
+              </div>
+
+              <!-- Payment Information -->
+              <div class="payment-section">
+                <h4>Zahlungsstatus</h4>
+                <p>
+                  <span class="payment-status" [class]="'status-' + selectedOrder.payment_status">
+                    {{ getPaymentStatusLabel(selectedOrder.payment_status) }}
+                  </span>
+                </p>
+              </div>
+
+              <!-- Additional Notes -->
+              <div class="notes-section">
+                <h4>Zusätzliche Hinweise</h4>
+                <textarea
+                  class="notes-input"
+                  [(ngModel)]="orderNotes"
+                  placeholder="Fügen Sie hier zusätzliche Hinweise hinzu..."
+                  rows="3"
+                ></textarea>
+              </div>
+
+              <!-- Special Requests -->
+              <div class="special-requests-section">
+                <h4>Spezielle Anfragen</h4>
+                <textarea
+                  class="special-requests-input"
+                  [(ngModel)]="orderSpecialRequests"
+                  placeholder="Haben Sie spezielle Anfragen oder Allergien?..."
+                  rows="2"
+                ></textarea>
+              </div>
+
+              <!-- Rating Section -->
+              <div class="rating-section" *ngIf="selectedOrder.status === 'delivered'">
+                <h4>Bewertung abgeben</h4>
+                <div class="rating-input">
+                  <div class="stars">
+                    <i
+                      class="fa-solid fa-star"
+                      [class.active]="rating >= 1"
+                      (click)="setRating(1)"
+                    ></i>
+                    <i
+                      class="fa-solid fa-star"
+                      [class.active]="rating >= 2"
+                      (click)="setRating(2)"
+                    ></i>
+                    <i
+                      class="fa-solid fa-star"
+                      [class.active]="rating >= 3"
+                      (click)="setRating(3)"
+                    ></i>
+                    <i
+                      class="fa-solid fa-star"
+                      [class.active]="rating >= 4"
+                      (click)="setRating(4)"
+                    ></i>
+                    <i
+                      class="fa-solid fa-star"
+                      [class.active]="rating >= 5"
+                      (click)="setRating(5)"
+                    ></i>
+                  </div>
+                  <textarea
+                    class="review-input"
+                    [(ngModel)]="reviewText"
+                    placeholder="Teilen Sie Ihre Erfahrung..."
+                    rows="3"
+                  ></textarea>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="modal-actions">
+                <button class="btn-secondary" (click)="closeOrderDetailsModal()">Schließen</button>
+                <button class="btn-primary" (click)="saveOrderDetails()">Änderungen speichern</button>
+                <button class="btn-outline" *ngIf="canReportIssue(selectedOrder)" (click)="reportIssue(selectedOrder)">Problem melden</button>
+                <button class="btn-danger" *ngIf="canCancelOrder(selectedOrder)" (click)="cancelOrder()">Bestellung stornieren</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -365,6 +513,17 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
     .status-ready { background: color-mix(in oklab, #10b981 15%, white); color: #059669; }
     .status-delivered { background: color-mix(in oklab, #059669 15%, white); color: #047857; }
     .status-cancelled { background: color-mix(in oklab, #ef4444 15%, white); color: #dc2626; }
+
+    .payment-status {
+      padding: var(--space-1) var(--space-3);
+      border-radius: var(--radius-full);
+      font-size: var(--text-sm);
+      font-weight: 500;
+    }
+
+    .status-paid { background: color-mix(in oklab, #10b981 15%, white); color: #059669; }
+    .status-failed { background: color-mix(in oklab, #ef4444 15%, white); color: #dc2626; }
+    .status-refunded { background: color-mix(in oklab, #8b5cf6 15%, white); color: #7c3aed; }
 
     .order-items {
       margin-bottom: var(--space-3);
@@ -630,6 +789,208 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
       padding: var(--space-6);
     }
 
+    /* Order Details Modal Styles */
+    .order-details-modal .modal-content {
+      max-width: 700px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .order-details-content {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+
+    .order-info-section {
+      background: var(--bg-light);
+      padding: var(--space-4);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-border);
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-2) 0;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+    }
+
+    .info-row .label {
+      font-weight: 600;
+      color: var(--color-heading);
+    }
+
+    .info-row .value {
+      color: var(--color-text);
+    }
+
+    .total-price {
+      font-size: var(--text-lg);
+      font-weight: 700;
+      color: var(--color-success);
+    }
+
+    .order-items-section h4,
+    .delivery-section h4,
+    .payment-section h4,
+    .notes-section h4,
+    .special-requests-section h4,
+    .rating-section h4 {
+      margin: 0 0 var(--space-3) 0;
+      color: var(--color-heading);
+      font-size: var(--text-lg);
+      font-weight: 600;
+    }
+
+    .order-items-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .order-item-detail {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-3);
+      background: var(--bg-light);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+    }
+
+    .item-info {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .item-name {
+      font-weight: 600;
+      color: var(--color-heading);
+    }
+
+    .item-quantity {
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+    }
+
+    .item-price {
+      font-weight: 600;
+      color: var(--color-success);
+    }
+
+    .address-info p {
+      margin: var(--space-1) 0;
+      color: var(--color-text);
+    }
+
+    .notes-input,
+    .special-requests-input,
+    .review-input {
+      width: 100%;
+      padding: var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-family: inherit;
+      font-size: var(--text-sm);
+      resize: vertical;
+    }
+
+    .notes-input:focus,
+    .special-requests-input:focus,
+    .review-input:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-primary) 15%, transparent);
+    }
+
+    .rating-input {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .stars {
+      display: flex;
+      gap: var(--space-2);
+    }
+
+    .stars i {
+      font-size: var(--text-xl);
+      color: var(--color-border);
+      cursor: pointer;
+      transition: color var(--transition);
+    }
+
+    .stars i.active {
+      color: var(--color-warning);
+    }
+
+    .stars i:hover {
+      color: var(--color-warning);
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--space-3);
+      padding-top: var(--space-4);
+      border-top: 1px solid var(--color-border);
+    }
+
+    .btn-danger {
+      background: var(--color-danger);
+      color: white;
+      border: none;
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      font-weight: 600;
+      transition: all var(--transition);
+    }
+
+    .btn-danger:hover {
+      background: color-mix(in oklab, var(--color-danger) 85%, black);
+      transform: translateY(-1px);
+    }
+
+    .btn-outline {
+      background: none;
+      border: 2px solid var(--color-primary);
+      color: var(--color-primary);
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      font-weight: 600;
+      transition: all var(--transition);
+    }
+
+    .btn-outline:hover {
+      background: var(--color-primary);
+      color: white;
+      transform: translateY(-1px);
+    }
+
+    /* AI Chat Section Styles */
+    .dashboard-section .section-header h2 {
+      font-size: var(--text-xl);
+      font-weight: 600;
+      color: var(--color-heading);
+      margin: 0;
+    }
+
+    .dashboard-section .section-header p {
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+      margin: var(--space-1) 0 0 0;
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
       .customer-dashboard {
@@ -664,6 +1025,27 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
         flex-direction: column;
         gap: var(--space-2);
       }
+
+      .order-details-modal .modal-content {
+        margin: var(--space-2);
+        max-height: 95vh;
+      }
+
+      .modal-actions {
+        flex-direction: column;
+      }
+
+      .info-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-1);
+      }
+
+      .order-item-detail {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-2);
+      }
     }
   `]
 })
@@ -682,6 +1064,12 @@ export class CustomerDashboardComponent implements OnInit {
   isLoadingOrders = false;
   ordersError: string | null = null;
   showPasswordChangeModal = false;
+  showOrderDetailsModal = false;
+  selectedOrder: Order | null = null;
+  rating = 0;
+  reviewText = '';
+  orderNotes = '';
+  orderSpecialRequests = '';
 
   // Mock featured restaurants - in real app, this would come from API
   featuredRestaurants = [
@@ -803,6 +1191,16 @@ export class CustomerDashboardComponent implements OnInit {
     return labels[mapped as keyof typeof labels] || (mapped as string);
   }
 
+  getPaymentStatusLabel(status: Order['payment_status']): string {
+    const labels = {
+      pending: 'Ausstehend',
+      paid: 'Bezahlt',
+      failed: 'Fehlgeschlagen',
+      refunded: 'Rückerstattet'
+    } as const;
+    return labels[status] || status;
+  }
+
   goToRestaurants() {
     this.router.navigate(['/customer']);
   }
@@ -822,8 +1220,57 @@ export class CustomerDashboardComponent implements OnInit {
   }
 
   viewOrderDetails(order: Order) {
-    // TODO: Implement order details modal/page
-    console.log('View order details:', order);
+    this.selectedOrder = order;
+    this.showOrderDetailsModal = true;
+  }
+
+  closeOrderDetailsModal() {
+    this.showOrderDetailsModal = false;
+    this.selectedOrder = null;
+    this.rating = 0;
+    this.reviewText = '';
+    this.orderNotes = '';
+    this.orderSpecialRequests = '';
+  }
+
+  setRating(rating: number) {
+    this.rating = rating;
+  }
+
+  saveOrderDetails() {
+    // TODO: Implement save functionality to update order notes, special requests, and rating
+    console.log('Saving order details:', {
+      orderId: this.selectedOrder?.id,
+      notes: this.orderNotes,
+      specialRequests: this.orderSpecialRequests,
+      rating: this.rating,
+      reviewText: this.reviewText
+    });
+
+    // For now, just close the modal
+    this.closeOrderDetailsModal();
+  }
+
+  canCancelOrder(order: Order): boolean {
+    // Allow cancellation only for pending, confirmed, or preparing orders
+    return ['pending', 'confirmed', 'preparing'].includes(order.status);
+  }
+
+  cancelOrder() {
+    // TODO: Implement order cancellation
+    console.log('Cancelling order:', this.selectedOrder?.id);
+    this.closeOrderDetailsModal();
+  }
+
+  canReportIssue(order: Order | null): boolean {
+    if (!order) return false;
+    // Allow reporting issues only for delivered or picked up orders
+    return ['delivered', 'picked_up'].includes(order.status);
+  }
+
+  reportIssue(order: Order) {
+    this.closeOrderDetailsModal();
+    this.router.navigate(['/report-issue', order.id]);
   }
 
   orderFromRestaurant(restaurant: any) {
