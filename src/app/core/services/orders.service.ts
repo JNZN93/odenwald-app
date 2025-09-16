@@ -51,6 +51,7 @@ export interface Order {
   payment_status: 'pending' | 'paid' | 'failed';
   delivery_address: string;
   delivery_instructions?: string;
+  notes?: string; // Additional notes from customer or restaurant manager
   created_at: string;
   updated_at: string;
   driver_id?: string;
@@ -118,6 +119,7 @@ export class OrdersService {
     payment_status: raw.payment_status,
     delivery_address: raw.delivery_address,
     delivery_instructions: raw.delivery_instructions ?? undefined,
+    notes: raw.notes ?? undefined,
     created_at: raw.created_at,
     updated_at: raw.updated_at,
     driver_id: raw.driver_id != null ? String(raw.driver_id) : undefined,
@@ -157,7 +159,15 @@ export class OrdersService {
   // Get order by ID
   getOrderById(orderId: string): Observable<Order> {
     return this.http.get<{ order: any }>(`${this.baseUrl}/${orderId}`).pipe(
-      map(response => this.normalizeOrder(response.order))
+      map(response => {
+        // API returns { order: OrderWithItems } where OrderWithItems has { order: Order, items: OrderItem[] }
+        const orderWithItems = response.order;
+        if (orderWithItems && orderWithItems.order) {
+          return this.normalizeOrder(orderWithItems.order);
+        }
+        // Fallback: if it's already the order object directly
+        return this.normalizeOrder(orderWithItems);
+      })
     );
   }
 
@@ -274,6 +284,16 @@ export class OrdersService {
     return this.http.get<{ count: number; loyalty: any[] }>(`${this.baseUrl}/my-loyalty`);
   }
 
+  // Update order notes
+  updateOrderNotes(orderId: string, notes: string): Observable<{ message: string; order: Order }> {
+    return this.http.patch<{ message: string; order: Order }>(`${this.baseUrl}/${orderId}/notes`, { notes });
+  }
+
+  // Update order notes by customer
+  updateOrderNotesByCustomer(orderId: string, notes: string): Observable<{ message: string; order: Order }> {
+    return this.http.patch<{ message: string; order: Order }>(`${this.baseUrl}/${orderId}/customer-notes`, { notes });
+  }
+
   // Get order statistics
   getOrderStats(timeRange?: { start: Date; end: Date }): Observable<{ stats: OrderStats }> {
     let params: any = {};
@@ -282,5 +302,18 @@ export class OrdersService {
       params.end = timeRange.end.toISOString();
     }
     return this.http.get<{ stats: OrderStats }>(`${this.baseUrl}/stats`, { params });
+  }
+
+  // Submit an issue report for an order
+  submitOrderIssue(data: {
+    order_id: string;
+    restaurant_id: string;
+    reason: string;
+    description: string;
+    priority?: 'low' | 'normal' | 'high';
+    restaurant_customer_id?: string;
+  }): Observable<any> {
+    const url = `${environment.apiUrl}/order-issues`;
+    return this.http.post(url, data);
   }
 }

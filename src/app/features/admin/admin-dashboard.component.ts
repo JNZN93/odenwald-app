@@ -3,6 +3,9 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 
+//* eslint-disable @typescript-eslint/no-explicit-any
+//* eslint-disable @typescript-eslint/no-unused-vars
+
 export interface DashboardStat {
   label: string;
   value: string | number;
@@ -435,6 +438,14 @@ export class AdminDashboardComponent implements OnInit, OnDestroy, AfterViewInit
         color: '#10b981'
       },
       {
+        id: 'issues',
+        title: 'Probleme',
+        description: 'Gemeldete Bestell-Probleme',
+        icon: 'fa-solid fa-triangle-exclamation',
+        route: '/admin/issues',
+        color: '#ef4444'
+      },
+      {
         id: 'analytics',
         title: 'Analytics',
         description: 'Berichte & Statistiken',
@@ -480,7 +491,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy, AfterViewInit
           // App admin can see everything except restaurant-dashboard
           return item.id !== 'restaurant-dashboard';
         case 'admin':
-          // Tenant admin can see most items except registrations and restaurant-dashboard
+          // Tenant admin can see most items except registrations, restaurant-dashboard, and issues
+          if (item.id === 'issues') return false;
           return item.id !== 'restaurant-registrations' && item.id !== 'restaurant-dashboard';
         case 'manager':
           // Restaurant manager has limited access

@@ -1165,6 +1165,14 @@ export class RestaurantManagerMenuComponent implements OnInit {
     });
   }
 
+  // Debug method to check menu items
+  debugMenuItems() {
+    console.log('=== Current Menu Items ===');
+    this.menuItems.forEach(item => {
+      console.log(`ID: ${item.id}, Name: ${item.name}, Category: ${item.category_id}, Available: ${item.is_available}`);
+    });
+  }
+
   getActiveCategories(): any[] {
     return this.categories;
   }
@@ -1452,13 +1460,11 @@ export class RestaurantManagerMenuComponent implements OnInit {
           });
         }
 
-        // Create new array reference to trigger Angular change detection
-        this.menuItems = [...this.menuItems, normalized];
-
-        // Reload categories in case a new category was created
+        // Reload the entire menu data to ensure consistency and proper display
         if (this.managedRestaurantId) {
           this.restaurantsService.getMenuCategoriesWithItems(this.managedRestaurantId).subscribe({
             next: (cats: any[]) => {
+              // Update categories
               this.categories = (cats || [])
                 .filter(c => c.id)
                 .map(c => ({
@@ -1466,11 +1472,32 @@ export class RestaurantManagerMenuComponent implements OnInit {
                   name: c.name,
                   position: c.position ?? 0
                 }));
+
+              // Update menu items with fresh data from server
+              this.menuItems = (cats || []).flatMap(c => (c.items || []).map((i: any) => ({
+                id: String(i.id),
+                category_id: String(i.category_id ?? c.id),
+                name: i.name,
+                description: i.description,
+                price: typeof i.price === 'number' ? i.price : (i.price_cents ? Math.round(i.price_cents) / 100 : 0),
+                image_url: i.image_url,
+                is_available: !!i.is_available,
+                is_vegetarian: !!i.is_vegetarian,
+                is_vegan: !!i.is_vegan,
+                is_gluten_free: !!i.is_gluten_free,
+                allergens: Array.isArray(i.allergens) ? i.allergens : [],
+                preparation_time_minutes: i.preparation_time_minutes ?? 15
+              })));
             },
-            error: () => {
-              // Keep existing categories on error
+            error: (err) => {
+              console.error('Failed to reload menu data:', err);
+              // Fallback: just add the normalized item to the array
+              this.menuItems = [...this.menuItems, normalized];
             }
           });
+        } else {
+          // Fallback: just add the normalized item to the array
+          this.menuItems = [...this.menuItems, normalized];
         }
 
         this.showAddItemModal = false;

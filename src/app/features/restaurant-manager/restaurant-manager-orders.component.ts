@@ -127,15 +127,43 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                   <span class="total-amount">€{{ order.total_price.toFixed(2) }}</span>
                 </div>
               </div>
+
+              <!-- Order Notes Section -->
+              <!-- Debug: order.id={{order.id}}, notes="{{order.notes}}", delivery_instructions="{{order.delivery_instructions}}" -->
+              <div class="order-notes-section" *ngIf="order.notes || order.delivery_instructions">
+                <div class="notes-header">
+                  <h4>Hinweise</h4>
+                  <button
+                    *ngIf="!order.notes"
+                    class="add-notes-btn"
+                    (click)="openNotesModal(order)"
+                    title="Notizen hinzufügen">
+                    <i class="fa-solid fa-plus"></i>
+                  </button>
+                </div>
+                <div class="notes-content">
+                  <div *ngIf="order.delivery_instructions" class="delivery-notes">
+                    <i class="fa-solid fa-map-marker-alt"></i>
+                    <span>{{ order.delivery_instructions }}</span>
+                  </div>
+                  <div *ngIf="order.notes" class="order-notes">
+                    <i class="fa-solid fa-sticky-note"></i>
+                    <span>{{ order.notes }}</span>
+                    <button class="edit-notes-btn" (click)="openNotesModal(order)" title="Notizen bearbeiten">
+                      <i class="fa-solid fa-edit"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="order-actions">
               <div class="action-buttons">
                 <button
-                  *ngIf="canUpdateStatus(order.status, 'confirmed')"
                   class="action-btn confirm"
-                  (click)="updateOrderStatus(order.id, 'confirmed')"
-                  [disabled]="updatingOrderId === order.id"
+                  [class.hidden]="!canUpdateStatus(order.status, 'confirmed')"
+                  (click)="canUpdateStatus(order.status, 'confirmed') ? updateOrderStatus(order.id, 'confirmed') : null"
+                  [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'confirmed')"
                 >
                   <i class="fa-solid fa-check"></i>
                   Bestätigen
@@ -143,60 +171,60 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
 
                 <!-- Payment Button -->
                 <button
-                  *ngIf="order.payment_status !== 'paid'"
                   class="action-btn payment"
-                  (click)="markOrderAsPaid(order.id)"
-                  [disabled]="updatingOrderId === order.id"
+                  [class.hidden]="order.payment_status === 'paid'"
+                  (click)="order.payment_status !== 'paid' ? markOrderAsPaid(order.id) : null"
+                  [disabled]="updatingOrderId === order.id || order.payment_status === 'paid'"
                 >
                   <i class="fa-solid fa-credit-card"></i>
                   Als bezahlt markieren
                 </button>
 
                 <button
-                  *ngIf="canUpdateStatus(order.status, 'preparing')"
                   class="action-btn prepare"
-                  (click)="updateOrderStatus(order.id, 'preparing')"
-                  [disabled]="updatingOrderId === order.id"
+                  [class.hidden]="!canUpdateStatus(order.status, 'preparing')"
+                  (click)="canUpdateStatus(order.status, 'preparing') ? updateOrderStatus(order.id, 'preparing') : null"
+                  [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'preparing')"
                 >
                   <i class="fa-solid fa-utensils"></i>
                   Zubereiten
                 </button>
 
                 <button
-                  *ngIf="canUpdateStatus(order.status, 'ready')"
                   class="action-btn ready"
-                  (click)="updateOrderStatus(order.id, 'ready')"
-                  [disabled]="updatingOrderId === order.id"
+                  [class.hidden]="!canUpdateStatus(order.status, 'ready')"
+                  (click)="canUpdateStatus(order.status, 'ready') ? updateOrderStatus(order.id, 'ready') : null"
+                  [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'ready')"
                 >
                   <i class="fa-solid fa-check-circle"></i>
                   Fertig
                 </button>
 
                 <button
-                  *ngIf="canUpdateStatus(order.status, 'picked_up')"
                   class="action-btn pickup"
-                  (click)="updateOrderStatus(order.id, 'picked_up')"
-                  [disabled]="updatingOrderId === order.id"
+                  [class.hidden]="!canUpdateStatus(order.status, 'picked_up')"
+                  (click)="canUpdateStatus(order.status, 'picked_up') ? updateOrderStatus(order.id, 'picked_up') : null"
+                  [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'picked_up')"
                 >
                   <i class="fa-solid fa-box"></i>
                   Abgeholt
                 </button>
 
                 <button
-                  *ngIf="canUpdateStatus(order.status, 'delivered')"
                   class="action-btn deliver"
-                  (click)="updateOrderStatus(order.id, 'delivered')"
-                  [disabled]="updatingOrderId === order.id"
+                  [class.hidden]="!canUpdateStatus(order.status, 'delivered')"
+                  (click)="canUpdateStatus(order.status, 'delivered') ? updateOrderStatus(order.id, 'delivered') : null"
+                  [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'delivered')"
                 >
                   <i class="fa-solid fa-truck"></i>
                   Geliefert
                 </button>
 
                 <button
-                  *ngIf="canCancelOrder(order.status)"
                   class="action-btn cancel"
-                  (click)="cancelOrder(order.id)"
-                  [disabled]="updatingOrderId === order.id"
+                  [class.hidden]="!canCancelOrder(order.status)"
+                  (click)="canCancelOrder(order.status) ? cancelOrder(order.id) : null"
+                  [disabled]="updatingOrderId === order.id || !canCancelOrder(order.status)"
                 >
                   <i class="fa-solid fa-times"></i>
                   Stornieren
@@ -214,6 +242,47 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
             <i class="fa-solid fa-shopping-cart"></i>
             <h3>Keine Bestellungen gefunden</h3>
             <p>Es gibt keine Bestellungen mit den aktuellen Filtereinstellungen.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes Modal -->
+      <div class="notes-modal-overlay" *ngIf="notesModalOpen" (click)="closeNotesModal()">
+        <div class="notes-modal" (click)="$event.stopPropagation()">
+          <div class="notes-modal-header">
+            <h3>{{ editingOrder?.notes ? 'Notizen bearbeiten' : 'Notizen hinzufügen' }}</h3>
+            <button class="close-btn" (click)="closeNotesModal()">
+              <i class="fa-solid fa-times"></i>
+            </button>
+          </div>
+          <div class="notes-modal-body">
+            <div class="form-group">
+              <label for="notes-textarea">Zusätzliche Hinweise zur Bestellung</label>
+              <textarea
+                id="notes-textarea"
+                [(ngModel)]="notesText"
+                placeholder="Fügen Sie hier zusätzliche Hinweise hinzu..."
+                rows="4"
+                maxlength="1000">
+              </textarea>
+              <small class="character-count">{{ notesText.length }}/1000</small>
+            </div>
+            <div class="notes-modal-info" *ngIf="!editingOrder?.notes">
+              <i class="fa-solid fa-info-circle"></i>
+              <span>Notizen können nur einmal hinzugefügt werden. Stellen Sie sicher, dass alle wichtigen Informationen enthalten sind.</span>
+            </div>
+          </div>
+          <div class="notes-modal-footer">
+            <button class="cancel-btn" (click)="closeNotesModal()">Abbrechen</button>
+            <button
+              class="save-btn"
+              (click)="saveNotes()"
+              [disabled]="savingNotes || !notesText.trim()"
+              [class.loading]="savingNotes">
+              <i class="fa-solid fa-save" *ngIf="!savingNotes"></i>
+              <i class="fa-solid fa-spinner fa-spin" *ngIf="savingNotes"></i>
+              {{ editingOrder?.notes ? 'Aktualisieren' : 'Hinzufügen' }}
+            </button>
           </div>
         </div>
       </div>
@@ -541,6 +610,8 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       flex-wrap: wrap;
       gap: var(--space-2);
       margin-bottom: var(--space-2);
+      justify-content: flex-start;
+      align-items: center;
     }
 
     .action-btn {
@@ -631,12 +702,282 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       cursor: not-allowed;
     }
 
+    .action-btn.hidden {
+      visibility: hidden;
+      width: 0;
+      height: 0;
+      padding: 0;
+      margin: 0;
+      border: none;
+      overflow: hidden;
+    }
+
     .loading-indicator {
       display: flex;
       align-items: center;
       gap: var(--space-2);
       font-size: var(--text-sm);
       color: var(--color-muted);
+    }
+
+    /* Order Notes Section */
+    .order-notes-section {
+      margin-top: var(--space-4);
+      padding: var(--space-4);
+      background: var(--color-gray-50);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-border);
+    }
+
+    .notes-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-3);
+    }
+
+    .notes-header h4 {
+      font-size: var(--text-lg);
+      font-weight: 600;
+      color: var(--color-text);
+      margin: 0;
+    }
+
+    .add-notes-btn, .edit-notes-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--color-primary-500);
+      background: white;
+      color: var(--color-primary-600);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition);
+      font-size: var(--text-sm);
+    }
+
+    .add-notes-btn:hover, .edit-notes-btn:hover {
+      background: var(--color-primary-50);
+      transform: translateY(-1px);
+    }
+
+    .notes-content {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .delivery-notes, .order-notes {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-2);
+      padding: var(--space-2);
+      background: white;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+    }
+
+    .delivery-notes i, .order-notes i {
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    .delivery-notes {
+      border-left: 3px solid var(--color-info);
+    }
+
+    .order-notes {
+      border-left: 3px solid var(--color-warning);
+      position: relative;
+    }
+
+    .order-notes .edit-notes-btn {
+      position: absolute;
+      top: var(--space-2);
+      right: var(--space-2);
+      width: 24px;
+      height: 24px;
+      font-size: var(--text-xs);
+    }
+
+    /* Notes Modal */
+    .notes-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: var(--space-4);
+    }
+
+    .notes-modal {
+      background: white;
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-xl);
+      width: 100%;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .notes-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-6);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .notes-modal-header h3 {
+      font-size: var(--text-xl);
+      font-weight: 600;
+      color: var(--color-text);
+      margin: 0;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: var(--color-muted);
+      cursor: pointer;
+      font-size: var(--text-lg);
+      padding: var(--space-1);
+      border-radius: var(--radius-md);
+      transition: all var(--transition);
+    }
+
+    .close-btn:hover {
+      background: var(--color-gray-100);
+      color: var(--color-text);
+    }
+
+    .notes-modal-body {
+      padding: var(--space-6);
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .notes-modal-body .form-group {
+      margin-bottom: var(--space-4);
+    }
+
+    .notes-modal-body label {
+      display: block;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: var(--space-2);
+    }
+
+    .notes-modal-body textarea {
+      width: 100%;
+      padding: var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      font-family: inherit;
+      font-size: var(--text-sm);
+      resize: vertical;
+      transition: border-color var(--transition);
+    }
+
+    .notes-modal-body textarea:focus {
+      outline: none;
+      border-color: var(--color-primary-500);
+      box-shadow: 0 0 0 3px var(--color-primary-50);
+    }
+
+    .character-count {
+      display: block;
+      text-align: right;
+      font-size: var(--text-xs);
+      color: var(--color-muted);
+      margin-top: var(--space-1);
+    }
+
+    .notes-modal-info {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-2);
+      padding: var(--space-3);
+      background: var(--color-info-50);
+      border: 1px solid var(--color-info-200);
+      border-radius: var(--radius-lg);
+      margin-top: var(--space-4);
+    }
+
+    .notes-modal-info i {
+      color: var(--color-info);
+      font-size: var(--text-sm);
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    .notes-modal-info span {
+      font-size: var(--text-sm);
+      color: var(--color-info-800);
+      line-height: 1.4;
+    }
+
+    .notes-modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--space-3);
+      padding: var(--space-6);
+      border-top: 1px solid var(--color-border);
+    }
+
+    .cancel-btn, .save-btn {
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-lg);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .cancel-btn {
+      border: 1px solid var(--color-border);
+      background: white;
+      color: var(--color-text);
+    }
+
+    .cancel-btn:hover {
+      background: var(--color-gray-50);
+    }
+
+    .save-btn {
+      border: 1px solid var(--color-primary-500);
+      background: var(--color-primary-500);
+      color: white;
+    }
+
+    .save-btn:hover:not(:disabled) {
+      background: var(--color-primary-600);
+      transform: translateY(-1px);
+    }
+
+    .save-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .save-btn.loading {
+      pointer-events: none;
     }
 
     /* Empty State */
@@ -709,6 +1050,12 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
   updatingOrderId: string | null = null;
   isLoading = false;
 
+  // Notes modal properties
+  notesModalOpen = false;
+  editingOrder: Order | null = null;
+  notesText = '';
+  savingNotes = false;
+
   private refreshSubscription?: Subscription;
 
   ngOnInit() {
@@ -737,6 +1084,8 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
           const restaurantId = restaurants[0].restaurant_id;
           this.ordersService.getRestaurantOrders(restaurantId).subscribe({
             next: (orders) => {
+              console.log('Loaded orders for restaurant:', orders);
+              console.log('Order 214 found:', orders.find(o => o.id === '214'));
               this.orders = orders;
               this.applyFilters();
               this.loadingService.stop('orders');
@@ -809,6 +1158,8 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
 
     // Debug logging to help identify issues
     console.log(`Filtered ${this.orders.length} orders to ${this.filteredOrders.length} with status filter: ${this.selectedStatus}`);
+    console.log('Filtered orders IDs:', this.filteredOrders.map(o => o.id));
+    console.log('Order 214 in filtered:', this.filteredOrders.find(o => o.id === '214'));
 
     // If no orders are shown but we have orders, there might be a filter issue
     if (this.orders.length > 0 && this.filteredOrders.length === 0 && this.selectedStatus !== 'all') {
@@ -1103,5 +1454,44 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
     }
 
     return summaries.join(', ');
+  }
+
+  // Notes modal methods
+  openNotesModal(order: Order) {
+    this.editingOrder = order;
+    this.notesText = order.notes || '';
+    this.notesModalOpen = true;
+  }
+
+  closeNotesModal() {
+    this.notesModalOpen = false;
+    this.editingOrder = null;
+    this.notesText = '';
+    this.savingNotes = false;
+  }
+
+  saveNotes() {
+    if (!this.editingOrder || !this.notesText.trim()) return;
+
+    this.savingNotes = true;
+
+    this.ordersService.updateOrderNotes(this.editingOrder.id, this.notesText.trim()).subscribe({
+      next: (response) => {
+        // Update local order data
+        const index = this.orders.findIndex(o => o.id === this.editingOrder!.id);
+        if (index !== -1) {
+          this.orders[index] = response.order;
+          this.applyFilters(); // Refresh filtered orders
+        }
+
+        this.toastService.success('Notizen gespeichert', 'Die Notizen wurden erfolgreich gespeichert.');
+        this.closeNotesModal();
+      },
+      error: (error: any) => {
+        console.error('Error saving notes:', error);
+        this.toastService.error('Fehler beim Speichern', error.error?.error || 'Notizen konnten nicht gespeichert werden.');
+        this.savingNotes = false;
+      }
+    });
   }
 }

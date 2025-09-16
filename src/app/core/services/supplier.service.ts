@@ -200,7 +200,7 @@ export class CartService {
   }
 
   // Order creation
-  createOrder(deliveryAddress: string, deliveryInstructions?: string, paymentMethod?: string, customerInfo?: any, useLoyaltyReward?: boolean): Observable<any> {
+  createOrder(deliveryAddress: string, deliveryInstructions?: string, paymentMethod?: string, customerInfo?: any, useLoyaltyReward?: boolean, notes?: string): Observable<any> {
     const cart = this.getCurrentCart();
     if (!cart || cart.items.length === 0) {
       throw new Error('Warenkorb ist leer');
@@ -210,6 +210,7 @@ export class CartService {
       restaurant_id: cart.restaurant_id,
       delivery_address: deliveryAddress,
       delivery_instructions: deliveryInstructions || '',
+      notes: notes || '',
       payment_method: paymentMethod || 'cash',
       items: cart.items.map(item => ({
         menu_item_id: item.menu_item_id,

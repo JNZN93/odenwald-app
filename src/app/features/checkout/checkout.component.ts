@@ -15,7 +15,6 @@ interface DeliveryAddress {
   street: string;
   city: string;
   postal_code: string;
-  instructions?: string;
 }
 
 interface CustomerInfo {
@@ -146,12 +145,13 @@ interface CustomerInfo {
                 </div>
               </div>
 
+
               <div class="form-group">
-                <label for="instructions">Lieferhinweise (optional)</label>
+                <label for="notes">Zusätzliche Hinweise (optional)</label>
                 <textarea
-                  id="instructions"
-                  [(ngModel)]="deliveryAddress.instructions"
-                  placeholder="z.B. Bitte klingeln bei Müller"
+                  id="notes"
+                  [(ngModel)]="orderNotes"
+                  placeholder="z.B. Allergien, besondere Wünsche..."
                   rows="3">
                 </textarea>
               </div>
@@ -1075,9 +1075,10 @@ export class CheckoutComponent implements OnInit {
   deliveryAddress: DeliveryAddress = {
     street: '',
     city: '',
-    postal_code: '',
-    instructions: ''
+    postal_code: ''
   };
+
+  orderNotes = '';
 
   customerInfo: CustomerInfo = {
     name: '',
@@ -1257,7 +1258,7 @@ export class CheckoutComponent implements OnInit {
 
     // Guests can now use online payments (card/paypal)
 
-    this.cartService.createOrder(fullAddress, this.deliveryAddress.instructions, this.selectedPaymentMethod, customerInfo, this.useLoyaltyReward)
+    this.cartService.createOrder(fullAddress, '', this.selectedPaymentMethod, customerInfo, this.useLoyaltyReward, this.orderNotes)
       .subscribe({
         next: (response) => {
           this.loading = false;

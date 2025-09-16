@@ -263,12 +263,30 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
               <!-- Additional Notes -->
               <div class="notes-section">
                 <h4>Zusätzliche Hinweise</h4>
-                <textarea
-                  class="notes-input"
-                  [(ngModel)]="orderNotes"
-                  placeholder="Fügen Sie hier zusätzliche Hinweise hinzu..."
-                  rows="3"
-                ></textarea>
+                <ng-container *ngIf="selectedOrder && canEditOrderNotes(selectedOrder)">
+                  <textarea
+                    class="notes-input"
+                    [(ngModel)]="orderNotes"
+                    placeholder="Fügen Sie hier zusätzliche Hinweise hinzu..."
+                    rows="3"
+                  ></textarea>
+                  <p class="notes-hint">Notizen können nur einmal hinzugefügt werden und danach nicht mehr geändert werden.</p>
+                </ng-container>
+                <ng-container *ngIf="selectedOrder && !canEditOrderNotes(selectedOrder)">
+                  <div class="notes-display" *ngIf="selectedOrder.notes && selectedOrder.notes.trim().length > 0">
+                    <p class="existing-notes">{{ selectedOrder.notes }}</p>
+                    <p class="notes-info">Diese Hinweise wurden beim Checkout angegeben und können nicht mehr geändert werden.</p>
+                  </div>
+                  <div class="notes-display" *ngIf="!selectedOrder.notes || selectedOrder.notes.trim().length === 0">
+                    <p class="no-notes">Keine zusätzlichen Hinweise vorhanden.</p>
+                    <p class="notes-info" *ngIf="!['delivered', 'cancelled'].includes(selectedOrder.status)">
+                      Zusätzliche Hinweise können nur beim Checkout hinzugefügt werden.
+                    </p>
+                    <p class="notes-info" *ngIf="['delivered', 'cancelled'].includes(selectedOrder.status)">
+                      Die Bestellung ist bereits {{ selectedOrder.status === 'delivered' ? 'geliefert' : 'storniert' }} und kann nicht mehr bearbeitet werden.
+                    </p>
+                  </div>
+                </ng-container>
               </div>
 
               <!-- Special Requests -->
@@ -325,9 +343,9 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
               <!-- Action Buttons -->
               <div class="modal-actions">
                 <button class="btn-secondary" (click)="closeOrderDetailsModal()">Schließen</button>
-                <button class="btn-primary" (click)="saveOrderDetails()">Änderungen speichern</button>
-                <button class="btn-outline" *ngIf="canReportIssue(selectedOrder)" (click)="reportIssue(selectedOrder)">Problem melden</button>
-                <button class="btn-danger" *ngIf="canCancelOrder(selectedOrder)" (click)="cancelOrder()">Bestellung stornieren</button>
+                <button class="btn-primary" (click)="saveOrderDetails()" *ngIf="selectedOrder && canEditOrderNotes(selectedOrder)">Änderungen speichern</button>
+                <button class="btn-outline" *ngIf="selectedOrder && canReportIssue(selectedOrder)" (click)="reportIssue(selectedOrder)">Problem melden</button>
+                <button class="btn-danger" *ngIf="selectedOrder && canCancelOrder(selectedOrder)" (click)="cancelOrder()">Bestellung stornieren</button>
               </div>
             </div>
           </div>
@@ -910,6 +928,41 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
       box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-primary) 15%, transparent);
     }
 
+    .notes-hint {
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+      margin-top: var(--space-2);
+      font-style: italic;
+    }
+
+    .notes-display {
+      background: var(--bg-light);
+      padding: var(--space-3);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+    }
+
+    .existing-notes {
+      margin: 0;
+      color: var(--color-text);
+      font-size: var(--text-sm);
+      line-height: 1.5;
+    }
+
+    .no-notes {
+      margin: 0;
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+      font-style: italic;
+    }
+
+    .notes-info {
+      margin: var(--space-2) 0 0 0;
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+      line-height: 1.4;
+    }
+
     .rating-input {
       display: flex;
       flex-direction: column;
@@ -1222,6 +1275,20 @@ export class CustomerDashboardComponent implements OnInit {
   viewOrderDetails(order: Order) {
     this.selectedOrder = order;
     this.showOrderDetailsModal = true;
+    // Initialize form fields with current order data
+    this.orderNotes = order.notes || '';
+    this.orderSpecialRequests = '';
+    this.rating = 0;
+    this.reviewText = '';
+  }
+
+  // Check if customer can edit notes for this order
+  canEditOrderNotes(order: Order): boolean {
+    // Can only edit if:
+    // 1. Order is not delivered or cancelled
+    // 2. No notes exist yet (prevents modifying existing checkout notes)
+    return !['delivered', 'cancelled'].includes(order.status) &&
+           (!order.notes || order.notes.trim().length === 0);
   }
 
   closeOrderDetailsModal() {
@@ -1238,17 +1305,51 @@ export class CustomerDashboardComponent implements OnInit {
   }
 
   saveOrderDetails() {
-    // TODO: Implement save functionality to update order notes, special requests, and rating
+    if (!this.selectedOrder) return;
+
     console.log('Saving order details:', {
-      orderId: this.selectedOrder?.id,
+      orderId: this.selectedOrder.id,
       notes: this.orderNotes,
       specialRequests: this.orderSpecialRequests,
       rating: this.rating,
       reviewText: this.reviewText
     });
 
-    // For now, just close the modal
-    this.closeOrderDetailsModal();
+    let hasChanges = false;
+
+    // Update order notes if they changed and can be edited
+    if (this.canEditOrderNotes(this.selectedOrder)) {
+      const currentNotes = this.selectedOrder.notes || '';
+      const newNotes = this.orderNotes.trim();
+
+      if (newNotes !== currentNotes) {
+        hasChanges = true;
+        this.ordersService.updateOrderNotesByCustomer(this.selectedOrder.id, newNotes)
+          .subscribe({
+            next: (response) => {
+              console.log('Order notes updated:', response);
+              // Update the order in our local data
+              this.selectedOrder = response.order;
+              // Also update in the recentOrders$ observable if needed
+              this.loadRecentOrders();
+              // Show success message
+              // TODO: Add toast notification
+            },
+            error: (error) => {
+              console.error('Failed to update order notes:', error);
+              // TODO: Show error toast to user
+            }
+          });
+      }
+    }
+
+    // TODO: Implement special requests update
+    // TODO: Implement rating/review submission
+
+    // Close modal after operations (or immediately if no changes)
+    if (!hasChanges) {
+      this.closeOrderDetailsModal();
+    }
   }
 
   canCancelOrder(order: Order): boolean {

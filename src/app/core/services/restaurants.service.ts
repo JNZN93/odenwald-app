@@ -429,9 +429,9 @@ export class RestaurantsService {
     );
   }
 
-  // Loyalty settings
+  // Loyalty settings (public endpoint for unauthenticated users)
   getLoyaltySettings(restaurantId: string): Observable<any | null> {
-    return this.http.get<{ loyalty_settings: any | null }>(`${this.baseUrl}/${restaurantId}/loyalty-settings`).pipe(
+    return this.http.get<{ loyalty_settings: any | null }>(`${this.baseUrl}/${restaurantId}/loyalty-settings/public`).pipe(
       map(resp => resp.loyalty_settings ?? null)
     );
   }

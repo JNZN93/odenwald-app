@@ -22,6 +22,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from './core/auth/auth.service';
 import { take } from 'rxjs/operators';
+import { IssuesAdminComponent } from './features/admin/issues-admin.component';
 
 // Simple redirect component for root route
 @Component({
@@ -90,7 +91,8 @@ export const routes: Routes = [
       { path: 'orders', component: OrdersAdminComponent },
       { path: 'drivers', component: DriversAdminComponent },
       { path: 'payments', component: PaymentsAdminComponent },
-      { path: 'analytics', component: AnalyticsAdminComponent }
+      { path: 'analytics', component: AnalyticsAdminComponent },
+      { path: 'issues', component: IssuesAdminComponent, canActivate: [roleGuard(['app_admin'])] }
     ]
   },
   {

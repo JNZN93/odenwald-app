@@ -48,7 +48,7 @@ interface IssueReason {
         </div>
 
         <!-- Step 1: Reason Selection -->
-        <div class="step-section" *ngIf="!selectedReason">
+        <div class="step-section" *ngIf="!selectedReason && !isSubmitted">
           <h3>Was ist das Problem?</h3>
           <div class="reasons-grid">
             <div
@@ -71,7 +71,7 @@ interface IssueReason {
         </div>
 
         <!-- Step 2: Details Form -->
-        <div class="step-section" *ngIf="selectedReason">
+        <div class="step-section" *ngIf="selectedReason && !isSubmitted">
           <div class="selected-reason">
             <button class="change-reason-btn" (click)="changeReason()">
               <i class="fa-solid fa-arrow-left"></i>
@@ -121,6 +121,11 @@ interface IssueReason {
                   Wird gesendet...
                 </span>
               </button>
+            </div>
+
+            <div class="error-message" *ngIf="submitError">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+              {{ submitError }}
             </div>
           </div>
         </div>
@@ -500,6 +505,18 @@ interface IssueReason {
     .status-picked_up { background: color-mix(in oklab, #059669 15%, white); color: #047857; }
     .status-cancelled { background: color-mix(in oklab, #ef4444 15%, white); color: #dc2626; }
 
+    .error-message {
+      margin-top: var(--space-3);
+      color: #b91c1c;
+      background: color-mix(in oklab, #ef4444 10%, white);
+      border: 1px solid #fecaca;
+      border-radius: var(--radius-md);
+      padding: var(--space-3);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
     @media (max-width: 768px) {
       .report-issue-container {
         padding: var(--space-2);
@@ -534,96 +551,31 @@ export class ReportIssueComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private ordersService = inject(OrdersService);
-  private authService = inject(AuthService);
 
   order: Order | null = null;
+  issueReasons: IssueReason[] = [
+    { id: 'missing_item', label: 'Artikel fehlt', description: 'Ein oder mehrere Artikel fehlen in deiner Bestellung.', icon: 'fa-solid fa-box-open' },
+    { id: 'wrong_item', label: 'Falscher Artikel', description: 'Du hast einen falschen Artikel erhalten.', icon: 'fa-solid fa-shuffle' },
+    { id: 'cold_food', label: 'Essen ist kalt', description: 'Die Speisen sind kalt angekommen.', icon: 'fa-solid fa-temperature-low' },
+    { id: 'late_delivery', label: 'Lieferung verspätet', description: 'Die Lieferung hat deutlich länger gedauert.', icon: 'fa-solid fa-clock' },
+    { id: 'other', label: 'Anderes Problem', description: 'Ein anderes Problem mit deiner Bestellung.', icon: 'fa-solid fa-message' },
+  ];
+
   selectedReason: IssueReason | null = null;
   issueDescription = '';
   isSubmitting = false;
   isSubmitted = false;
+  submitError: string | null = null;
 
-  issueReasons: IssueReason[] = [
-    {
-      id: 'wrong_items',
-      label: 'Falsche Artikel',
-      description: 'Die erhaltenen Artikel entsprechen nicht der Bestellung',
-      icon: 'fa-solid fa-exclamation-triangle'
-    },
-    {
-      id: 'missing_items',
-      label: 'Artikel fehlen',
-      description: 'Einige Artikel aus der Bestellung wurden nicht geliefert',
-      icon: 'fa-solid fa-box-open'
-    },
-    {
-      id: 'poor_quality',
-      label: 'Schlechte Qualität',
-      description: 'Die Artikel sind beschädigt oder entsprechen nicht den Erwartungen',
-      icon: 'fa-solid fa-utensils'
-    },
-    {
-      id: 'late_delivery',
-      label: 'Zu spät geliefert',
-      description: 'Die Bestellung kam später als angegeben an',
-      icon: 'fa-solid fa-clock'
-    },
-    {
-      id: 'wrong_address',
-      label: 'Falsche Adresse',
-      description: 'Die Bestellung wurde an die falsche Adresse geliefert',
-      icon: 'fa-solid fa-map-marker-alt'
-    },
-    {
-      id: 'other',
-      label: 'Sonstiges',
-      description: 'Ein anderes Problem, das hier nicht aufgeführt ist',
-      icon: 'fa-solid fa-comment-dots'
-    }
-  ];
-
-  ngOnInit() {
-    const orderId = this.route.snapshot.params['orderId'];
-    if (orderId) {
-      this.loadOrder(orderId);
-    }
-  }
-
-  loadOrder(orderId: string) {
-    // In a real app, this would load the order from the service
-    // For now, we'll create a mock order based on the ID
-    this.order = {
-      id: orderId,
-      customer_id: 'mock',
-      user_id: 'mock-user',
-      restaurant_id: 'mock',
-      status: 'delivered',
-      total_price: 25.50,
-      delivery_fee: 2.50,
-      tax_amount: 2.00,
-      subtotal: 21.00,
-      delivery_address: 'Musterstraße 123, 12345 Musterstadt',
-      payment_status: 'paid',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      items: [],
-      restaurant_name: 'Test Restaurant'
-    } as Order;
-  }
-
-  getStatusLabel(status: Order['status']): string {
-    const labels: Record<Order['status'], string> = {
-      pending: 'Ausstehend',
-      confirmed: 'Bestätigt',
-      preparing: 'Wird zubereitet',
-      ready: 'Bereit',
-      picked_up: 'Abgeholt',
-      delivered: 'Geliefert',
-      cancelled: 'Storniert',
-      open: 'Offen',
-      in_progress: 'In Bearbeitung',
-      out_for_delivery: 'Unterwegs'
-    };
-    return labels[status] || status;
+  async ngOnInit() {
+    const orderId = this.route.snapshot.paramMap.get('orderId');
+    if (!orderId) return;
+    this.ordersService.getOrderById(orderId).subscribe({
+      next: (order) => this.order = order,
+      error: () => {
+        // non-blocking
+      }
+    });
   }
 
   selectReason(reason: IssueReason) {
@@ -632,25 +584,46 @@ export class ReportIssueComponent implements OnInit {
 
   changeReason() {
     this.selectedReason = null;
-    this.issueDescription = '';
+  }
+
+  getStatusLabel(status: Order['status']): string {
+    const labels: Record<Order['status'], string> = {
+      pending: 'Ausstehend',
+      confirmed: 'Bestätigt',
+      preparing: 'Wird zubereitet',
+      ready: 'Bereit zur Abholung',
+      picked_up: 'Abgeholt',
+      delivered: 'Geliefert',
+      cancelled: 'Storniert',
+      open: 'Offen',
+      in_progress: 'In Bearbeitung',
+      out_for_delivery: 'Unterwegs'
+    } as const;
+    return labels[status];
   }
 
   submitReport() {
-    if (!this.selectedReason || !this.issueDescription.trim()) return;
+    if (!this.selectedReason || !this.issueDescription.trim() || !this.order) return;
 
     this.isSubmitting = true;
+    this.submitError = null;
 
-    // Simulate API call
-    setTimeout(() => {
-      this.isSubmitting = false;
-      this.isSubmitted = true;
-
-      console.log('Issue report submitted:', {
-        orderId: this.order?.id,
-        reason: this.selectedReason,
-        description: this.issueDescription
-      });
-    }, 2000);
+    this.ordersService.submitOrderIssue({
+      order_id: this.order.id,
+      restaurant_id: this.order.restaurant_id,
+      reason: this.selectedReason.id,
+      description: this.issueDescription.trim(),
+    }).subscribe({
+      next: () => {
+        this.isSubmitting = false;
+        this.isSubmitted = true;
+      },
+      error: (err) => {
+        this.isSubmitting = false;
+        this.submitError = 'Senden fehlgeschlagen. Bitte versuche es erneut.';
+        console.error('Issue submit failed', err);
+      }
+    });
   }
 
   cancel() {
