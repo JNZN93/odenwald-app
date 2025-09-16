@@ -30,10 +30,23 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
         </div>
       </div>
 
+      <!-- Order Tabs -->
+      <div class="order-tabs">
+        <button
+          *ngFor="let tab of orderTabs"
+          [class.active]="activeTab === tab.id"
+          (click)="switchTab(tab.id)"
+          class="tab-button"
+        >
+          <i [ngClass]="tab.icon"></i>
+          <span>{{ tab.title }}</span>
+        </button>
+      </div>
+
       <!-- Filters -->
       <div class="filters-section">
         <div class="filters-grid">
-          <div class="filter-group">
+          <div class="filter-group" *ngIf="activeTab === 'active'">
             <label for="status-filter">Status:</label>
             <select id="status-filter" [(ngModel)]="selectedStatus" (change)="applyFilters()">
               <option value="all">Alle Status</option>
@@ -73,10 +86,151 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       <!-- Orders List -->
       <div class="orders-section">
         <div class="orders-header">
-          <h2>{{ filteredOrders.length }} Bestellung{{ filteredOrders.length !== 1 ? 'en' : '' }} gefunden</h2>
+          <h2>{{ filteredOrders.length }} {{ activeTab === 'active' ? 'aktive' : 'abgeschlossene' }} Bestellung{{ filteredOrders.length !== 1 ? 'en' : '' }} gefunden</h2>
         </div>
 
-        <div class="orders-list">
+        <!-- Desktop Table View -->
+        <div class="orders-table-container desktop-only" *ngIf="filteredOrders.length > 0">
+          <table class="orders-table">
+            <thead>
+              <tr>
+                <th class="col-order-id">Bestellung</th>
+                <th class="col-customer">Kunde</th>
+                <th class="col-order-status">Bestellstatus</th>
+                <th class="col-payment-status">Zahlung</th>
+                <th class="col-total">Gesamt</th>
+                <th class="col-time">Bestellt</th>
+                <th class="col-actions">Aktionen</th>
+                <th class="col-details">Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let order of filteredOrders" class="order-row" [class.paid-pending]="order.payment_status === 'paid' && order.status === 'pending'">
+                <td class="col-order-id">
+                  <div class="order-id">#{{ order.id.slice(-6) }}</div>
+                  <div class="order-time-mobile">{{ formatOrderTime(order.created_at) }}</div>
+                </td>
+                <td class="col-customer">
+                  <div class="customer-name">{{ order.customer_name }}</div>
+                  <div class="customer-email">{{ order.customer_email }}</div>
+                </td>
+                <td class="col-order-status">
+                  <span [ngClass]="getOrderStatusClass(order.status)" class="status-badge">
+                    {{ getOrderStatusText(order.status) }}
+                  </span>
+                </td>
+                <td class="col-payment-status">
+                  <span *ngIf="order.payment_status === 'paid'" class="payment-indicator">
+                    <i class="fa-solid fa-credit-card"></i>
+                    Bezahlt
+                  </span>
+                  <span *ngIf="order.payment_status === 'pending'" class="payment-indicator temp">
+                    <i class="fa-solid fa-clock"></i>
+                    Wartet auf Zahlung
+                  </span>
+                </td>
+                <td class="col-total">
+                  <div class="total-amount">€{{ order.total_price.toFixed(2) }}</div>
+                  <div class="item-count">{{ order.items.length }} Artikel</div>
+                </td>
+                <td class="col-time">{{ formatOrderTime(order.created_at) }}</td>
+                <td class="col-actions">
+                  <div class="action-buttons">
+                    <!-- Status Action Buttons - Always visible in same positions -->
+                    <button
+                      class="action-btn confirm"
+                      [class.hidden]="!canUpdateStatus(order.status, 'confirmed')"
+                      (click)="canUpdateStatus(order.status, 'confirmed') ? updateOrderStatus(order.id, 'confirmed') : null"
+                      [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'confirmed')"
+                      title="Bestätigen"
+                    >
+                      <i class="fa-solid fa-check"></i>
+                    </button>
+
+                    <button
+                      class="action-btn prepare"
+                      [class.hidden]="!canUpdateStatus(order.status, 'preparing')"
+                      (click)="canUpdateStatus(order.status, 'preparing') ? updateOrderStatus(order.id, 'preparing') : null"
+                      [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'preparing')"
+                      title="Zubereiten"
+                    >
+                      <i class="fa-solid fa-utensils"></i>
+                    </button>
+
+                    <button
+                      class="action-btn ready"
+                      [class.hidden]="!canUpdateStatus(order.status, 'ready')"
+                      (click)="canUpdateStatus(order.status, 'ready') ? updateOrderStatus(order.id, 'ready') : null"
+                      [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'ready')"
+                      title="Fertig"
+                    >
+                      <i class="fa-solid fa-check-circle"></i>
+                    </button>
+
+                    <button
+                      class="action-btn pickup"
+                      [class.hidden]="!canUpdateStatus(order.status, 'picked_up')"
+                      (click)="canUpdateStatus(order.status, 'picked_up') ? updateOrderStatus(order.id, 'picked_up') : null"
+                      [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'picked_up')"
+                      title="Abgeholt"
+                    >
+                      <i class="fa-solid fa-box"></i>
+                    </button>
+
+                    <button
+                      class="action-btn deliver"
+                      [class.hidden]="!canUpdateStatus(order.status, 'delivered')"
+                      (click)="canUpdateStatus(order.status, 'delivered') ? updateOrderStatus(order.id, 'delivered') : null"
+                      [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'delivered')"
+                      title="Geliefert"
+                    >
+                      <i class="fa-solid fa-truck"></i>
+                    </button>
+
+                    <!-- Payment Button - Only visible when not paid -->
+                    <button
+                      class="action-btn payment"
+                      *ngIf="order.payment_status === 'pending'"
+                      (click)="markOrderAsPaid(order.id)"
+                      [disabled]="updatingOrderId === order.id"
+                      title="Als bezahlt markieren"
+                    >
+                      <i class="fa-solid fa-credit-card"></i>
+                    </button>
+
+                    <!-- Cancel Button -->
+                    <button
+                      class="action-btn cancel"
+                      [class.hidden]="!canCancelOrder(order.status)"
+                      (click)="canCancelOrder(order.status) ? cancelOrder(order.id) : null"
+                      [disabled]="updatingOrderId === order.id || !canCancelOrder(order.status)"
+                      title="Stornieren"
+                    >
+                      <i class="fa-solid fa-times"></i>
+                    </button>
+
+                  </div>
+                  <div class="loading-indicator" *ngIf="updatingOrderId === order.id">
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                  </div>
+                </td>
+                <td class="col-details">
+                  <button
+                    class="action-btn details"
+                    [class.has-notes]="order.notes"
+                    (click)="openDetailsModal(order)"
+                    [title]="order.notes ? 'Details anzeigen (mit Notizen)' : 'Details anzeigen'"
+                  >
+                    <i class="fa-solid fa-eye"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Mobile Card View -->
+        <div class="orders-list mobile-only">
           <div *ngFor="let order of filteredOrders" class="order-card" [class.paid-pending]="order.payment_status === 'paid' && order.status === 'pending'">
             <div class="order-header">
               <div class="order-info">
@@ -129,17 +283,9 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
               </div>
 
               <!-- Order Notes Section -->
-              <!-- Debug: order.id={{order.id}}, notes="{{order.notes}}", delivery_instructions="{{order.delivery_instructions}}" -->
               <div class="order-notes-section" *ngIf="order.notes || order.delivery_instructions">
                 <div class="notes-header">
                   <h4>Hinweise</h4>
-                  <button
-                    *ngIf="!order.notes"
-                    class="add-notes-btn"
-                    (click)="openNotesModal(order)"
-                    title="Notizen hinzufügen">
-                    <i class="fa-solid fa-plus"></i>
-                  </button>
                 </div>
                 <div class="notes-content">
                   <div *ngIf="order.delivery_instructions" class="delivery-notes">
@@ -149,9 +295,6 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                   <div *ngIf="order.notes" class="order-notes">
                     <i class="fa-solid fa-sticky-note"></i>
                     <span>{{ order.notes }}</span>
-                    <button class="edit-notes-btn" (click)="openNotesModal(order)" title="Notizen bearbeiten">
-                      <i class="fa-solid fa-edit"></i>
-                    </button>
                   </div>
                 </div>
               </div>
@@ -159,6 +302,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
 
             <div class="order-actions">
               <div class="action-buttons">
+                <!-- Status Action Buttons - Always visible in same positions -->
                 <button
                   class="action-btn confirm"
                   [class.hidden]="!canUpdateStatus(order.status, 'confirmed')"
@@ -167,17 +311,6 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                 >
                   <i class="fa-solid fa-check"></i>
                   Bestätigen
-                </button>
-
-                <!-- Payment Button -->
-                <button
-                  class="action-btn payment"
-                  [class.hidden]="order.payment_status === 'paid'"
-                  (click)="order.payment_status !== 'paid' ? markOrderAsPaid(order.id) : null"
-                  [disabled]="updatingOrderId === order.id || order.payment_status === 'paid'"
-                >
-                  <i class="fa-solid fa-credit-card"></i>
-                  Als bezahlt markieren
                 </button>
 
                 <button
@@ -220,6 +353,18 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                   Geliefert
                 </button>
 
+                <!-- Payment Button - Only visible when not paid -->
+                <button
+                  class="action-btn payment"
+                  *ngIf="order.payment_status === 'pending'"
+                  (click)="markOrderAsPaid(order.id)"
+                  [disabled]="updatingOrderId === order.id"
+                >
+                  <i class="fa-solid fa-credit-card"></i>
+                  Als bezahlt markieren
+                </button>
+
+                <!-- Cancel Button -->
                 <button
                   class="action-btn cancel"
                   [class.hidden]="!canCancelOrder(order.status)"
@@ -242,6 +387,142 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
             <i class="fa-solid fa-shopping-cart"></i>
             <h3>Keine Bestellungen gefunden</h3>
             <p>Es gibt keine Bestellungen mit den aktuellen Filtereinstellungen.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Order Details Modal -->
+      <div class="details-modal-overlay" *ngIf="detailsModalOpen" (click)="closeDetailsModal()">
+        <div class="details-modal" (click)="$event.stopPropagation()">
+          <div class="details-modal-header">
+            <h3>Bestellung #{{ selectedOrder?.id?.slice(-6) || 'Unbekannt' }}</h3>
+            <button class="close-btn" (click)="closeDetailsModal()">
+              <i class="fa-solid fa-times"></i>
+            </button>
+          </div>
+          <div class="details-modal-body" *ngIf="selectedOrder">
+            <!-- Order Header Info -->
+            <div class="order-summary-section">
+              <div class="order-summary-grid">
+                <div class="summary-item">
+                  <label>Kunde:</label>
+                  <span>{{ selectedOrder.customer_name }}</span>
+                </div>
+                <div class="summary-item">
+                  <label>E-Mail:</label>
+                  <span>{{ selectedOrder.customer_email }}</span>
+                </div>
+                <div class="summary-item">
+                  <label>Bestellt am:</label>
+                  <span>{{ formatOrderTime(selectedOrder.created_at) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Delivery Address -->
+            <div class="delivery-section" *ngIf="selectedOrder.delivery_address">
+              <h4>Lieferadresse</h4>
+              <div class="address-info">
+                <i class="fa-solid fa-map-marker-alt"></i>
+                <span>{{ selectedOrder.delivery_address }}</span>
+              </div>
+              <div class="delivery-instructions" *ngIf="selectedOrder.delivery_instructions">
+                <i class="fa-solid fa-info-circle"></i>
+                <span>{{ selectedOrder.delivery_instructions }}</span>
+              </div>
+            </div>
+
+            <!-- Order Items -->
+            <div class="items-section">
+              <h4>Bestellte Artikel</h4>
+              <div class="order-items-list">
+                <div *ngFor="let item of selectedOrder.items" class="detail-order-item">
+                  <div class="item-header">
+                    <div class="item-main-info">
+                      <span class="item-quantity">{{ item.quantity }}x</span>
+                      <div class="item-details">
+                        <span class="item-name">{{ item.name }}</span>
+                        <span class="item-variants" *ngIf="item.selected_variant_options && item.selected_variant_options.length > 0">
+                          ({{ getVariantSummary(item.selected_variant_options) }})
+                        </span>
+                      </div>
+                    </div>
+                    <span class="item-price">€{{ item.total_price.toFixed(2) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Order Total -->
+            <div class="total-section">
+              <div class="total-breakdown">
+                <div class="total-row">
+                  <span class="total-label">Zwischensumme:</span>
+                  <span class="total-amount">€{{ (selectedOrder.total_price - (selectedOrder.delivery_fee || 0)).toFixed(2) }}</span>
+                </div>
+                <div class="total-row" *ngIf="selectedOrder.delivery_fee">
+                  <span class="total-label">Liefergebühr:</span>
+                  <span class="total-amount">€{{ selectedOrder.delivery_fee.toFixed(2) }}</span>
+                </div>
+                <div class="total-row final">
+                  <span class="total-label">Gesamt:</span>
+                  <span class="total-amount">€{{ selectedOrder.total_price.toFixed(2) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Order Notes Section -->
+            <div class="notes-section">
+              <div class="notes-header">
+                <h4>Notizen</h4>
+                <button
+                  class="edit-notes-btn"
+                  (click)="toggleNotesEdit()"
+                  [title]="editingNotes ? 'Bearbeitung abbrechen' : (selectedOrder.notes ? 'Notizen bearbeiten' : 'Notizen hinzufügen')"
+                >
+                  <i [ngClass]="editingNotes ? 'fa-solid fa-times' : (selectedOrder.notes ? 'fa-solid fa-edit' : 'fa-solid fa-plus')"></i>
+                </button>
+              </div>
+              
+              <!-- Display Notes -->
+              <div *ngIf="!editingNotes && selectedOrder.notes" class="order-notes">
+                <i class="fa-solid fa-sticky-note"></i>
+                <span>{{ selectedOrder.notes }}</span>
+              </div>
+              
+              <!-- No Notes Message -->
+              <div *ngIf="!editingNotes && !selectedOrder.notes" class="no-notes">
+                <i class="fa-solid fa-info-circle"></i>
+                <span>Keine Notizen vorhanden. Klicken Sie auf das Plus-Symbol, um Notizen hinzuzufügen.</span>
+              </div>
+              
+              <!-- Edit Notes Form -->
+              <div *ngIf="editingNotes" class="notes-edit-form">
+                <div class="form-group">
+                  <label for="notes-textarea">Zusätzliche Hinweise zur Bestellung</label>
+                  <textarea
+                    id="notes-textarea"
+                    [(ngModel)]="notesText"
+                    placeholder="Fügen Sie hier zusätzliche Hinweise hinzu..."
+                    rows="4"
+                    maxlength="1000">
+                  </textarea>
+                  <small class="character-count">{{ notesText.length }}/1000</small>
+                </div>
+                <div class="notes-actions">
+                  <button class="cancel-btn" (click)="cancelNotesEdit()">Abbrechen</button>
+                  <button
+                    class="save-btn"
+                    (click)="saveNotesInline()"
+                    [disabled]="savingNotes || !notesText.trim()"
+                    [class.loading]="savingNotes">
+                    <i class="fa-solid fa-save" *ngIf="!savingNotes"></i>
+                    <i class="fa-solid fa-spinner fa-spin" *ngIf="savingNotes"></i>
+                    {{ selectedOrder.notes ? 'Aktualisieren' : 'Hinzufügen' }}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -300,12 +581,63 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: var(--space-8);
+      margin-bottom: var(--space-6);
       padding: var(--space-6);
       background: white;
       border-radius: var(--radius-xl);
       border: 1px solid var(--color-border);
       box-shadow: var(--shadow-sm);
+    }
+
+    /* Order Tabs */
+    .order-tabs {
+      display: flex;
+      gap: var(--space-2);
+      margin-bottom: var(--space-6);
+      padding: var(--space-4);
+      background: white;
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .tab-button {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-4);
+      background: var(--color-gray-50);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--color-text);
+      cursor: pointer;
+      transition: all var(--transition);
+      white-space: nowrap;
+    }
+
+    .tab-button:hover {
+      background: var(--color-gray-100);
+      border-color: var(--color-gray-300);
+      transform: translateY(-1px);
+    }
+
+    .tab-button.active {
+      background: var(--color-primary-500);
+      border-color: var(--color-primary-500);
+      color: white;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .tab-button.active:hover {
+      background: var(--color-primary-600);
+      border-color: var(--color-primary-600);
+      transform: translateY(-1px);
+    }
+
+    .tab-button i {
+      font-size: var(--text-base);
     }
 
     .header-content h1 {
@@ -703,13 +1035,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
     }
 
     .action-btn.hidden {
-      visibility: hidden;
-      width: 0;
-      height: 0;
-      padding: 0;
-      margin: 0;
-      border: none;
-      overflow: hidden;
+      display: none;
     }
 
     .loading-indicator {
@@ -980,6 +1306,443 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       pointer-events: none;
     }
 
+    /* Order Details Modal */
+    .details-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: var(--space-4);
+    }
+
+    .details-modal {
+      background: white;
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-xl);
+      width: 100%;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .details-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-6);
+      border-bottom: 1px solid var(--color-border);
+      background: var(--color-gray-50);
+    }
+
+    .details-modal-header h3 {
+      font-size: var(--text-xl);
+      font-weight: 600;
+      color: var(--color-text);
+      margin: 0;
+    }
+
+    .details-modal .close-btn {
+      background: none;
+      border: none;
+      color: var(--color-muted);
+      cursor: pointer;
+      font-size: var(--text-lg);
+      padding: var(--space-1);
+      border-radius: var(--radius-md);
+      transition: all var(--transition);
+    }
+
+    .details-modal .close-btn:hover {
+      background: var(--color-gray-100);
+      color: var(--color-text);
+    }
+
+    .details-modal-body {
+      padding: var(--space-6);
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+
+    /* Order Summary Section */
+    .order-summary-section {
+      background: var(--color-gray-50);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+    }
+
+    .order-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--space-4);
+    }
+
+    .summary-item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .summary-item label {
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .summary-item span {
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+    }
+
+    /* Delivery Section */
+    .delivery-section {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+    }
+
+    .delivery-section h4 {
+      font-size: var(--text-lg);
+      font-weight: 600;
+      color: var(--color-text);
+      margin: 0 0 var(--space-3) 0;
+    }
+
+    .address-info, .delivery-instructions {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-2);
+      padding: var(--space-2);
+      background: var(--color-gray-50);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-2);
+    }
+
+    .address-info:last-child,
+    .delivery-instructions:last-child {
+      margin-bottom: 0;
+    }
+
+    .address-info i, .delivery-instructions i {
+      color: var(--color-info);
+      font-size: var(--text-sm);
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    .address-info span, .delivery-instructions span {
+      font-size: var(--text-sm);
+      color: var(--color-text);
+      line-height: 1.4;
+    }
+
+    /* Items Section */
+    .items-section {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+    }
+
+    .items-section h4 {
+      font-size: var(--text-lg);
+      font-weight: 600;
+      color: var(--color-text);
+      margin: 0 0 var(--space-4) 0;
+    }
+
+    .order-items-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .detail-order-item {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-3);
+      background: white;
+    }
+
+    .item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: var(--space-2);
+    }
+
+    .item-main-info {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-2);
+      flex: 1;
+    }
+
+    .item-quantity {
+      font-weight: 600;
+      color: var(--color-primary-600);
+      min-width: 35px;
+    }
+
+    .item-details {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      flex: 1;
+    }
+
+    .item-name {
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .item-variants {
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+      font-style: italic;
+    }
+
+    .item-price {
+      font-weight: 600;
+      color: var(--color-primary-600);
+      font-size: var(--text-lg);
+    }
+
+    /* Total Section */
+    .total-section {
+      background: var(--color-primary-50);
+      border: 1px solid var(--color-primary-200);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+    }
+
+    .total-breakdown {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-1) 0;
+    }
+
+    .total-row.final {
+      border-top: 2px solid var(--color-primary-300);
+      padding-top: var(--space-3);
+      margin-top: var(--space-2);
+      font-size: var(--text-lg);
+      font-weight: 700;
+    }
+
+    .total-label {
+      color: var(--color-text);
+      font-weight: 500;
+    }
+
+    .total-amount {
+      color: var(--color-primary-600);
+      font-weight: 600;
+    }
+
+    .total-row.final .total-amount {
+      color: var(--color-primary-700);
+    }
+
+    /* Notes Section */
+    .details-modal-body .notes-section {
+      border: 1px solid var(--color-warning-200);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      background: var(--color-warning-50);
+    }
+
+    .details-modal-body .notes-section .notes-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-3);
+    }
+
+    .details-modal-body .notes-section h4 {
+      font-size: var(--text-lg);
+      font-weight: 600;
+      color: var(--color-text);
+      margin: 0;
+    }
+
+    .details-modal-body .edit-notes-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--color-primary-500);
+      background: white;
+      color: var(--color-primary-600);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition);
+      font-size: var(--text-sm);
+    }
+
+    .details-modal-body .edit-notes-btn:hover {
+      background: var(--color-primary-50);
+      transform: translateY(-1px);
+    }
+
+    .details-modal-body .order-notes {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-2);
+      padding: var(--space-3);
+      background: white;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-warning-200);
+    }
+
+    .details-modal-body .order-notes i {
+      color: var(--color-warning);
+      font-size: var(--text-sm);
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    .details-modal-body .order-notes span {
+      font-size: var(--text-sm);
+      color: var(--color-text);
+      line-height: 1.4;
+    }
+
+    .details-modal-body .no-notes {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-2);
+      padding: var(--space-3);
+      background: white;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+    }
+
+    .details-modal-body .no-notes i {
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    .details-modal-body .no-notes span {
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+      line-height: 1.4;
+      font-style: italic;
+    }
+
+    .details-modal-body .notes-edit-form {
+      background: white;
+      border-radius: var(--radius-md);
+      padding: var(--space-4);
+      border: 1px solid var(--color-warning-200);
+    }
+
+    .details-modal-body .notes-edit-form .form-group {
+      margin-bottom: var(--space-4);
+    }
+
+    .details-modal-body .notes-edit-form label {
+      display: block;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: var(--space-2);
+    }
+
+    .details-modal-body .notes-edit-form textarea {
+      width: 100%;
+      padding: var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      font-family: inherit;
+      font-size: var(--text-sm);
+      resize: vertical;
+      transition: border-color var(--transition);
+    }
+
+    .details-modal-body .notes-edit-form textarea:focus {
+      outline: none;
+      border-color: var(--color-primary-500);
+      box-shadow: 0 0 0 3px var(--color-primary-50);
+    }
+
+    .details-modal-body .character-count {
+      display: block;
+      text-align: right;
+      font-size: var(--text-xs);
+      color: var(--color-muted);
+      margin-top: var(--space-1);
+    }
+
+    .details-modal-body .notes-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--space-3);
+    }
+
+    .details-modal-body .notes-actions .cancel-btn,
+    .details-modal-body .notes-actions .save-btn {
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-lg);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .details-modal-body .notes-actions .cancel-btn {
+      border: 1px solid var(--color-border);
+      background: white;
+      color: var(--color-text);
+    }
+
+    .details-modal-body .notes-actions .cancel-btn:hover {
+      background: var(--color-gray-50);
+    }
+
+    .details-modal-body .notes-actions .save-btn {
+      border: 1px solid var(--color-primary-500);
+      background: var(--color-primary-500);
+      color: white;
+    }
+
+    .details-modal-body .notes-actions .save-btn:hover:not(:disabled) {
+      background: var(--color-primary-600);
+      transform: translateY(-1px);
+    }
+
+    .details-modal-body .notes-actions .save-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .details-modal-body .notes-actions .save-btn.loading {
+      pointer-events: none;
+    }
+
     /* Empty State */
     .empty-state {
       padding: var(--space-12) var(--space-6);
@@ -1004,6 +1767,300 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       margin: 0;
     }
 
+    /* Desktop Table Styles */
+    .orders-table-container {
+      overflow-x: auto;
+      margin-bottom: var(--space-6);
+    }
+
+    .orders-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--color-border);
+    }
+
+    .orders-table thead {
+      background: var(--color-gray-50);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .orders-table th {
+      padding: var(--space-4) var(--space-3);
+      text-align: left;
+      font-size: var(--text-sm);
+      font-weight: 700;
+      color: var(--color-text);
+      border-bottom: 1px solid var(--color-border);
+      white-space: nowrap;
+    }
+
+    .orders-table td {
+      padding: var(--space-4) var(--space-3);
+      border-bottom: 1px solid var(--color-border);
+      vertical-align: top;
+    }
+
+    .orders-table tbody tr {
+      transition: background-color var(--transition);
+    }
+
+    .orders-table tbody tr:hover {
+      background: var(--color-gray-25);
+    }
+
+    .orders-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Table Column Styles */
+    .col-order-id {
+      width: 120px;
+      min-width: 120px;
+    }
+
+    .col-customer {
+      width: 200px;
+      min-width: 200px;
+    }
+
+    .col-order-status {
+      width: 140px;
+      min-width: 140px;
+    }
+
+    .col-payment-status {
+      width: 140px;
+      min-width: 140px;
+    }
+
+    .col-total {
+      width: 100px;
+      min-width: 100px;
+      text-align: right;
+    }
+
+    .col-time {
+      width: 120px;
+      min-width: 120px;
+    }
+
+    .col-actions {
+      width: 250px;
+      min-width: 250px;
+    }
+
+    .col-details {
+      width: 60px;
+      min-width: 60px;
+      text-align: center;
+    }
+
+    /* Table Cell Content */
+    .order-id {
+      font-size: var(--text-lg);
+      font-weight: 700;
+      color: var(--color-text);
+      margin-bottom: var(--space-1);
+    }
+
+    .order-time-mobile {
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+    }
+
+    .customer-name {
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: var(--space-1);
+    }
+
+    .customer-email {
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+    }
+
+    .col-order-status .status-badge,
+    .col-payment-status .payment-indicator {
+      margin: 0;
+    }
+
+    .total-amount {
+      font-size: var(--text-lg);
+      font-weight: 700;
+      color: var(--color-primary-600);
+    }
+
+    .item-count {
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+      text-align: right;
+    }
+
+    /* Table Action Buttons */
+    .col-actions .action-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1);
+      justify-content: flex-start;
+    }
+
+    .col-actions .action-btn {
+      width: 32px;
+      height: 32px;
+      padding: var(--space-1);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--text-sm);
+      cursor: pointer;
+      transition: all var(--transition);
+      border: 1px solid;
+    }
+
+    .col-actions .action-btn.confirm {
+      border-color: var(--color-info-500);
+      color: var(--color-info-600);
+      background: white;
+    }
+
+    .col-actions .action-btn.confirm:hover:not(:disabled) {
+      background: var(--color-info-50);
+    }
+
+    .col-actions .action-btn.payment {
+      border-color: var(--color-success-500);
+      color: var(--color-success);
+      background: white;
+    }
+
+    .col-actions .action-btn.payment:hover:not(:disabled) {
+      background: var(--color-success-50);
+    }
+
+    .col-actions .action-btn.prepare {
+      border-color: var(--color-primary-500);
+      color: var(--color-primary-600);
+      background: white;
+    }
+
+    .col-actions .action-btn.prepare:hover:not(:disabled) {
+      background: var(--color-primary-50);
+    }
+
+    .col-actions .action-btn.ready {
+      border-color: var(--color-success-500);
+      color: var(--color-success);
+      background: white;
+    }
+
+    .col-actions .action-btn.ready:hover:not(:disabled) {
+      background: var(--color-success-50);
+    }
+
+    .col-actions .action-btn.pickup {
+      border-color: var(--color-accent-500);
+      color: var(--color-accent-600);
+      background: white;
+    }
+
+    .col-actions .action-btn.pickup:hover:not(:disabled) {
+      background: var(--color-accent-50);
+    }
+
+    .col-actions .action-btn.deliver {
+      border-color: var(--color-success-500);
+      color: var(--color-success);
+      background: white;
+    }
+
+    .col-actions .action-btn.deliver:hover:not(:disabled) {
+      background: var(--color-success-50);
+    }
+
+    .col-actions .action-btn.cancel {
+      border-color: var(--color-danger-500);
+      color: var(--color-danger);
+      background: white;
+    }
+
+    .col-actions .action-btn.cancel:hover:not(:disabled) {
+      background: var(--color-danger-50);
+    }
+
+    .col-actions .action-btn.details {
+      border-color: var(--color-info-500);
+      color: var(--color-info-600);
+      background: white;
+    }
+
+    .col-actions .action-btn.details:hover:not(:disabled) {
+      background: var(--color-info-50);
+    }
+
+    .col-actions .action-btn.notes {
+      border-color: var(--color-warning-500);
+      color: var(--color-warning-600);
+      background: white;
+    }
+
+    .col-actions .action-btn.notes:hover:not(:disabled) {
+      background: var(--color-warning-50);
+    }
+
+    /* Details button with notes indicator */
+    .action-btn.details.has-notes {
+      background: #ff9500 !important;
+      border-color: #ff9500 !important;
+      color: white !important;
+    }
+
+    .action-btn.details.has-notes:hover {
+      background: #e6850e !important;
+      border-color: #e6850e !important;
+      color: white !important;
+    }
+
+    .col-actions .action-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .col-actions .action-btn.hidden {
+      display: none;
+    }
+
+    .col-actions .loading-indicator {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+      margin-top: var(--space-2);
+    }
+
+    /* Highlight paid pending orders in table */
+    .order-row.paid-pending {
+      background: linear-gradient(135deg, var(--color-gray-25) 0%, var(--color-success-25) 100%);
+    }
+
+    .order-row.paid-pending:hover {
+      background: linear-gradient(135deg, var(--color-gray-50) 0%, var(--color-success-50) 100%);
+    }
+
+    /* Responsive: Show table on desktop, cards on mobile */
+    .desktop-only {
+      display: block;
+    }
+
+    .mobile-only {
+      display: none;
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
       .orders-container {
@@ -1016,8 +2073,31 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
         padding: var(--space-4);
       }
 
+      .order-tabs {
+        padding: var(--space-2);
+        gap: var(--space-1);
+      }
+
+      .tab-button {
+        padding: var(--space-2) var(--space-3);
+        font-size: var(--text-xs);
+      }
+
+      .tab-button i {
+        font-size: var(--text-sm);
+      }
+
       .filters-grid {
         grid-template-columns: 1fr;
+      }
+
+      /* Hide table on mobile, show cards */
+      .desktop-only {
+        display: none;
+      }
+
+      .mobile-only {
+        display: block;
       }
 
       .order-header {
@@ -1055,6 +2135,18 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
   editingOrder: Order | null = null;
   notesText = '';
   savingNotes = false;
+
+  // Details modal properties
+  detailsModalOpen = false;
+  selectedOrder: Order | null = null;
+  editingNotes = false;
+
+  // Tabs properties
+  activeTab = 'active';
+  orderTabs = [
+    { id: 'active', title: 'Aktive Bestellungen', icon: 'fa-solid fa-clock' },
+    { id: 'completed', title: 'Abgeschlossene', icon: 'fa-solid fa-check-circle' }
+  ];
 
   private refreshSubscription?: Subscription;
 
@@ -1116,9 +2208,35 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
     this.loadOrders();
   }
 
+  switchTab(tabId: string) {
+    this.activeTab = tabId;
+    // Reset status filter when switching tabs
+    if (tabId === 'active') {
+      this.selectedStatus = 'all';
+    } else if (tabId === 'completed') {
+      this.selectedStatus = 'all';
+    }
+    this.applyFilters();
+  }
+
   applyFilters() {
     // Ensure we always work with the most current orders data
     let filtered = [...this.orders];
+
+    // First, filter by tab (active vs completed orders)
+    if (this.activeTab === 'active') {
+      // Active orders: NOT (delivered AND paid)
+      filtered = filtered.filter(order => {
+        const canonicalStatus = this.canonicalStatus(order.status);
+        return !(canonicalStatus === 'delivered' && order.payment_status === 'paid');
+      });
+    } else if (this.activeTab === 'completed') {
+      // Completed orders: delivered AND paid
+      filtered = filtered.filter(order => {
+        const canonicalStatus = this.canonicalStatus(order.status);
+        return canonicalStatus === 'delivered' && order.payment_status === 'paid';
+      });
+    }
 
     // Filter by status
     if (this.selectedStatus !== 'all') {
@@ -1454,6 +2572,64 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
     }
 
     return summaries.join(', ');
+  }
+
+  // Details modal methods
+  openDetailsModal(order: Order) {
+    this.selectedOrder = order;
+    this.detailsModalOpen = true;
+  }
+
+  closeDetailsModal() {
+    this.detailsModalOpen = false;
+    this.selectedOrder = null;
+    this.editingNotes = false;
+    this.notesText = '';
+  }
+
+  // Inline notes editing methods
+  toggleNotesEdit() {
+    this.editingNotes = !this.editingNotes;
+    if (this.editingNotes) {
+      this.notesText = this.selectedOrder?.notes || '';
+    } else {
+      this.notesText = '';
+    }
+  }
+
+  cancelNotesEdit() {
+    this.editingNotes = false;
+    this.notesText = '';
+  }
+
+  saveNotesInline() {
+    if (!this.selectedOrder || !this.notesText.trim()) return;
+
+    this.savingNotes = true;
+
+    this.ordersService.updateOrderNotes(this.selectedOrder.id, this.notesText.trim()).subscribe({
+      next: (response) => {
+        // Update local order data
+        const index = this.orders.findIndex(o => o.id === this.selectedOrder!.id);
+        if (index !== -1) {
+          this.orders[index] = response.order;
+          this.applyFilters(); // Refresh filtered orders
+        }
+
+        // Update selected order for modal
+        this.selectedOrder = response.order;
+        this.editingNotes = false;
+        this.notesText = '';
+
+        this.toastService.success('Notizen gespeichert', 'Die Notizen wurden erfolgreich gespeichert.');
+        this.savingNotes = false;
+      },
+      error: (error: any) => {
+        console.error('Error saving notes:', error);
+        this.toastService.error('Fehler beim Speichern', error.error?.error || 'Notizen konnten nicht gespeichert werden.');
+        this.savingNotes = false;
+      }
+    });
   }
 
   // Notes modal methods

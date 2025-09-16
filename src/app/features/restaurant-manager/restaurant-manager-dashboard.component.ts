@@ -39,6 +39,7 @@ export interface ManagerMenuItem {
             <!-- Font Awesome Icons -->
             <i *ngIf="menuItem.icon === 'overview-icon'" class="fas fa-th-large nav-icon"></i>
             <i *ngIf="menuItem.icon === 'orders-icon'" class="fas fa-clipboard-check nav-icon"></i>
+            <i *ngIf="menuItem.icon === 'issues-icon'" class="fas fa-triangle-exclamation nav-icon"></i>
             <i *ngIf="menuItem.icon === 'drivers-icon'" class="fas fa-truck nav-icon"></i>
             <i *ngIf="menuItem.icon === 'menu-icon'" class="fas fa-list nav-icon"></i>
             <i *ngIf="menuItem.icon === 'analytics-icon'" class="fas fa-chart-line nav-icon"></i>
@@ -618,6 +619,15 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
         queryParams: {},
         color: '#f59e0b',
         badge: this.pendingOrdersCount > 0 ? this.pendingOrdersCount.toString() : undefined
+      },
+      {
+        id: 'issues',
+        title: 'Reklamationen',
+        description: 'Zugewiesene Kundenreklamationen',
+        icon: 'issues-icon',
+        route: '/restaurant-manager/issues',
+        queryParams: {},
+        color: '#dc2626'
       },
       {
         id: 'drivers',

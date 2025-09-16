@@ -111,7 +111,8 @@ export const routes: Routes = [
       { path: 'payment-methods', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-payment-methods.component').then(m => m.RestaurantManagerPaymentMethodsComponent) },
       { path: 'wholesale', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-wholesale.component').then(m => m.RestaurantManagerWholesaleComponent) },
       { path: 'wholesale/:id', loadComponent: () => import('./features/restaurant-manager/wholesaler-detail.component').then(m => m.WholesalerDetailComponent) },
-      { path: 'invoices', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-invoices.component').then(m => m.RestaurantManagerInvoicesComponent) }
+      { path: 'invoices', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-invoices.component').then(m => m.RestaurantManagerInvoicesComponent) },
+      { path: 'issues', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-issues.component').then(m => m.RestaurantManagerIssuesComponent) }
     ]
   },
   {

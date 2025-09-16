@@ -18,6 +18,10 @@ interface OrderIssueVm {
   status: IssueStatus;
   priority: IssuePriority;
   admin_notes?: string;
+  assigned_to_restaurant_manager?: boolean;
+  assigned_by_admin_id?: number;
+  assigned_at?: string;
+  restaurant_manager_notes?: string;
   created_at: string;
 }
 
@@ -159,6 +163,21 @@ interface OrderIssueVm {
               <option value="normal">Normal</option>
               <option value="high">Hoch</option>
             </select>
+              </div>
+
+              <div class="action-group assign-group">
+                <label class="action-label">Zuweisung:</label>
+                <button
+                  class="assign-btn"
+                  [class.assigned]="issue.assigned_to_restaurant_manager"
+                  (click)="toggleAssignment(issue)"
+                  [disabled]="assigningIssueId === issue.id">
+                  <i class="fa-solid" [class]="issue.assigned_to_restaurant_manager ? 'fa-check' : 'fa-share'"></i>
+                  {{ issue.assigned_to_restaurant_manager ? 'Zugewiesen' : 'An Restaurant zuweisen' }}
+                </button>
+                <div *ngIf="issue.assigned_to_restaurant_manager && issue.assigned_at" class="assignment-info">
+                  <small>Zugewiesen am {{ issue.assigned_at | date:'dd.MM.yyyy HH:mm' }}</small>
+                </div>
               </div>
 
               <div class="action-group notes-group">
@@ -570,6 +589,54 @@ interface OrderIssueVm {
       box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-primary-500) 15%, transparent);
     }
 
+    .assign-group {
+      margin-bottom: var(--space-4);
+    }
+
+    .assign-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      border: 1px solid var(--color-primary-500);
+      border-radius: var(--radius-md);
+      background: var(--color-surface);
+      color: var(--color-primary-600);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+      width: 100%;
+      justify-content: center;
+    }
+
+    .assign-btn:hover:not(:disabled) {
+      background: var(--color-primary-50);
+      transform: translateY(-1px);
+    }
+
+    .assign-btn.assigned {
+      border-color: var(--color-success-500);
+      color: var(--color-success);
+      background: color-mix(in oklab, var(--color-success) 10%, white);
+    }
+
+    .assign-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .assignment-info {
+      margin-top: var(--space-2);
+      text-align: center;
+    }
+
+    .assignment-info small {
+      color: var(--color-muted);
+      font-size: var(--text-xs);
+    }
+
     .notes-group {
       flex: 1;
     }
@@ -753,6 +820,7 @@ export class IssuesAdminComponent implements OnInit {
   filters: { status?: IssueStatus | ''; search: string } = { status: '', search: '' };
   issues: OrderIssueVm[] = [];
   filteredIssues: OrderIssueVm[] = [];
+  assigningIssueId: string | null = null;
 
   ngOnInit(): void {
     this.loadIssues();
@@ -882,6 +950,44 @@ export class IssuesAdminComponent implements OnInit {
   updateIssueNotes(issue: OrderIssueVm, notes: string) {
     issue.admin_notes = notes;
     this.updateIssue(issue);
+  }
+
+  toggleAssignment(issue: OrderIssueVm) {
+    if (issue.assigned_to_restaurant_manager) {
+      // Remove assignment (unassign)
+      this.assigningIssueId = issue.id;
+      this.http.patch<OrderIssueVm>(`${environment.apiUrl}/order-issues/${issue.id}`, {
+        assigned_to_restaurant_manager: false,
+        assigned_by_admin_id: null,
+        assigned_at: null
+      }).subscribe({
+        next: (updated: OrderIssueVm) => {
+          issue.assigned_to_restaurant_manager = updated.assigned_to_restaurant_manager;
+          issue.assigned_by_admin_id = updated.assigned_by_admin_id;
+          issue.assigned_at = updated.assigned_at;
+          this.assigningIssueId = null;
+        },
+        error: (err) => {
+          console.error('Failed to unassign issue', err);
+          this.assigningIssueId = null;
+        }
+      });
+    } else {
+      // Assign to restaurant
+      this.assigningIssueId = issue.id;
+      this.http.post<OrderIssueVm>(`${environment.apiUrl}/order-issues/${issue.id}/assign-to-restaurant`, {}).subscribe({
+        next: (updated: OrderIssueVm) => {
+          issue.assigned_to_restaurant_manager = updated.assigned_to_restaurant_manager;
+          issue.assigned_by_admin_id = updated.assigned_by_admin_id;
+          issue.assigned_at = updated.assigned_at;
+          this.assigningIssueId = null;
+        },
+        error: (err) => {
+          console.error('Failed to assign issue', err);
+          this.assigningIssueId = null;
+        }
+      });
+    }
   }
 
   hasActiveFilters(): boolean {
