@@ -4,10 +4,14 @@
   --color-bg: #ffffff;
   --color-surface: #ffffff;
   --color-surface-2: #f0f9f0;
+  --color-surface-3: #e8f5e8;
   --color-border: #e5e7eb;
   --color-muted: #6b7280;
   --color-text: #111827;
   --color-heading: #0f172a;
+
+  /* Primary color alias for backward compatibility */
+  --color-primary: var(--color-primary-500);
 
   /* Brand - nature green with gradient */
   --color-primary-50: #effaf1;
@@ -26,6 +30,7 @@
   --bg-light-green: #f0f9f0;
   --bg-light-green-2: #e8f5e8;
   --bg-light-green-3: #d4f1d4;
+  --bg-light: var(--bg-light-green); /* Alias for backward compatibility */
   --gradient-light-green: linear-gradient(180deg, #f0f9f0 0%, #e8f5e8 50%, #d4f1d4 100%);
 
   /* Accent (customizable) */
@@ -35,6 +40,7 @@
   --color-success: #16a34a;
   --color-warning: #f59e0b;
   --color-danger: #dc2626;
+  --color-error: var(--color-danger); /* Alias for backward compatibility */
   --color-info: #3b82f6;
 
   /* Radius */
@@ -175,8 +181,18 @@ img { max-width: 100%; display: block; }
   border: 1px solid transparent;
   cursor: pointer;
   transition: transform var(--transition-fast), box-shadow var(--transition), background var(--transition), border-color var(--transition);
+  text-decoration: none;
 }
 .btn:disabled { opacity: 0.6; cursor: default; }
+
+/* Responsive button text helpers */
+.btn-text-full { display: inline; }
+.btn-text-mobile { display: none; }
+
+@media (max-width: 640px) {
+  .btn-text-full { display: none; }
+  .btn-text-mobile { display: inline; }
+}
 
 .btn-primary {
   color: #fff;
@@ -200,6 +216,17 @@ img { max-width: 100%; display: block; }
   background: var(--color-success);
 }
 
+.btn-outline-primary {
+  color: var(--color-primary-700);
+  background: transparent;
+  border-color: var(--color-primary-700);
+}
+
+.btn-outline-primary:hover:not(:disabled) {
+  background: var(--color-primary-700);
+  color: white;
+}
+
 /* Utilities - badges */
 .badge {
   display: inline-flex;
@@ -214,6 +241,133 @@ img { max-width: 100%; display: block; }
 }
 .badge-primary { background: color-mix(in oklab, var(--color-accent) 12%, white); color: var(--color-heading); border-color: transparent; }
 .badge-success { background: color-mix(in oklab, var(--color-success) 12%, white); color: var(--color-heading); border-color: transparent; }
+
+/* Tab styles */
+.tabs-container {
+  margin-bottom: var(--space-6);
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-4);
+}
+
+.tab-button {
+  background: none;
+  border: none;
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  color: var(--color-muted);
+  font-weight: 500;
+  transition: all var(--transition);
+}
+
+.tab-button.active {
+  color: var(--color-primary-700);
+  border-bottom-color: var(--color-primary-700);
+}
+
+.tab-button:hover:not(.active) {
+  color: var(--color-heading);
+  background: var(--color-surface-2);
+}
+
+.tab-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.tab-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.tab-text-full { display: inline; }
+.tab-text-mobile { display: none; }
+
+@media (max-width: 640px) {
+  .tab-text-full { display: none; }
+  .tab-text-mobile { display: inline; }
+}
+
+.tab-info {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+  padding: var(--space-2) 0;
+}
+
+/* Status dots for driver status */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: var(--space-2);
+}
+
+.status-dot.available {
+  background: var(--color-success);
+}
+
+.status-dot.busy {
+  background: var(--color-warning);
+}
+
+.status-dot.offline, .status-dot.on_break {
+  background: var(--color-muted);
+}
+
+/* Vehicle type badges */
+.vehicle-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.vehicle-badge.bicycle {
+  background: color-mix(in oklab, var(--color-success) 15%, white);
+  color: var(--color-success);
+}
+
+.vehicle-badge.motorcycle, .vehicle-badge.scooter {
+  background: color-mix(in oklab, var(--color-warning) 15%, white);
+  color: var(--color-warning);
+}
+
+.vehicle-badge.car {
+  background: color-mix(in oklab, var(--color-primary-700) 15%, white);
+  color: var(--color-primary-700);
+}
+
+/* Mobile layout adjustments */
+@media (max-width: 768px) {
+  .main-content-grid {
+    grid-template-columns: 1fr !important;
+    gap: var(--space-6) !important;
+  }
+
+  .quick-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .modal-content {
+    width: 95% !important;
+    margin: var(--space-2);
+  }
+}
 
 /* Header gradient helper */
 .header-gradient {

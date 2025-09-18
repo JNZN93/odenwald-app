@@ -99,7 +99,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                 <th class="col-order-status">Bestellstatus</th>
                 <th class="col-payment-status">Zahlung</th>
                 <th class="col-total">Gesamt</th>
-                <th class="col-time">Bestellt</th>
+                <th class="col-address">Adresse</th>
                 <th class="col-actions">Aktionen</th>
                 <th class="col-details">Details</th>
               </tr>
@@ -111,7 +111,12 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                   <div class="order-time-mobile">{{ formatOrderTime(order.created_at) }}</div>
                 </td>
                 <td class="col-customer">
-                  <div class="customer-name">{{ order.customer_name }}</div>
+                  <div class="customer-name">
+                    <span [ngClass]="getUserTypeClass(order.user_id)" class="user-type-badge">
+                      {{ getUserTypeText(order.user_id) }}
+                    </span>
+                    {{ order.customer_name }}
+                  </div>
                   <div class="customer-email">{{ order.customer_email }}</div>
                 </td>
                 <td class="col-order-status">
@@ -133,7 +138,10 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                   <div class="total-amount">€{{ order.total_price.toFixed(2) }}</div>
                   <div class="item-count">{{ order.items.length }} Artikel</div>
                 </td>
-                <td class="col-time">{{ formatOrderTime(order.created_at) }}</td>
+                <td class="col-address">
+                  <div class="delivery-address" *ngIf="order.delivery_address">{{ order.delivery_address }}</div>
+                  <div class="no-address" *ngIf="!order.delivery_address">Keine Adresse</div>
+                </td>
                 <td class="col-actions">
                   <div class="action-buttons">
                     <!-- Status Action Buttons - Always visible in same positions -->
@@ -254,7 +262,12 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
 
             <div class="order-details">
               <div class="customer-info">
-                <div class="customer-name">{{ order.customer_name }}</div>
+                <div class="customer-name">
+                  <span [ngClass]="getUserTypeClass(order.user_id)" class="user-type-badge">
+                    {{ getUserTypeText(order.user_id) }}
+                  </span>
+                  {{ order.customer_name }}
+                </div>
                 <div class="customer-email">{{ order.customer_email }}</div>
                 <div class="delivery-address">{{ order.delivery_address }}</div>
               </div>
@@ -1843,14 +1856,14 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       text-align: right;
     }
 
-    .col-time {
-      width: 120px;
-      min-width: 120px;
+    .col-address {
+      width: 200px;
+      min-width: 200px;
     }
 
     .col-actions {
-      width: 250px;
-      min-width: 250px;
+      width: 140px;
+      min-width: 140px;
     }
 
     .col-details {
@@ -1876,11 +1889,46 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       font-weight: 600;
       color: var(--color-text);
       margin-bottom: var(--space-1);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
     }
 
     .customer-email {
       font-size: var(--text-sm);
       color: var(--color-muted);
+    }
+
+    .user-type-badge {
+      padding: 2px var(--space-1);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .user-type-badge.user-registered {
+      background: var(--color-success-50);
+      color: var(--color-success);
+    }
+
+    .user-type-badge.user-guest {
+      background: var(--color-warning-50);
+      color: var(--color-warning);
+    }
+
+    .delivery-address {
+      font-size: var(--text-sm);
+      color: var(--color-text);
+      line-height: 1.4;
+      word-wrap: break-word;
+    }
+
+    .no-address {
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+      font-style: italic;
     }
 
     .col-order-status .status-badge,
@@ -2572,6 +2620,19 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
     }
 
     return summaries.join(', ');
+  }
+
+  getUserTypeText(userId: string): string {
+    return this.isRegisteredUser(userId) ? 'User' : 'Gast';
+  }
+
+  getUserTypeClass(userId: string): string {
+    return this.isRegisteredUser(userId) ? 'user-registered' : 'user-guest';
+  }
+
+  private isRegisteredUser(userId: string): boolean {
+    // Consider a user registered if user_id exists and is not null/empty
+    return !!(userId && userId.trim() && userId !== 'null' && userId !== 'undefined');
   }
 
   // Details modal methods

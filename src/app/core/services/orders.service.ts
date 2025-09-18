@@ -49,6 +49,7 @@ export interface Order {
   loyalty_redemption_stamps_used?: number;
   status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked_up' | 'delivered' | 'cancelled' | 'open' | 'in_progress' | 'out_for_delivery';
   payment_status: 'pending' | 'paid' | 'failed';
+  payment_method?: 'cash' | 'card' | 'paypal' | 'bank_transfer';
   delivery_address: string;
   delivery_instructions?: string;
   notes?: string; // Additional notes from customer or restaurant manager
@@ -101,7 +102,7 @@ export class OrdersService {
   });
 
   // Normalize raw API order to typed Order
-  private normalizeOrder = (raw: any): Order => ({
+  public normalizeOrder = (raw: any): Order => ({
     id: String(raw.id),
     user_id: String(raw.user_id),
     restaurant_id: String(raw.restaurant_id),
@@ -117,6 +118,7 @@ export class OrdersService {
     loyalty_redemption_stamps_used: raw.loyalty_redemption_stamps_used != null ? Number(raw.loyalty_redemption_stamps_used) : undefined,
     status: raw.status,
     payment_status: raw.payment_status,
+    payment_method: raw.payment_method,
     delivery_address: raw.delivery_address,
     delivery_instructions: raw.delivery_instructions ?? undefined,
     notes: raw.notes ?? undefined,

@@ -21,24 +21,9 @@ import { environment } from '../../../environments/environment';
         <p class="confirmation-subtitle">Ihre Bestellung wurde aufgegeben und wird bald bearbeitet.</p>
       </div>
 
-      <ng-container *ngIf="order$ | async as order">
-        <div class="payment-banner" [ngClass]="{
-          'payment-pending': order.payment_status === 'pending',
-          'payment-paid': order.payment_status === 'paid',
-          'payment-failed': order.payment_status === 'failed'
-        }">
-          <i class="fa-solid" [ngClass]="{
-            'fa-spinner fa-spin': order.payment_status === 'pending',
-            'fa-check-circle': order.payment_status === 'paid',
-            'fa-triangle-exclamation': order.payment_status === 'failed'
-          }"></i>
-          <span *ngIf="order.payment_status === 'pending'">Zahlung ausstehend – wir aktualisieren den Status automatisch…</span>
-          <span *ngIf="order.payment_status === 'paid'">Zahlung erfolgreich – Ihre Bestellung wird bestätigt.</span>
-          <span *ngIf="order.payment_status === 'failed'">Zahlung fehlgeschlagen – bitte versuchen Sie es erneut.</span>
-        </div>
-      </ng-container>
+      <!-- Payment Banner entfernt - nicht mehr benötigt -->
 
-      <div class="confirmation-content" *ngIf="order$ | async as order; else loading">
+      <div class="confirmation-content" *ngIf="order$ | async as order">
         <div class="order-details-card">
           <div class="order-header">
             <h2>Bestellung #{{ order.id }}</h2>
@@ -59,11 +44,20 @@ import { environment } from '../../../environments/environment';
               <p *ngIf="order.delivery_instructions" class="instructions">
                 Hinweise: {{ order.delivery_instructions }}
               </p>
+              <div class="data-saved-notice">
+                <i class="fa-solid fa-info-circle"></i>
+                <small>Ihre Daten wurden für zukünftige Bestellungen gespeichert</small>
+              </div>
             </div>
 
             <div class="info-section">
-              <h3><i class="fa-solid fa-clock"></i> Geschätzte Lieferzeit</h3>
+              <h3><i class="fa-solid fa-clock"></i> Bestellt am</h3>
               <p>{{ order.created_at | date:'dd.MM.yyyy HH:mm' }}</p>
+            </div>
+
+            <div class="info-section">
+              <h3><i class="fa-solid fa-credit-card"></i> Zahlungsmethode</h3>
+              <p>{{ getPaymentMethodLabel(order) }}</p>
             </div>
           </div>
 
@@ -96,17 +90,6 @@ import { environment } from '../../../environments/environment';
           </div>
         </div>
 
-        <div class="redirect-notice" *ngIf="countdown > 0">
-          <div class="redirect-message">
-            <i class="fa-solid fa-info-circle"></i>
-            <span>Automatische Weiterleitung zur Startseite in {{ countdown }} Sekunden...</span>
-            <button class="cancel-redirect-btn" (click)="cancelRedirect()">
-              <i class="fa-solid fa-times"></i>
-              Abbrechen
-            </button>
-          </div>
-        </div>
-
         <div class="action-buttons">
           <button class="btn btn-primary" (click)="trackOrder()">
             <i class="fa-solid fa-map-marker-alt"></i>
@@ -118,13 +101,6 @@ import { environment } from '../../../environments/environment';
           </button>
         </div>
       </div>
-
-      <ng-template #loading>
-        <div class="loading-state">
-          <div class="loading-spinner"></div>
-          <p>Bestellung wird geladen...</p>
-        </div>
-      </ng-template>
     </div>
   `,
   styles: [`
@@ -251,6 +227,24 @@ import { environment } from '../../../environments/environment';
     .instructions {
       font-style: italic;
       color: var(--color-muted);
+    }
+
+    .data-saved-notice {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin-top: var(--space-2);
+      padding: var(--space-2);
+      background: color-mix(in oklab, #10b981 10%, white);
+      border: 1px solid #10b981;
+      border-radius: var(--radius-md);
+      color: #065f46;
+      font-size: var(--text-sm);
+    }
+
+    .data-saved-notice i {
+      color: #10b981;
+      font-size: var(--text-sm);
     }
 
     .order-items {
@@ -384,54 +378,95 @@ import { environment } from '../../../environments/environment';
       to { transform: rotate(360deg); }
     }
 
-    .redirect-notice {
-      margin-bottom: var(--space-6);
-    }
 
-    .redirect-message {
+    /* ===== LOADING AND MESSAGE STYLES ===== */
+
+    .loading-message, .success-message, .error-message {
       display: flex;
       align-items: center;
       gap: var(--space-3);
       padding: var(--space-4);
-      background: color-mix(in oklab, var(--color-primary) 5%, white);
-      border: 1px solid var(--color-primary);
       border-radius: var(--radius-lg);
-      color: var(--color-primary);
-      font-weight: 500;
-    }
-
-    .redirect-message i {
-      font-size: var(--text-lg);
-      flex-shrink: 0;
-    }
-
-    .redirect-message span {
-      flex: 1;
-    }
-
-    .cancel-redirect-btn {
-      display: flex;
-      align-items: center;
-      gap: var(--space-1);
-      padding: var(--space-2) var(--space-3);
-      background: transparent;
-      border: 1px solid var(--color-primary);
-      border-radius: var(--radius-md);
-      color: var(--color-primary);
-      cursor: pointer;
-      font-size: var(--text-sm);
       font-weight: 600;
+      font-size: var(--text-base);
+      border: 1px solid;
+      margin-bottom: var(--space-6);
+      animation: slideIn 0.3s ease-out;
+    }
+
+    .loading-message {
+      background: color-mix(in oklab, #3b82f6 10%, white);
+      color: #1d4ed8;
+      border-color: #3b82f6;
+      justify-content: center;
+    }
+
+    .loading-message .loading-spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid #3b82f6;
+      border-top: 2px solid transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .loading-message i {
+      color: #3b82f6;
+      font-size: var(--text-lg);
+    }
+
+    .success-message {
+      background: color-mix(in oklab, #10b981 10%, white);
+      color: #065f46;
+      border-color: #10b981;
+      justify-content: center;
+    }
+
+    .success-message i {
+      color: #10b981;
+      font-size: var(--text-lg);
+    }
+
+    .error-message {
+      background: color-mix(in oklab, #ef4444 10%, white);
+      color: #7f1d1d;
+      border-color: #ef4444;
+    }
+
+    .error-message i {
+      color: #ef4444;
+      font-size: var(--text-lg);
+    }
+
+    .error-message .close-btn {
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: #7f1d1d;
+      cursor: pointer;
+      padding: var(--space-1);
+      border-radius: var(--radius-md);
       transition: all var(--transition);
-      flex-shrink: 0;
-    }
-
-    .cancel-redirect-btn:hover {
-      background: var(--color-primary);
-      color: white;
-    }
-
-    .cancel-redirect-btn i {
       font-size: var(--text-sm);
+    }
+
+    .error-message .close-btn:hover {
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
     /* Responsive */
@@ -473,6 +508,19 @@ import { environment } from '../../../environments/environment';
         width: 100%;
         justify-content: center;
       }
+
+      /* Responsive messages */
+      .loading-message, .success-message, .error-message {
+        padding: var(--space-3);
+        font-size: var(--text-sm);
+        gap: var(--space-2);
+        margin-bottom: var(--space-4);
+      }
+
+      .loading-message .loading-spinner {
+        width: 20px;
+        height: 20px;
+      }
     }
   `]
 })
@@ -484,9 +532,8 @@ export class OrderConfirmationComponent implements OnInit, OnDestroy {
 
   private orderSubject = new BehaviorSubject<Order | null>(null);
   order$: Observable<Order | null> = this.orderSubject.asObservable();
-  countdown = 5;
-  private countdownSubscription: Subscription | null = null;
   private pollingSubscription: Subscription | null = null;
+  
 
   ngOnInit() {
     const orderId = this.route.snapshot.paramMap.get('id');
@@ -495,38 +542,13 @@ export class OrderConfirmationComponent implements OnInit, OnDestroy {
       this.pollingSubscription = interval(2000)
         .pipe(take(30))
         .subscribe(() => this.refreshOrder(orderId, true));
-      this.startCountdown();
     }
   }
 
   ngOnDestroy() {
-    if (this.countdownSubscription) {
-      this.countdownSubscription.unsubscribe();
-    }
     if (this.pollingSubscription) {
       this.pollingSubscription.unsubscribe();
     }
-  }
-
-  private startCountdown() {
-    this.countdownSubscription = interval(1000)
-      .pipe(take(5))
-      .subscribe({
-        next: (count) => {
-          this.countdown = 5 - count;
-        },
-        complete: () => {
-          this.goToRestaurants();
-        }
-      });
-  }
-
-  cancelRedirect() {
-    if (this.countdownSubscription) {
-      this.countdownSubscription.unsubscribe();
-      this.countdownSubscription = null;
-    }
-    this.countdown = 0;
   }
 
   getStatusLabel(status: Order['status'] | 'open' | 'in_progress' | 'out_for_delivery'): string {
@@ -549,6 +571,18 @@ export class OrderConfirmationComponent implements OnInit, OnDestroy {
     return labels[mapped as keyof typeof labels] || (mapped as string);
   }
 
+  getPaymentMethodLabel(order: Order): string {
+    // This information might not be directly available in the order object
+    // We'll need to infer it from payment_status or add it to the backend
+    if (order.payment_status === 'paid') {
+      return 'Online bezahlt';
+    } else if (order.payment_status === 'pending') {
+      return 'Zahlung ausstehend';
+    } else {
+      return 'Barzahlung bei Lieferung';
+    }
+  }
+
   trackOrder() {
     // TODO: Navigate to order tracking page
     console.log('Track order');
@@ -558,12 +592,26 @@ export class OrderConfirmationComponent implements OnInit, OnDestroy {
     this.router.navigate(['/customer']);
   }
 
+  private showErrorMessage(message: string) {
+    console.error(message);
+  }
+
   private refreshOrder(orderId: string, stopOnPaid = false) {
     // Use the public confirmation endpoint that doesn't require authentication
     this.http.get<{ order: any }>(`${environment.apiUrl}/orders/confirmation/${orderId}`).subscribe({
       next: (response) => {
-        const order = this.ordersService['normalizeOrder'](response.order);
+        console.log('Order confirmation response:', response);
+        let orderData = response.order;
+
+        // Handle different response formats
+        if (orderData && orderData.order) {
+          // Backend returns { order: { order: Order, items: OrderItem[] } }
+          orderData = { ...orderData.order, items: orderData.items || [] };
+        }
+
+        const order = this.ordersService.normalizeOrder(orderData);
         this.orderSubject.next(order);
+
         if (stopOnPaid && (order.payment_status === 'paid' || order.payment_status === 'failed')) {
           if (this.pollingSubscription) {
             this.pollingSubscription.unsubscribe();
@@ -574,6 +622,7 @@ export class OrderConfirmationComponent implements OnInit, OnDestroy {
       error: (error) => {
         console.error('Error loading order:', error);
         this.orderSubject.next(null);
+        this.showErrorMessage('Fehler beim Laden der Bestellungsdaten');
       }
     });
   }

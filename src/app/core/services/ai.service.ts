@@ -11,6 +11,18 @@ export interface BudgetMenuItem {
   item_name: string;
   price_cents: number;
   price_eur: number;
+  // Erweiterte Felder
+  description?: string;
+  category?: string;
+  is_vegetarian?: boolean;
+  is_vegan?: boolean;
+  preparation_time?: number;
+  restaurant_rating?: number;
+  cuisine_type?: string;
+  delivery_fee?: number;
+  minimum_order?: number;
+  avg_review_rating?: number;
+  review_count?: number;
 }
 
 export interface OrderResult {
@@ -32,6 +44,14 @@ export interface RestaurantResult {
   delivery_fee: number;
   minimum_order: number;
   is_open: boolean;
+  // Erweiterte Felder
+  description?: string;
+  phone?: string;
+  email?: string;
+  avg_review_rating?: number;
+  review_count?: number;
+  avg_delivery_rating?: number;
+  avg_food_rating?: number;
 }
 
 export interface MenuItemResult {
@@ -117,6 +137,7 @@ export interface ChatResponse {
   payouts?: PayoutResult[];
   text?: string;
   message?: string;
+  appliedFilters?: any; // Neue Eigenschaft für angewandte Filter
 }
 
 @Injectable({

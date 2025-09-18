@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -8,6 +8,8 @@ import { OrdersService } from '../../core/services/orders.service';
 import { PaymentsService } from '../../core/services/payments.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { RestaurantsService } from '../../core/services/restaurants.service';
+import { LoadingService } from '../../core/services/loading.service';
+import { UserDataService } from '../../core/services/user-data.service';
 import { ImageFallbackDirective } from '../../core/image-fallback.directive';
 import { Observable, map } from 'rxjs';
 
@@ -49,6 +51,21 @@ interface CustomerInfo {
         <h1>Warenkorb</h1>
       </div>
 
+      <!-- Success/Error Messages -->
+      <div class="message-container" *ngIf="showSuccessMessage || errorMessage">
+        <div class="success-message" *ngIf="showSuccessMessage">
+          <i class="fa-solid fa-check-circle"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+        <div class="error-message" *ngIf="errorMessage">
+          <i class="fa-solid fa-exclamation-triangle"></i>
+          <span>{{ errorMessage }}</span>
+          <button class="close-btn" (click)="clearMessages()">
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+      </div>
+
       <div class="checkout-content" *ngIf="cart$ | async as cart; else emptyCart">
         <div class="checkout-main">
           <!-- Cart Items -->
@@ -62,42 +79,50 @@ interface CustomerInfo {
                 </div>
 
                 <div class="item-details">
-                  <h3 class="item-name">{{ item.name }}</h3>
-                  <div class="item-price">{{ item.unit_price | currency:'EUR':'symbol':'1.2-2':'de' }} / Stück</div>
+                  <div class="item-header">
+                    <h3 class="item-name">{{ item.name }}</h3>
+                    <div class="item-price">{{ item.total_price | currency:'EUR':'symbol':'1.2-2':'de' }}</div>
+                  </div>
 
-                  <!-- Show selected variants -->
-                  <div class="selected-variants" *ngIf="item.selected_variant_options && item.selected_variant_options.length > 0">
-                    <div *ngFor="let variant of item.selected_variant_options" class="variant-tag">
-                      {{ variant.name }}
-                      <span *ngIf="variant.price_modifier_cents !== 0" class="variant-price">
-                        ({{ variant.price_modifier_cents > 0 ? '+' : '' }}{{ variant.price_modifier_cents / 100 | currency:'EUR':'symbol':'1.2-2':'de' }})
-                      </span>
+                  <div class="item-meta">
+                    <div class="item-unit-price">{{ item.unit_price | currency:'EUR':'symbol':'1.2-2':'de' }} / Stück</div>
+
+                    <!-- Show selected variants -->
+                    <div class="selected-variants" *ngIf="item.selected_variant_options && item.selected_variant_options.length > 0">
+                      <div *ngFor="let variant of item.selected_variant_options" class="variant-tag">
+                        {{ variant.name }}
+                        <span *ngIf="variant.price_modifier_cents !== 0" class="variant-price">
+                          ({{ variant.price_modifier_cents > 0 ? '+' : '' }}{{ variant.price_modifier_cents / 100 | currency:'EUR':'symbol':'1.2-2':'de' }})
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div class="item-quantity">
-                  <button
-                    class="quantity-btn"
-                    (click)="updateQuantity(item.menu_item_id, item.quantity - 1)"
-                    [disabled]="item.quantity <= 1">
-                    <i class="fa-solid fa-minus"></i>
-                  </button>
-                  <span class="quantity">{{ item.quantity }}</span>
-                  <button
-                    class="quantity-btn"
-                    (click)="updateQuantity(item.menu_item_id, item.quantity + 1)">
-                    <i class="fa-solid fa-plus"></i>
-                  </button>
-                </div>
+                <div class="item-actions">
+                  <div class="item-quantity">
+                    <button
+                      class="quantity-btn"
+                      (click)="updateQuantity(item.menu_item_id, item.quantity - 1)"
+                      [disabled]="item.quantity <= 1">
+                      <i class="fa-solid fa-minus"></i>
+                    </button>
+                    <span class="quantity">{{ item.quantity }}</span>
+                    <button
+                      class="quantity-btn"
+                      (click)="updateQuantity(item.menu_item_id, item.quantity + 1)">
+                      <i class="fa-solid fa-plus"></i>
+                    </button>
+                  </div>
 
-                <div class="item-total">
-                  <div class="total-price">{{ item.total_price | currency:'EUR':'symbol':'1.2-2':'de' }}</div>
-                  <button
-                    class="remove-btn"
-                    (click)="removeItem(item.menu_item_id)">
-                    <i class="fa-solid fa-trash"></i>
-                  </button>
+                  <div class="item-remove">
+                    <button
+                      class="remove-btn"
+                      (click)="removeItem(item.menu_item_id)">
+                      <i class="fa-solid fa-trash"></i>
+                      Entfernen
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -115,6 +140,7 @@ interface CustomerInfo {
                     id="street"
                     type="text"
                     [(ngModel)]="deliveryAddress.street"
+                    (ngModelChange)="onAddressChange()"
                     placeholder="Musterstraße 123"
                     required
                   >
@@ -128,6 +154,7 @@ interface CustomerInfo {
                     id="city"
                     type="text"
                     [(ngModel)]="deliveryAddress.city"
+                    (ngModelChange)="onAddressChange()"
                     placeholder="Musterstadt"
                     required
                   >
@@ -139,6 +166,7 @@ interface CustomerInfo {
                     id="postal_code"
                     type="text"
                     [(ngModel)]="deliveryAddress.postal_code"
+                    (ngModelChange)="onAddressChange()"
                     placeholder="12345"
                     required
                   >
@@ -151,10 +179,21 @@ interface CustomerInfo {
                 <textarea
                   id="notes"
                   [(ngModel)]="orderNotes"
+                  (ngModelChange)="onNotesChange()"
                   placeholder="z.B. Allergien, besondere Wünsche..."
                   rows="3">
                 </textarea>
               </div>
+            </div>
+
+            <!-- Data Saving Notice -->
+            <div class="data-saving-notice" *ngIf="!isAuthenticated">
+              <i class="fa-solid fa-shield-alt"></i>
+              <small *ngIf="!userDataSvc.hasData()">Ihre Adresse und Kontaktdaten werden nach der ersten Bestellung lokal gespeichert.</small>
+              <small *ngIf="userDataSvc.hasData()">Ihre Adresse und Kontaktdaten wurden gespeichert und werden bei zukünftigen Bestellungen automatisch ausgefüllt.</small>
+              <button class="clear-data-btn" *ngIf="userDataSvc.hasData()" (click)="clearSavedData()" title="Gespeicherte Daten löschen">
+                <i class="fa-solid fa-trash"></i>
+              </button>
             </div>
           </div>
 
@@ -234,6 +273,7 @@ interface CustomerInfo {
                     id="customer_name"
                     type="text"
                     [(ngModel)]="customerInfo.name"
+                    (ngModelChange)="onCustomerInfoChange()"
                     placeholder="Max Mustermann"
                     required
                   >
@@ -247,6 +287,7 @@ interface CustomerInfo {
                     id="customer_email"
                     type="email"
                     [(ngModel)]="customerInfo.email"
+                    (ngModelChange)="onCustomerInfoChange()"
                     placeholder="max.mustermann@email.com"
                     required
                   >
@@ -258,6 +299,7 @@ interface CustomerInfo {
                     id="customer_phone"
                     type="tel"
                     [(ngModel)]="customerInfo.phone"
+                    (ngModelChange)="onCustomerInfoChange()"
                     placeholder="+49 123 4567890"
                     required
                   >
@@ -345,14 +387,8 @@ interface CustomerInfo {
               (click)="placeOrder()"
               [disabled]="!isFormValid() || !isMinimumOrderMet(cart) || loading"
             >
-              <span *ngIf="!loading">
-                <i class="fa-solid fa-shopping-cart"></i>
-                Jetzt bestellen
-              </span>
-              <span *ngIf="loading" class="loading-text">
-                <i class="fa-solid fa-spinner fa-spin"></i>
-                Bestellung wird aufgegeben...
-              </span>
+              <i class="fa-solid fa-shopping-cart"></i>
+              Jetzt bestellen
             </button>
 
             <div class="order-info">
@@ -451,83 +487,171 @@ interface CustomerInfo {
     .cart-items {
       display: flex;
       flex-direction: column;
-      gap: var(--space-4);
+      gap: var(--space-3);
     }
 
     .cart-item {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: var(--space-4);
-      padding: var(--space-4);
+      padding: var(--space-5);
       border: 1px solid var(--color-border);
-      border-radius: var(--radius-lg);
-      background: var(--bg-light);
+      border-radius: var(--radius-xl);
+      background: linear-gradient(135deg, var(--color-surface) 0%, rgba(255, 255, 255, 0.8) 100%);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      transition: all var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cart-item::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light));
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+
+    .cart-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+      border-color: var(--color-primary-200);
+    }
+
+    .cart-item:hover::before {
+      opacity: 1;
     }
 
     .item-image {
-      width: 60px;
-      height: 60px;
-      border-radius: var(--radius-lg);
+      width: 80px;
+      height: 80px;
+      border-radius: var(--radius-xl);
       overflow: hidden;
-      background: var(--color-border);
+      background: linear-gradient(135deg, var(--color-border), var(--color-border-light));
       flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      border: 2px solid rgba(255, 255, 255, 0.8);
+      position: relative;
     }
 
     .item-image img {
       width: 100%;
       height: 100%;
       object-fit: cover;
+      transition: transform var(--transition);
+    }
+
+    .cart-item:hover .item-image img {
+      transform: scale(1.05);
     }
 
     .item-details {
       flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: var(--space-3);
     }
 
     .item-name {
-      font-weight: 600;
+      font-weight: 700;
+      font-size: var(--text-lg);
       color: var(--color-heading);
-      margin-bottom: var(--space-1);
+      line-height: 1.3;
+      margin: 0;
+      flex: 1;
+      min-width: 0;
     }
 
     .item-price {
+      color: var(--color-primary);
+      font-weight: 600;
+      font-size: var(--text-base);
+      white-space: nowrap;
+      background: var(--color-primary-50);
+      padding: 4px 8px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-primary-200);
+    }
+
+    .item-meta {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .item-unit-price {
       color: var(--color-muted);
       font-size: var(--text-sm);
+      font-weight: 500;
     }
 
     .selected-variants {
-      margin-top: var(--space-2);
       display: flex;
       flex-wrap: wrap;
       gap: var(--space-2);
+      margin-top: var(--space-1);
     }
 
     .variant-tag {
       display: inline-flex;
       align-items: center;
       gap: var(--space-1);
-      background: var(--color-primary-50);
+      background: linear-gradient(135deg, var(--color-primary-50), var(--color-primary-25));
       color: var(--color-primary-700);
-      padding: 2px var(--space-2);
-      border-radius: var(--radius-sm);
+      padding: 4px var(--space-3);
+      border-radius: var(--radius-lg);
       font-size: var(--text-xs);
-      font-weight: 500;
+      font-weight: 600;
+      border: 1px solid var(--color-primary-200);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      transition: all var(--transition);
+    }
+
+    .variant-tag:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
     }
 
     .variant-price {
-      color: var(--color-primary-600);
-      font-weight: 600;
+      color: var(--color-primary-800);
+      font-weight: 700;
+      font-size: var(--text-xs);
+    }
+
+    .item-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: var(--space-3);
+      min-width: 120px;
     }
 
     .item-quantity {
       display: flex;
       align-items: center;
-      gap: var(--space-3);
+      gap: var(--space-2);
+      background: var(--color-surface-2);
+      border-radius: var(--radius-lg);
+      padding: var(--space-1);
+      border: 1px solid var(--color-border);
     }
 
     .quantity-btn {
-      width: 32px;
-      height: 32px;
-      border: 1px solid var(--color-border);
+      width: 36px;
+      height: 36px;
+      border: none;
       background: var(--color-surface);
       border-radius: var(--radius-md);
       cursor: pointer;
@@ -535,49 +659,239 @@ interface CustomerInfo {
       align-items: center;
       justify-content: center;
       transition: all var(--transition);
+      color: var(--color-text);
+      font-weight: 600;
+      font-size: var(--text-lg);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
 
     .quantity-btn:hover:not(:disabled) {
       background: var(--color-primary);
       color: white;
-      border-color: var(--color-primary);
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .quantity-btn:active:not(:disabled) {
+      transform: scale(0.95);
     }
 
     .quantity-btn:disabled {
-      opacity: 0.5;
+      opacity: 0.4;
       cursor: not-allowed;
+      transform: none;
     }
 
     .quantity {
-      font-weight: 600;
-      min-width: 30px;
-      text-align: center;
-    }
-
-    .item-total {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: var(--space-2);
-    }
-
-    .total-price {
       font-weight: 700;
-      color: var(--color-success);
+      font-size: var(--text-base);
+      min-width: 24px;
+      text-align: center;
+      color: var(--color-heading);
+    }
+
+    .item-remove {
+      margin-top: var(--space-2);
     }
 
     .remove-btn {
-      background: none;
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      padding: var(--space-2) var(--space-3);
+      background: linear-gradient(135deg, #dc2626, #ef4444);
+      color: white !important;
       border: none;
-      color: var(--color-danger);
+      border-radius: var(--radius-lg);
+      font-size: var(--text-sm);
+      font-weight: 600;
       cursor: pointer;
-      padding: var(--space-2);
-      border-radius: var(--radius-md);
       transition: all var(--transition);
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+      text-decoration: none;
     }
 
     .remove-btn:hover {
-      background: color-mix(in oklab, var(--color-danger) 10%, white);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+    }
+
+    .remove-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .cart-item {
+        display: grid;
+        grid-template-columns: 70px 1fr auto;
+        grid-template-areas: 
+          "image details actions"
+          "image details actions";
+        align-items: start;
+        gap: var(--space-3);
+        padding: var(--space-3);
+        border-radius: var(--radius-lg);
+      }
+
+      .item-image {
+        grid-area: image;
+        width: 70px;
+        height: 70px;
+        justify-self: start;
+      }
+
+      .item-details {
+        grid-area: details;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+        min-width: 0;
+      }
+
+      .item-header {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+      }
+
+      .item-name {
+        font-size: var(--text-base);
+        font-weight: 600;
+        line-height: 1.2;
+        margin: 0;
+      }
+
+      .item-price {
+        font-size: var(--text-sm);
+        padding: 2px 6px;
+        align-self: flex-start;
+        margin-bottom: var(--space-1);
+      }
+
+      .item-meta {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+      }
+
+      .item-unit-price {
+        font-size: var(--text-xs);
+        color: var(--color-muted);
+      }
+
+      .selected-variants {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-1);
+        margin-top: var(--space-1);
+      }
+
+      .variant-tag {
+        font-size: 10px;
+        padding: 2px 4px;
+      }
+
+      .item-actions {
+        grid-area: actions;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: var(--space-2);
+        min-width: 90px;
+        height: 100%;
+      }
+
+      .item-quantity {
+        background: transparent;
+        border: none;
+        padding: 0;
+        gap: var(--space-1);
+      }
+
+      .quantity-btn {
+        width: 28px;
+        height: 28px;
+        font-size: var(--text-sm);
+      }
+
+      .quantity {
+        font-size: var(--text-sm);
+        min-width: 20px;
+      }
+
+      .remove-btn {
+        padding: var(--space-1) var(--space-2);
+        font-size: 10px;
+        gap: 2px;
+        border-radius: var(--radius-md);
+        margin-top: auto;
+      }
+
+      .remove-btn i {
+        font-size: 10px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .cart-item {
+        grid-template-columns: 60px 1fr auto;
+        padding: var(--space-2);
+        gap: var(--space-2);
+      }
+
+      .item-image {
+        width: 60px;
+        height: 60px;
+      }
+
+      .item-name {
+        font-size: var(--text-sm);
+        line-height: 1.3;
+      }
+
+      .item-price {
+        font-size: var(--text-xs);
+        padding: 1px 4px;
+      }
+
+      .item-unit-price {
+        font-size: 10px;
+      }
+
+      .quantity-btn {
+        width: 24px;
+        height: 24px;
+        font-size: var(--text-xs);
+      }
+
+      .quantity {
+        font-size: var(--text-xs);
+        min-width: 16px;
+      }
+
+      .remove-btn {
+        padding: 2px 4px;
+        font-size: 8px;
+        gap: 1px;
+      }
+
+      .remove-btn i {
+        font-size: 8px;
+      }
+
+      .variant-tag {
+        font-size: 8px;
+        padding: 1px 3px;
+      }
+
+      .item-actions {
+        min-width: 70px;
+        gap: var(--space-1);
+      }
     }
 
     .address-form {
@@ -1059,18 +1373,155 @@ interface CustomerInfo {
         justify-content: center;
       }
     }
+
+    /* ===== MESSAGE STYLES ===== */
+
+    .message-container {
+      margin-bottom: var(--space-6);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .success-message, .error-message {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-4);
+      border-radius: var(--radius-lg);
+      font-weight: 600;
+      font-size: var(--text-base);
+      border: 1px solid;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    .success-message {
+      background: color-mix(in oklab, #10b981 10%, white);
+      color: #065f46;
+      border-color: #10b981;
+    }
+
+    .success-message i {
+      color: #10b981;
+      font-size: var(--text-lg);
+    }
+
+    .error-message {
+      background: color-mix(in oklab, #ef4444 10%, white);
+      color: #7f1d1d;
+      border-color: #ef4444;
+    }
+
+    .error-message i {
+      color: #ef4444;
+      font-size: var(--text-lg);
+    }
+
+    .error-message .close-btn {
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: #7f1d1d;
+      cursor: pointer;
+      padding: var(--space-1);
+      border-radius: var(--radius-md);
+      transition: all var(--transition);
+      font-size: var(--text-sm);
+    }
+
+    .error-message .close-btn:hover {
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ===== DATA SAVING NOTICE ===== */
+
+    .data-saving-notice {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin-top: var(--space-4);
+      padding: var(--space-3);
+      background: color-mix(in oklab, #3b82f6 8%, white);
+      border: 1px solid #3b82f6;
+      border-radius: var(--radius-lg);
+      color: #1d4ed8;
+      font-size: var(--text-sm);
+    }
+
+    .data-saving-notice i {
+      color: #3b82f6;
+      font-size: var(--text-base);
+      flex-shrink: 0;
+    }
+
+    .clear-data-btn {
+      background: none;
+      border: none;
+      color: #6b7280;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: var(--radius-md);
+      transition: all var(--transition);
+      margin-left: auto;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .clear-data-btn:hover {
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+    }
+
+    /* Responsive messages */
+    @media (max-width: 768px) {
+      .success-message, .error-message {
+        padding: var(--space-3);
+        font-size: var(--text-sm);
+        gap: var(--space-2);
+      }
+
+      .success-message i, .error-message i {
+        font-size: var(--text-base);
+      }
+
+      .data-saving-notice {
+        padding: var(--space-2);
+        font-size: 12px;
+        gap: var(--space-1);
+      }
+
+      .data-saving-notice i {
+        font-size: var(--text-sm);
+      }
+    }
   `]
 })
-export class CheckoutComponent implements OnInit {
+export class CheckoutComponent implements OnInit, AfterViewInit {
   private cartService = inject(CartService);
   private ordersService = inject(OrdersService);
   private paymentsService = inject(PaymentsService);
   private authService = inject(AuthService);
   private router = inject(Router);
   private restaurantsService = inject(RestaurantsService);
+  private userDataService = inject(UserDataService);
+  private loadingService = inject(LoadingService);
 
   cart$ = this.cartService.cart$;
   loading = false;
+  successMessage = '';
+  errorMessage = '';
+  showSuccessMessage = false;
 
   deliveryAddress: DeliveryAddress = {
     street: '',
@@ -1102,6 +1553,9 @@ export class CheckoutComponent implements OnInit {
   };
 
   ngOnInit() {
+    // Lade gespeicherte Benutzerdaten beim Initialisieren
+    this.loadSavedUserData();
+
     // Check if cart is empty and redirect if needed
     this.cart$.subscribe(cart => {
       if (!cart || cart.items.length === 0) {
@@ -1120,6 +1574,13 @@ export class CheckoutComponent implements OnInit {
     this.authService.currentUser$.subscribe(user => {
       this.isAuthenticated = !!(user && user.is_active);
     });
+  }
+
+  ngAfterViewInit() {
+    // Garantiertes Scrolling nach oben nach vollständiger View-Initialisierung
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 100);
   }
 
   private loadRestaurantPaymentMethods(restaurantId: string) {
@@ -1245,7 +1706,11 @@ export class CheckoutComponent implements OnInit {
   placeOrder() {
     if (!this.isFormValid()) return;
 
+    // Clear any previous messages
+    this.clearMessages();
+
     this.loading = true;
+    this.loadingService.start('place-order');
 
     const fullAddress = `${this.deliveryAddress.street}, ${this.deliveryAddress.postal_code} ${this.deliveryAddress.city}`;
 
@@ -1261,16 +1726,26 @@ export class CheckoutComponent implements OnInit {
     this.cartService.createOrder(fullAddress, '', this.selectedPaymentMethod, customerInfo, this.useLoyaltyReward, this.orderNotes)
       .subscribe({
         next: (response) => {
-          this.loading = false;
           console.log('Order placed successfully:', response);
           const orderId = response.order.id;
+
+          // Speichere die Daten nach erfolgreicher Bestellung
+          this.saveUserData();
+
+          // Clear cart after successful order creation
+          this.cartService.clearCart();
+          this.loading = false;
+          this.loadingService.stopAll(); // Stoppe alle Loading-Zustände
+
           if (this.selectedPaymentMethod === 'card' || this.selectedPaymentMethod === 'paypal') {
             // Create Stripe checkout session and redirect (includes PayPal option)
             const successUrl = window.location.origin + '/order-confirmation/' + orderId;
             const cancelUrl = window.location.origin + '/checkout';
             const customerEmail = this.isAuthenticated ? undefined : this.customerInfo.email;
+            this.loadingService.start('place-order');
             this.paymentsService.createStripeCheckoutSession(orderId, successUrl, cancelUrl, customerEmail).subscribe({
               next: (data) => {
+                this.loadingService.stopAll(); // Stoppe alle Loading-Zustände
                 if (data.url) {
                   window.location.href = data.url;
                 } else {
@@ -1280,19 +1755,22 @@ export class CheckoutComponent implements OnInit {
               },
               error: (err) => {
                 console.error('Failed to create checkout session:', err);
-                alert('Zahlung konnte nicht gestartet werden. Bitte versuchen Sie es erneut.');
-                this.router.navigate(['/order-confirmation', orderId]);
+                this.loadingService.stopAll(); // Stoppe alle Loading-Zustände
+                // Show failure alert and stay on checkout
+                this.showErrorMessage('Zahlung konnte nicht gestartet werden. Bitte versuchen Sie es erneut.');
               }
             });
           } else {
-            // Navigate to order confirmation or order tracking
+            // Navigate to order confirmation immediately
             this.router.navigate(['/order-confirmation', orderId]);
           }
         },
         error: (error) => {
           this.loading = false;
+          this.loadingService.stopAll(); // Stoppe alle Loading-Zustände
           console.error('Order placement failed:', error);
-          alert('Bestellung konnte nicht aufgegeben werden. Bitte versuchen Sie es erneut.');
+          // Show failure alert and stay on checkout
+          this.showErrorMessage('Bestellung konnte nicht aufgegeben werden. Bitte versuchen Sie es erneut.');
         }
       });
   }
@@ -1333,5 +1811,110 @@ export class CheckoutComponent implements OnInit {
 
   goToRestaurants() {
     this.router.navigate(['/customer']);
+  }
+
+  /**
+   * Getter für den UserDataService (für Template-Zugriff)
+   */
+  get userDataSvc() {
+    return this.userDataService;
+  }
+
+  clearMessages() {
+    this.successMessage = '';
+    this.errorMessage = '';
+    this.showSuccessMessage = false;
+  }
+
+  private showErrorMessage(message: string) {
+    this.errorMessage = message;
+    this.successMessage = '';
+    this.showSuccessMessage = false;
+    // Auto-hide error message after 5 seconds
+    setTimeout(() => {
+      this.errorMessage = '';
+    }, 5000);
+  }
+
+  /**
+   * Lade gespeicherte Benutzerdaten aus localStorage
+   */
+  private loadSavedUserData(): void {
+    try {
+      if (this.userDataService.hasData() && this.userDataService.isDataRecent()) {
+        this.deliveryAddress = this.userDataService.loadDeliveryAddress();
+        this.customerInfo = this.userDataService.loadCustomerInfo();
+        this.orderNotes = this.userDataService.loadOrderNotes();
+        console.log('📂 Gespeicherte Benutzerdaten wurden wiederhergestellt');
+      } else {
+        console.log('📝 Keine oder veraltete gespeicherte Daten gefunden');
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden der gespeicherten Daten:', error);
+    }
+  }
+
+  /**
+   * Speichere die aktuellen Daten bei Änderungen
+   */
+  private saveUserData(): void {
+    try {
+      if (!this.isAuthenticated) {
+        // Speichere nur für Gast-Bestellungen
+        const customerInfoToSave = {
+          ...this.customerInfo,
+          phone: this.customerInfo.phone || ''
+        };
+        this.userDataService.saveCheckoutData(
+          this.deliveryAddress,
+          customerInfoToSave,
+          this.orderNotes
+        );
+      }
+    } catch (error) {
+      console.error('Fehler beim Speichern der Benutzerdaten:', error);
+    }
+  }
+
+  /**
+   * Event-Handler für Adressänderungen
+   */
+  onAddressChange(): void {
+    // Speichere Adresse bei jeder Änderung
+    this.saveUserData();
+  }
+
+  /**
+   * Event-Handler für Kontaktdaten-Änderungen
+   */
+  onCustomerInfoChange(): void {
+    // Speichere Kontaktdaten bei jeder Änderung
+    this.saveUserData();
+  }
+
+  /**
+   * Event-Handler für Notizen-Änderungen
+   */
+  onNotesChange(): void {
+    // Speichere Notizen bei jeder Änderung
+    this.saveUserData();
+  }
+
+  /**
+   * Gespeicherte Daten löschen
+   */
+  clearSavedData(): void {
+    if (confirm('Möchten Sie wirklich alle gespeicherten Daten löschen? Diese können nicht wiederhergestellt werden.')) {
+      this.userDataService.clearData();
+      // Zurücksetzen der Formularfelder auf Standardwerte
+      this.deliveryAddress.street = '';
+      this.deliveryAddress.city = '';
+      this.deliveryAddress.postal_code = '';
+      this.customerInfo.name = '';
+      this.customerInfo.email = '';
+      this.customerInfo.phone = undefined;
+      this.orderNotes = '';
+      console.log('🗑️ Gespeicherte Benutzerdaten wurden gelöscht');
+    }
   }
 }

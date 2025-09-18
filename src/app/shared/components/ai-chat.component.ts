@@ -41,6 +41,25 @@ interface ChatMessage {
                   <span class="price">{{ item.price_eur | currency:'EUR':'symbol':'1.2-2':'de' }}</span>
                 </div>
                 <div class="restaurant-name">{{ item.restaurant_name }}</div>
+
+                <!-- Erweiterte Informationen -->
+                <div class="item-details">
+                  <div *ngIf="item.category" class="category-badge">{{ item.category }}</div>
+                  <div class="dietary-badges">
+                    <span *ngIf="item.is_vegetarian" class="badge vegetarian">🌱 Vegetarisch</span>
+                    <span *ngIf="item.is_vegan" class="badge vegan">🌱 Vegan</span>
+                  </div>
+                  <div *ngIf="item.preparation_time" class="prep-time">⏱️ {{ item.preparation_time }} Min.</div>
+                  <div *ngIf="item.restaurant_rating" class="rating">⭐ {{ item.restaurant_rating }}/5</div>
+                  <div *ngIf="item.cuisine_type" class="cuisine-type">{{ item.cuisine_type }}</div>
+                  <div *ngIf="item.delivery_fee > 0" class="delivery-info">
+                    Lieferung: {{ item.delivery_fee | currency:'EUR':'symbol':'1.2-2':'de' }}
+                  </div>
+                  <div *ngIf="item.avg_review_rating" class="review-rating">
+                    Bewertung: {{ item.avg_review_rating | number:'1.1-1' }}/5 ({{ item.review_count }} Bewertungen)
+                  </div>
+                </div>
+
                 <button class="btn-primary">Bestellen</button>
               </div>
             </div>
@@ -250,7 +269,56 @@ interface ChatMessage {
       color: var(--color-primary);
       font-weight: 600;
       font-size: var(--text-sm);
+      margin-bottom: var(--space-2);
+    }
+
+    .item-details {
       margin-bottom: var(--space-3);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .category-badge {
+      display: inline-block;
+      background: var(--color-primary-100);
+      color: var(--color-primary-700);
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      align-self: flex-start;
+    }
+
+    .dietary-badges {
+      display: flex;
+      gap: var(--space-1);
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      font-size: var(--text-xs);
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-sm);
+      font-weight: 500;
+    }
+
+    .vegetarian {
+      background: var(--color-success-100);
+      color: var(--color-success-700);
+    }
+
+    .vegan {
+      background: var(--color-info-100);
+      color: var(--color-info-700);
+    }
+
+    .prep-time, .rating, .cuisine-type, .delivery-info, .review-rating {
+      font-size: var(--text-xs);
+      color: var(--color-muted);
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
     }
 
     .menu-item-card .btn-primary {
@@ -420,7 +488,22 @@ export class AIChatComponent implements OnInit {
 
   private handleResponse(response: ChatResponse) {
     if (response.intent === 'budget_menu_search' && response.items) {
-      let text = `Hier sind ${response.items.length} Vorschläge für Ihr Budget:`;
+      // Verwende die vom Server generierte Nachricht oder erstelle eine eigene
+      let text = response.message || `Hier sind ${response.items.length} Vorschläge für Ihr Budget:`;
+
+      // Füge Filter-Informationen hinzu, falls verfügbar
+      if (response.appliedFilters) {
+        const filters = [];
+        if (response.appliedFilters.dietaryRestrictions?.vegetarian) filters.push('vegetarisch');
+        if (response.appliedFilters.dietaryRestrictions?.vegan) filters.push('vegan');
+        if (response.appliedFilters.preparationTime?.preferredTime === 'fast') filters.push('schnell');
+        if (response.appliedFilters.location?.postalCode) filters.push(`PLZ ${response.appliedFilters.location.postalCode}`);
+
+        if (filters.length > 0) {
+          text += ` (gefiltert nach: ${filters.join(', ')})`;
+        }
+      }
+
       this.addMessage('ai', text, response.items);
     } else if (response.intent === 'order_status') {
       if (response.orders && response.orders.length > 0) {
@@ -433,14 +516,14 @@ export class AIChatComponent implements OnInit {
         this.addMessage('ai', 'Sie haben noch keine Bestellungen aufgegeben.');
       }
     } else if (response.intent === 'restaurant_info' && response.restaurants) {
-      let text = response.restaurants.length > 0
+      let text = response.message || (response.restaurants.length > 0
         ? `Hier sind ${response.restaurants.length} Restaurants passend zu Ihrer Suche:`
-        : 'Keine Restaurants gefunden. Versuchen Sie andere Suchbegriffe.';
+        : 'Keine Restaurants gefunden. Versuchen Sie andere Suchbegriffe.');
       this.addMessage('ai', text);
     } else if (response.intent === 'menu_details' && response.menuItems) {
-      let text = response.menuItems.length > 0
+      let text = response.message || (response.menuItems.length > 0
         ? `Hier sind ${response.menuItems.length} Menü-Artikel:`
-        : 'Keine passenden Menü-Artikel gefunden.';
+        : 'Keine passenden Menü-Artikel gefunden.');
       this.addMessage('ai', text);
     } else if (response.intent === 'faq' && response.faqs) {
       let text = response.faqs.length > 0

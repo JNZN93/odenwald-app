@@ -230,13 +230,7 @@ export class CartService {
       orderData.use_loyalty_reward = true;
     }
 
-    return this.http.post(`${environment.apiUrl}/orders`, orderData).pipe(
-      map((response: any) => {
-        // Clear cart after successful order
-        this.clearCart();
-        return response;
-      })
-    );
+    return this.http.post(`${environment.apiUrl}/orders`, orderData);
   }
 }
 
