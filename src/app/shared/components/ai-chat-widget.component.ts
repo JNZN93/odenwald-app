@@ -608,6 +608,17 @@ export class AIChatWidgetComponent implements OnInit {
   private handleResponse(response: ChatResponse) {
     const displayMessage = response.message || response.text || '';
 
+    // Debug-Logging für Entwickler
+    if (response.debug) {
+      console.log('🔧 AI Debug Info:', {
+        intent: response.intent,
+        totalFound: response.totalFound,
+        restaurantStats: response.debug.restaurantStats,
+        searchParams: response.debug.searchParams,
+        sampleFoundItems: response.debug.foundItems?.slice(0, 5)
+      });
+    }
+
     switch (response.intent) {
       case 'budget_menu_search':
         if (response.items && response.items.length > 0) {
@@ -641,11 +652,74 @@ export class AIChatWidgetComponent implements OnInit {
             restaurantText += `   Küche: ${restaurant.cuisine_type}\n`;
             restaurantText += `   Stadt: ${restaurant.city}\n`;
             restaurantText += `   Bewertung: ⭐ ${restaurant.rating}\n`;
-            restaurantText += `   Lieferkosten: ${restaurant.delivery_fee}€\n\n`;
+            let deliveryText = 'N/A';
+            if (restaurant.delivery_fee && typeof restaurant.delivery_fee === 'number' && !isNaN(restaurant.delivery_fee)) {
+              deliveryText = restaurant.delivery_fee.toFixed(2);
+            } else if (restaurant.delivery_fee && typeof restaurant.delivery_fee === 'string') {
+              deliveryText = restaurant.delivery_fee;
+            }
+            restaurantText += `   Lieferkosten: ${deliveryText}€\n\n`;
           });
           this.addMessage('ai', restaurantText);
         } else {
           this.addMessage('ai', 'Keine Restaurants gefunden. Versuchen Sie andere Suchbegriffe.');
+        }
+        break;
+
+      case 'drinks_menu':
+        if (response.drinks && response.drinks.length > 0) {
+          let drinksText = displayMessage + '\n\n';
+          response.drinks.forEach((drink, index) => {
+            drinksText += `${index + 1}. ${drink.name}\n`;
+            let priceText = 'N/A';
+            if (drink.price_eur && typeof drink.price_eur === 'number' && !isNaN(drink.price_eur)) {
+              priceText = drink.price_eur.toFixed(2);
+            } else if (drink.price_eur && typeof drink.price_eur === 'string') {
+              // Fallback für String-Preise
+              priceText = drink.price_eur;
+            }
+            drinksText += `   Preis: ${priceText}€\n`;
+            drinksText += `   Kategorie: ${drink.category}\n`;
+            if (drink.description) {
+              drinksText += `   Beschreibung: ${drink.description}\n`;
+            }
+            if (drink.is_vegetarian) drinksText += `   🥕 Vegetarisch\n`;
+            if (drink.is_vegan) drinksText += `   🌱 Vegan\n`;
+            drinksText += '\n';
+          });
+          this.addMessage('ai', drinksText);
+        } else {
+          this.addMessage('ai', 'Keine Getränke gefunden. Versuchen Sie andere Suchbegriffe.');
+        }
+        break;
+
+      case 'product_search':
+        if (response.products && response.products.length > 0) {
+          let productText = displayMessage + '\n\n';
+          response.products.forEach((product, index) => {
+            let priceText = 'N/A';
+            if (product.price_eur && typeof product.price_eur === 'number' && !isNaN(product.price_eur)) {
+              priceText = product.price_eur.toFixed(2);
+            } else if (product.price_eur && typeof product.price_eur === 'string') {
+              priceText = product.price_eur;
+            }
+
+            productText += `${index + 1}. ${product.name}\n`;
+            productText += `   Preis: ${priceText}€\n`;
+            productText += `   Restaurant: ${product.restaurant_name || 'Unbekannt'}\n`;
+            if (product.category) {
+              productText += `   Kategorie: ${product.category}\n`;
+            }
+            if (product.description) {
+              productText += `   Beschreibung: ${product.description}\n`;
+            }
+            if (product.is_vegetarian) productText += `   🥕 Vegetarisch\n`;
+            if (product.is_vegan) productText += `   🌱 Vegan\n`;
+            productText += '\n';
+          });
+          this.addMessage('ai', productText);
+        } else {
+          this.addMessage('ai', 'Keine Produkte gefunden. Versuchen Sie andere Suchbegriffe.');
         }
         break;
 
@@ -654,7 +728,14 @@ export class AIChatWidgetComponent implements OnInit {
           let menuText = displayMessage + '\n\n';
           response.menuItems.forEach((item, index) => {
             menuText += `${index + 1}. ${item.name}\n`;
-            menuText += `   Preis: ${item.price_eur}€\n`;
+            let itemPriceText = 'N/A';
+            if (item.price_eur && typeof item.price_eur === 'number' && !isNaN(item.price_eur)) {
+              itemPriceText = item.price_eur.toFixed(2);
+            } else if (item.price_eur && typeof item.price_eur === 'string') {
+              itemPriceText = item.price_eur;
+            }
+            menuText += `   Preis: ${itemPriceText}€\n`;
+            menuText += `   Restaurant: ${item.restaurant_name || 'Unbekannt'}\n`;
             menuText += `   Kategorie: ${item.category}\n`;
             if (item.description) {
               menuText += `   Beschreibung: ${item.description}\n`;

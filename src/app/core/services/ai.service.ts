@@ -60,6 +60,8 @@ export interface MenuItemResult {
   description?: string;
   price_eur: number;
   category: string;
+  restaurant_name?: string; // Für Product Search
+  restaurant_id?: string; // Für Product Search
   is_vegetarian: boolean;
   is_vegan: boolean;
   preparation_time?: number;
@@ -123,12 +125,25 @@ export interface PayoutResult {
   description?: string;
 }
 
+export interface DrinkResult {
+  id: string;
+  name: string;
+  description?: string;
+  price_eur: number;
+  category: string;
+  is_vegetarian: boolean;
+  is_vegan: boolean;
+  preparation_time?: number;
+}
+
 export interface ChatResponse {
-  intent: 'budget_menu_search' | 'order_status' | 'restaurant_info' | 'menu_details' | 'faq' | 'review_info' | 'loyalty_status' | 'payment_history' | 'driver_info' | 'payout_info' | 'smalltalk' | 'unknown';
+  intent: 'budget_menu_search' | 'order_status' | 'restaurant_info' | 'menu_details' | 'product_search' | 'drinks_menu' | 'faq' | 'review_info' | 'loyalty_status' | 'payment_history' | 'driver_info' | 'payout_info' | 'smalltalk' | 'unknown';
   items?: BudgetMenuItem[];
   orders?: OrderResult[];
   restaurants?: RestaurantResult[];
   menuItems?: MenuItemResult[];
+  products?: MenuItemResult[]; // Verwende MenuItemResult für Produkte
+  drinks?: DrinkResult[];
   faqs?: FAQResult[];
   reviews?: ReviewResult[];
   loyalty?: LoyaltyResult[];
@@ -137,6 +152,15 @@ export interface ChatResponse {
   payouts?: PayoutResult[];
   text?: string;
   message?: string;
+  response?: string; // Neue Eigenschaft für menschenlesbare Antworten
+  totalFound?: number; // Neue Eigenschaft für Gesamtanzahl
+  restaurantName?: string; // Neue Eigenschaft für Restaurant-Name
+  drinkType?: string; // Neue Eigenschaft für Getränke-Typ
+  debug?: {
+    restaurantStats?: any;
+    searchParams?: any;
+    foundItems?: any[];
+  }; // Debug-Informationen für Entwickler
   appliedFilters?: any; // Neue Eigenschaft für angewandte Filter
 }
 
