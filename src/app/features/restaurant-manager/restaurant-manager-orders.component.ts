@@ -99,6 +99,8 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                 <th class="col-order-status">Bestellstatus</th>
                 <th class="col-payment-status">Zahlung</th>
                 <th class="col-total">Gesamt</th>
+                <th class="col-order-type">Typ</th>
+                <th class="col-table">Tisch</th>
                 <th class="col-address">Adresse</th>
                 <th class="col-actions">Aktionen</th>
                 <th class="col-details">Details</th>
@@ -137,6 +139,19 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                 <td class="col-total">
                   <div class="total-amount">€{{ order.total_price.toFixed(2) }}</div>
                   <div class="item-count">{{ order.items.length }} Artikel</div>
+                </td>
+                <td class="col-order-type">
+                  <div class="order-type-badge" [ngClass]="getOrderTypeClass(order)">
+                    <i [ngClass]="getOrderTypeIcon(order)"></i>
+                    <span>{{ getOrderTypeText(order) }}</span>
+                  </div>
+                </td>
+                <td class="col-table">
+                  <div class="table-number" *ngIf="order.table_number">
+                    🪑 Tisch {{ order.table_number }}
+                    <span class="party-size" *ngIf="order.party_size">({{ order.party_size }} Pers.)</span>
+                  </div>
+                  <div class="no-table" *ngIf="!order.table_number">-</div>
                 </td>
                 <td class="col-address">
                   <div class="delivery-address" *ngIf="order.delivery_address">{{ order.delivery_address }}</div>
@@ -269,7 +284,17 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                   {{ order.customer_name }}
                 </div>
                 <div class="customer-email">{{ order.customer_email }}</div>
-                <div class="delivery-address">{{ order.delivery_address }}</div>
+                <div class="order-type-info">
+                  <div class="order-type-badge mobile" [ngClass]="getOrderTypeClass(order)">
+                    <i [ngClass]="getOrderTypeIcon(order)"></i>
+                    <span>{{ getOrderTypeText(order) }}</span>
+                  </div>
+                </div>
+                <div class="table-info" *ngIf="order.table_number">
+                  🪑 Tisch {{ order.table_number }}
+                  <span *ngIf="order.party_size"> ({{ order.party_size }} Personen)</span>
+                </div>
+                <div class="delivery-address" *ngIf="order.delivery_address">{{ order.delivery_address }}</div>
               </div>
 
               <div class="order-items">
@@ -868,6 +893,31 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       font-size: var(--text-sm);
       color: var(--color-muted);
       margin-bottom: var(--space-1);
+    }
+
+    .table-info {
+      font-size: var(--text-sm);
+      color: var(--color-primary-600);
+      font-weight: 500;
+      margin-bottom: var(--space-1);
+    }
+
+    .table-number {
+      font-size: var(--text-sm);
+      color: var(--color-primary-600);
+      font-weight: 500;
+    }
+
+    .party-size {
+      font-size: var(--text-xs);
+      color: var(--color-muted);
+      font-weight: normal;
+    }
+
+    .no-table {
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+      font-style: italic;
     }
 
     .order-items {
@@ -1856,6 +1906,17 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       text-align: right;
     }
 
+    .col-order-type {
+      width: 120px;
+      min-width: 120px;
+      text-align: center;
+    }
+
+    .col-table {
+      width: 120px;
+      min-width: 120px;
+    }
+
     .col-address {
       width: 200px;
       min-width: 200px;
@@ -1946,6 +2007,51 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       font-size: var(--text-sm);
       color: var(--color-muted);
       text-align: right;
+    }
+
+    /* Order Type Badges */
+    .order-type-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .order-type-badge.mobile {
+      margin-bottom: var(--space-2);
+    }
+
+    .order-type-badge.order-type-delivery {
+      background: var(--color-info-50);
+      color: var(--color-info-600);
+      border: 1px solid var(--color-info-200);
+    }
+
+    .order-type-badge.order-type-pickup {
+      background: var(--color-warning-50);
+      color: var(--color-warning-600);
+      border: 1px solid var(--color-warning-200);
+    }
+
+    .order-type-badge.order-type-dine-in {
+      background: var(--color-success-50);
+      color: var(--color-success-600);
+      border: 1px solid var(--color-success-200);
+    }
+
+    .order-type-badge.order-type-unknown {
+      background: var(--color-gray-50);
+      color: var(--color-gray-600);
+      border: 1px solid var(--color-gray-200);
+    }
+
+    .order-type-info {
+      margin-bottom: var(--space-2);
     }
 
     /* Table Action Buttons */
@@ -2189,10 +2295,13 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
   selectedOrder: Order | null = null;
   editingNotes = false;
 
-  // Tabs properties
+  // Tabs properties - erweitert um Tischangebote
   activeTab = 'active';
   orderTabs = [
-    { id: 'active', title: 'Aktive Bestellungen', icon: 'fa-solid fa-clock' },
+    { id: 'active', title: 'Alle Aktiven', icon: 'fa-solid fa-clock' },
+    { id: 'delivery', title: 'Lieferungen', icon: 'fa-solid fa-truck' },
+    { id: 'pickup', title: 'Abholungen', icon: 'fa-solid fa-shopping-bag' },
+    { id: 'dine_in', title: 'Tischangebote', icon: 'fa-solid fa-utensils' },
     { id: 'completed', title: 'Abgeschlossene', icon: 'fa-solid fa-check-circle' }
   ];
 
@@ -2225,7 +2334,6 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
           this.ordersService.getRestaurantOrders(restaurantId).subscribe({
             next: (orders) => {
               console.log('Loaded orders for restaurant:', orders);
-              console.log('Order 214 found:', orders.find(o => o.id === '214'));
               this.orders = orders;
               this.applyFilters();
               this.loadingService.stop('orders');
@@ -2259,9 +2367,7 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
   switchTab(tabId: string) {
     this.activeTab = tabId;
     // Reset status filter when switching tabs
-    if (tabId === 'active') {
-      this.selectedStatus = 'all';
-    } else if (tabId === 'completed') {
+    if (['active', 'delivery', 'pickup', 'dine_in', 'completed'].includes(tabId)) {
       this.selectedStatus = 'all';
     }
     this.applyFilters();
@@ -2271,18 +2377,43 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
     // Ensure we always work with the most current orders data
     let filtered = [...this.orders];
 
-    // First, filter by tab (active vs completed orders)
+    // First, filter by tab
     if (this.activeTab === 'active') {
-      // Active orders: NOT (delivered AND paid)
+      // Active orders: NOT (delivered AND paid) OR NOT (served AND paid for table orders)
       filtered = filtered.filter(order => {
         const canonicalStatus = this.canonicalStatus(order.status);
-        return !(canonicalStatus === 'delivered' && order.payment_status === 'paid');
+        const isTableOrder = this.ordersService.isTableOrder(order);
+
+        if (isTableOrder) {
+          // Table orders: NOT (served AND paid)
+          return !(order.table_status === 'served' && order.payment_status === 'paid');
+        } else {
+          // Delivery/Pickup orders: NOT (delivered AND paid)
+          return !(canonicalStatus === 'delivered' && order.payment_status === 'paid');
+        }
       });
+    } else if (this.activeTab === 'delivery') {
+      // Only delivery orders
+      filtered = filtered.filter(order => this.ordersService.isDeliveryOrder(order));
+    } else if (this.activeTab === 'pickup') {
+      // Only pickup orders
+      filtered = filtered.filter(order => this.ordersService.isPickupOrder(order));
+    } else if (this.activeTab === 'dine_in') {
+      // Only table orders
+      filtered = filtered.filter(order => this.ordersService.isTableOrder(order));
     } else if (this.activeTab === 'completed') {
-      // Completed orders: delivered AND paid
+      // Completed orders: (delivered AND paid) OR (served AND paid for table orders)
       filtered = filtered.filter(order => {
         const canonicalStatus = this.canonicalStatus(order.status);
-        return canonicalStatus === 'delivered' && order.payment_status === 'paid';
+        const isTableOrder = this.ordersService.isTableOrder(order);
+
+        if (isTableOrder) {
+          // Table orders: served AND paid
+          return order.table_status === 'served' && order.payment_status === 'paid';
+        } else {
+          // Delivery/Pickup orders: delivered AND paid
+          return canonicalStatus === 'delivered' && order.payment_status === 'paid';
+        }
       });
     }
 
@@ -2345,7 +2476,15 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
     this.updatingOrderId = orderId;
     console.log('Starting status update:', { orderId, newStatus });
 
-    this.ordersService.updateOrderStatus(orderId, newStatus).subscribe({
+    // Check if this is a table order and use appropriate service method
+    const order = this.orders.find(o => String(o.id) === String(orderId));
+    const isTableOrder = order ? this.ordersService.isTableOrder(order) : false;
+
+    const updateObservable = isTableOrder
+      ? this.ordersService.updateTableOrderStatus(orderId, newStatus as any)
+      : this.ordersService.updateOrderStatus(orderId, newStatus);
+
+    updateObservable.subscribe({
       next: (response) => {
         console.log('Status update response:', response);
 
@@ -2635,6 +2774,39 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
     return !!(userId && userId.trim() && userId !== 'null' && userId !== 'undefined');
   }
 
+  // Helper method to get display information for different order types
+  getOrderDisplayInfo(order: Order) {
+    if (this.ordersService.isTableOrder(order)) {
+      return {
+        title: `Tisch ${order.table_number || 'Unbekannt'}`,
+        subtitle: order.party_size ? `${order.party_size} Personen` : 'Tischangebot',
+        icon: '🪑',
+        type: 'dine_in'
+      };
+    } else if (this.ordersService.isDeliveryOrder(order)) {
+      return {
+        title: order.delivery_address || 'Keine Adresse',
+        subtitle: `Lieferung • €${order.delivery_fee}`,
+        icon: '🚚',
+        type: 'delivery'
+      };
+    } else if (this.ordersService.isPickupOrder(order)) {
+      return {
+        title: 'Abholung',
+        subtitle: 'Im Restaurant abholen',
+        icon: '🛍️',
+        type: 'pickup'
+      };
+    } else {
+      return {
+        title: 'Unbekannter Typ',
+        subtitle: order.id,
+        icon: '❓',
+        type: 'unknown'
+      };
+    }
+  }
+
   // Details modal methods
   openDetailsModal(order: Order) {
     this.selectedOrder = order;
@@ -2730,5 +2902,42 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
         this.savingNotes = false;
       }
     });
+  }
+
+  // Order type display methods
+  getOrderTypeText(order: Order): string {
+    if (this.ordersService.isTableOrder(order)) {
+      return 'Vor Ort';
+    } else if (this.ordersService.isDeliveryOrder(order)) {
+      return 'Lieferung';
+    } else if (this.ordersService.isPickupOrder(order)) {
+      return 'Abholung';
+    } else {
+      return 'Unbekannt';
+    }
+  }
+
+  getOrderTypeIcon(order: Order): string {
+    if (this.ordersService.isTableOrder(order)) {
+      return 'fa-solid fa-utensils';
+    } else if (this.ordersService.isDeliveryOrder(order)) {
+      return 'fa-solid fa-truck';
+    } else if (this.ordersService.isPickupOrder(order)) {
+      return 'fa-solid fa-shopping-bag';
+    } else {
+      return 'fa-solid fa-question';
+    }
+  }
+
+  getOrderTypeClass(order: Order): string {
+    if (this.ordersService.isTableOrder(order)) {
+      return 'order-type-dine-in';
+    } else if (this.ordersService.isDeliveryOrder(order)) {
+      return 'order-type-delivery';
+    } else if (this.ordersService.isPickupOrder(order)) {
+      return 'order-type-pickup';
+    } else {
+      return 'order-type-unknown';
+    }
   }
 }

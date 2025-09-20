@@ -74,6 +74,7 @@ export const routes: Routes = [
   { path: 'onboarding/refresh', loadComponent: () => import('./features/restaurant-manager/stripe-onboarding-redirect.component').then(m => m.StripeOnboardingRedirectComponent) },
   { path: 'onboarding/complete', loadComponent: () => import('./features/restaurant-manager/stripe-onboarding-redirect.component').then(m => m.StripeOnboardingRedirectComponent) },
   { path: 'order-confirmation/:id', loadComponent: () => import('./features/order-confirmation/order-confirmation.component').then(m => m.OrderConfirmationComponent) },
+  { path: 'table-order/:restaurantId/:tableNumber', loadComponent: () => import('./features/table-order/table-order.component').then(m => m.TableOrderComponent) },
   { path: 'review', loadComponent: () => import('./features/reviews/review-flow.component').then(m => m.ReviewFlowComponent) },
   { path: 'driver-dashboard', loadComponent: () => import('./features/driver/driver-dashboard.component').then(m => m.DriverDashboardComponent), canActivate: [authGuard, roleGuard(['driver'])] },
   {
@@ -111,6 +112,7 @@ export const routes: Routes = [
       { path: 'payment-methods', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-payment-methods.component').then(m => m.RestaurantManagerPaymentMethodsComponent) },
       { path: 'wholesale', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-wholesale.component').then(m => m.RestaurantManagerWholesaleComponent) },
       { path: 'wholesale/:id', loadComponent: () => import('./features/restaurant-manager/wholesaler-detail.component').then(m => m.WholesalerDetailComponent) },
+      { path: 'tables', loadComponent: () => import('./features/restaurant-manager/restaurant-tables.component').then(m => m.RestaurantTablesComponent) },
       { path: 'invoices', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-invoices.component').then(m => m.RestaurantManagerInvoicesComponent) },
       { path: 'issues', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-issues.component').then(m => m.RestaurantManagerIssuesComponent) }
     ]

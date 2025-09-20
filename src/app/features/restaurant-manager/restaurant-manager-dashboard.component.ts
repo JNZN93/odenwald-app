@@ -40,6 +40,7 @@ export interface ManagerMenuItem {
             <i *ngIf="menuItem.icon === 'overview-icon'" class="fas fa-th-large nav-icon"></i>
             <i *ngIf="menuItem.icon === 'orders-icon'" class="fas fa-clipboard-check nav-icon"></i>
             <i *ngIf="menuItem.icon === 'issues-icon'" class="fas fa-triangle-exclamation nav-icon"></i>
+            <i *ngIf="menuItem.icon === 'tables-icon'" class="fas fa-chair nav-icon"></i>
             <i *ngIf="menuItem.icon === 'drivers-icon'" class="fas fa-truck nav-icon"></i>
             <i *ngIf="menuItem.icon === 'menu-icon'" class="fas fa-list nav-icon"></i>
             <i *ngIf="menuItem.icon === 'analytics-icon'" class="fas fa-chart-line nav-icon"></i>
@@ -628,6 +629,15 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
         route: '/restaurant-manager/issues',
         queryParams: {},
         color: '#dc2626'
+      },
+      {
+        id: 'tables',
+        title: 'Tische',
+        description: 'Tischverwaltung & Tischangebote',
+        icon: 'tables-icon',
+        route: '/restaurant-manager/tables',
+        queryParams: {},
+        color: '#8b5cf6'
       },
       {
         id: 'drivers',

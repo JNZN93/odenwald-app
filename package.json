@@ -20,9 +20,11 @@
     "@angular/platform-browser-dynamic": "^18.2.0",
     "@angular/router": "^18.2.0",
     "@types/gapi.auth2": "^0.0.61",
+    "@types/qrcode": "^1.5.5",
     "chart.js": "^4.5.0",
     "ionicons": "^8.0.13",
     "ng2-charts": "^4.1.1",
+    "qrcode": "^1.5.4",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.14.10"

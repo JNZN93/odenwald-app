@@ -57,6 +57,13 @@ export interface Order {
   updated_at: string;
   driver_id?: string;
   driver_name?: string;
+  // Table order fields
+  table_id?: string;
+  table_number?: string;
+  session_id?: string;
+  party_size?: number;
+  order_type?: 'delivery' | 'pickup' | 'dine_in';
+  table_status?: 'ordered' | 'confirmed' | 'preparing' | 'ready' | 'served' | 'paid';
 }
 
 export interface OrderWithItems {
@@ -125,7 +132,13 @@ export class OrdersService {
     created_at: raw.created_at,
     updated_at: raw.updated_at,
     driver_id: raw.driver_id != null ? String(raw.driver_id) : undefined,
-    driver_name: raw.driver_name
+    driver_name: raw.driver_name,
+    // Table order fields
+    table_id: raw.table_id ?? undefined,
+    table_number: raw.table_number ?? undefined,
+    party_size: raw.party_size != null ? Number(raw.party_size) : undefined,
+    order_type: raw.order_type ?? undefined,
+    table_status: raw.table_status ?? undefined
   });
 
   // Get all orders with optional filters
@@ -317,5 +330,64 @@ export class OrdersService {
   }): Observable<any> {
     const url = `${environment.apiUrl}/order-issues`;
     return this.http.post(url, data);
+  }
+
+  // Table Order Methods
+
+  // Type Guards for order types
+  isDeliveryOrder(order: Order): boolean {
+    return order.order_type === 'delivery' || (!order.order_type && !!order.delivery_address);
+  }
+
+  isTableOrder(order: Order): boolean {
+    return order.order_type === 'dine_in' || (!order.order_type && !!order.table_id);
+  }
+
+  isPickupOrder(order: Order): boolean {
+    return order.order_type === 'pickup';
+  }
+
+  // Create table order
+  createTableOrder(tableOrderData: {
+    restaurant_id: string;
+    table_id: string;
+    items: Array<{
+      menu_item_id: string;
+      quantity: number;
+      unit_price: number;
+      special_instructions?: string;
+      selected_variant_options?: any[];
+    }>;
+    customer_info?: {
+      name: string;
+      email?: string;
+      phone?: string;
+    };
+    party_size?: number;
+    notes?: string;
+  }): Observable<{ message: string; order: Order }> {
+    return this.http.post<{ message: string; order: Order }>(`${this.baseUrl}/table-order`, tableOrderData);
+  }
+
+  // Get table orders for a restaurant
+  getTableOrders(restaurantId: string, tableId?: string): Observable<Order[]> {
+    const filters: OrderFilters = {
+      restaurant_id: restaurantId,
+      status: 'dine_in'
+    };
+
+    if (tableId) {
+      (filters as any).table_id = tableId;
+    }
+
+    return this.getOrders(filters);
+  }
+
+  // Update table order status
+  updateTableOrderStatus(orderId: string, status: 'ordered' | 'confirmed' | 'preparing' | 'ready' | 'served' | 'paid'): Observable<{ message: string; order: Order }> {
+    return this.http.patch<{ message: string; order: Order }>(
+      `${this.baseUrl}/${orderId}/table-status`,
+      { status }
+    );
   }
 }
