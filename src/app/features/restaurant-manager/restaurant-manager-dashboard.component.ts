@@ -5,7 +5,7 @@ import { RouterModule, RouterOutlet, Router } from '@angular/router';
 import { RestaurantManagerService } from '../../core/services/restaurant-manager.service';
 import { AuthService, User } from '../../core/auth/auth.service';
 import { ToastService } from '../../core/services/toast.service';
-import { Subscription } from 'rxjs';
+import { Subscription, interval } from 'rxjs';
 
 
 export interface ManagerMenuItem {
@@ -422,6 +422,7 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
   private toastService = inject(ToastService);
   private router = inject(Router);
   private subscriptions: Subscription[] = [];
+  private badgeRefreshSubscription?: Subscription;
 
   managedRestaurants: any[] = [];
   selectedRestaurantId: string = '';
@@ -456,10 +457,18 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
     this.loadCurrentUser();
     this.loadManagedRestaurants();
     this.loadBadgeCounts();
+
+    // Auto-refresh badge counts every 30 seconds
+    this.badgeRefreshSubscription = interval(30000).subscribe(() => {
+      this.loadBadgeCounts();
+    });
   }
 
   ngOnDestroy() {
     this.subscriptions.forEach(sub => sub.unsubscribe());
+    if (this.badgeRefreshSubscription) {
+      this.badgeRefreshSubscription.unsubscribe();
+    }
   }
 
   private loadCurrentUser() {
@@ -552,13 +561,21 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
 
   private async loadBadgeCounts() {
     try {
+      console.log('Loading badge counts...');
+
       // Load pending orders count
       const ordersResponse = await this.restaurantManagerService.getHttpClient().get(
         `${this.restaurantManagerService.getApiUrl()}/orders/stats/pending`
       ).toPromise();
 
+      console.log('Orders stats response:', ordersResponse);
+
       if (ordersResponse && typeof ordersResponse === 'object' && 'pending_orders_count' in ordersResponse) {
         this.pendingOrdersCount = ordersResponse.pending_orders_count as number;
+        console.log('Set pending orders count to:', this.pendingOrdersCount);
+      } else {
+        console.warn('Invalid orders response format:', ordersResponse);
+        this.pendingOrdersCount = 0;
       }
 
       // Load pending wholesaler orders count
@@ -566,17 +583,28 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
         `${this.restaurantManagerService.getApiUrl()}/wholesaler-orders/stats/pending`
       ).toPromise();
 
+      console.log('Wholesaler stats response:', wholesalerResponse);
+
       if (wholesalerResponse && typeof wholesalerResponse === 'object' && 'pending_wholesaler_orders_count' in wholesalerResponse) {
         this.pendingWholesalerOrdersCount = wholesalerResponse.pending_wholesaler_orders_count as number;
+        console.log('Set pending wholesaler orders count to:', this.pendingWholesalerOrdersCount);
+      } else {
+        console.warn('Invalid wholesaler response format:', wholesalerResponse);
+        this.pendingWholesalerOrdersCount = 0;
       }
 
       // Update menu badges
       this.updateMenuBadges();
     } catch (error) {
       console.error('Error loading badge counts:', error);
-      // Reset counts on error
-      this.pendingOrdersCount = 0;
-      this.pendingWholesalerOrdersCount = 0;
+      // Don't reset counts on error - keep previous values
+      // Only reset if this is the first load
+      if (this.pendingOrdersCount === undefined) {
+        this.pendingOrdersCount = 0;
+      }
+      if (this.pendingWholesalerOrdersCount === undefined) {
+        this.pendingWholesalerOrdersCount = 0;
+      }
       this.updateMenuBadges();
     }
   }

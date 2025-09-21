@@ -33,10 +33,6 @@ interface CartItem {
           <h1>{{ tableData.restaurant?.name || 'Restaurant' }}</h1>
           <p class="table-info">🪑 Tisch {{ tableData.tableNumber }}</p>
         </div>
-        <div class="cart-summary" *ngIf="cartItems.length > 0">
-          <span class="cart-count">{{ cartItems.length }} Artikel</span>
-          <span class="cart-total">€{{ getCartTotal().toFixed(2) }}</span>
-        </div>
       </div>
 
       <!-- Menu Categories -->
@@ -102,8 +98,68 @@ interface CartItem {
         </div>
       </div>
 
-      <!-- Cart Sidebar -->
-      <div class="cart-sidebar" *ngIf="cartItems.length > 0">
+      <!-- Cart Modal Overlay (Mobile/Tablet) -->
+      <div class="cart-modal-overlay" *ngIf="cartSidebarOpen && cartItems.length > 0" (click)="closeCartSidebar()">
+        <div class="cart-modal" (click)="$event.stopPropagation()">
+          <div class="cart-header">
+            <h3>Warenkorb</h3>
+            <button (click)="closeCartSidebar()" class="close-modal-btn">✕</button>
+          </div>
+
+        <div class="cart-items">
+          <div *ngFor="let item of cartItems; let i = index" class="cart-item">
+            <div class="item-details">
+              <h4>{{ item.name }}</h4>
+              <div class="quantity-controls">
+                <button (click)="updateQuantity(i, item.quantity - 1)" class="qty-btn">-</button>
+                <span class="quantity">{{ item.quantity }}</span>
+                <button (click)="updateQuantity(i, item.quantity + 1)" class="qty-btn">+</button>
+              </div>
+            </div>
+            <div class="item-price">€{{ (item.total_price || 0).toFixed(2) }}</div>
+            <button (click)="removeFromCart(i)" class="remove-btn">❌</button>
+          </div>
+        </div>
+
+        <div class="cart-total">
+          <div class="total-row">
+            <span>Gesamt:</span>
+            <strong>€{{ getCartTotal().toFixed(2) }}</strong>
+          </div>
+        </div>
+
+        <div class="order-actions">
+          <div class="party-size">
+            <label>Personenanzahl:</label>
+            <input
+              type="number"
+              [(ngModel)]="partySize"
+              min="1"
+              max="20"
+              class="party-input"
+            >
+          </div>
+
+          <textarea
+            [(ngModel)]="orderNotes"
+            placeholder="Besondere Wünsche..."
+            class="notes-input"
+            rows="2"
+          ></textarea>
+
+          <button
+            (click)="placeOrder()"
+            class="order-btn"
+            [disabled]="isPlacingOrder || cartItems.length === 0"
+          >
+            {{ isPlacingOrder ? 'Bestellung wird aufgegeben...' : 'Bestellung aufgeben' }}
+          </button>
+        </div>
+        </div>
+      </div>
+
+      <!-- Desktop Cart Sidebar -->
+      <div class="cart-sidebar desktop-only" *ngIf="cartItems.length > 0">
         <div class="cart-header">
           <h3>Warenkorb</h3>
           <button (click)="clearCart()" class="clear-btn">🗑️ Leeren</button>
@@ -157,6 +213,15 @@ interface CartItem {
           >
             {{ isPlacingOrder ? 'Bestellung wird aufgegeben...' : 'Bestellung aufgeben' }}
           </button>
+        </div>
+      </div>
+
+      <!-- Mobile Cart Button (Floating) -->
+      <div class="mobile-cart-btn" *ngIf="cartItems.length > 0" (click)="openCartSidebar()">
+        <i class="fa-solid fa-shopping-cart"></i>
+        <div class="cart-info">
+          <span class="cart-count">{{ cartItems.length }} Artikel</span>
+          <span class="cart-total">€{{ getCartTotal().toFixed(2) }}</span>
         </div>
       </div>
 
@@ -228,6 +293,74 @@ interface CartItem {
       font-size: var(--text-lg);
       font-weight: 700;
       color: var(--color-primary);
+    }
+
+    .mobile-cart-btn {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-600) 100%);
+      color: white;
+      border: none;
+      border-radius: 20px;
+      min-width: 120px;
+      height: 56px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15), 0 4px 8px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .mobile-cart-btn:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2), 0 6px 12px rgba(0, 0, 0, 0.15);
+      background: linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-primary-700) 100%);
+    }
+
+    .mobile-cart-btn:active {
+      transform: translateY(0) scale(0.98);
+      transition: all 0.1s ease;
+    }
+
+    .mobile-cart-btn i {
+      font-size: 18px;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+    }
+
+    .mobile-cart-btn .cart-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      line-height: 1.1;
+      flex-shrink: 0;
+    }
+
+    .mobile-cart-btn .cart-count {
+      font-size: 11px;
+      font-weight: 700;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    .mobile-cart-btn .cart-total {
+      font-size: 12px;
+      font-weight: 800;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+      color: rgba(255, 255, 255, 0.95);
+      letter-spacing: 0.3px;
+      white-space: nowrap;
     }
 
     .menu-section {
@@ -388,6 +521,57 @@ interface CartItem {
       background: var(--color-success);
       cursor: not-allowed;
       transform: none;
+    }
+
+    .cart-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1050;
+      display: flex;
+      align-items: flex-end;
+    }
+
+    .cart-modal {
+      background: white;
+      width: 100%;
+      max-height: 80vh;
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+      padding: var(--space-6);
+      overflow-y: auto;
+      animation: slideUp 0.3s ease-out;
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(100%);
+      }
+      to {
+        transform: translateY(0);
+      }
+    }
+
+    .close-modal-btn {
+      background: none;
+      border: none;
+      font-size: var(--text-xl);
+      cursor: pointer;
+      color: var(--color-muted);
+      padding: var(--space-2);
+      border-radius: var(--radius-md);
+      transition: all var(--transition);
+    }
+
+    .close-modal-btn:hover {
+      background: var(--color-gray-100);
+      color: var(--color-text);
+    }
+
+    .desktop-only {
+      display: block;
     }
 
     .cart-sidebar {
@@ -649,6 +833,21 @@ interface CartItem {
       100% { transform: rotate(360deg); }
     }
 
+    /* Hide cart summary on mobile/tablet, show floating cart button instead */
+    @media (max-width: 1024px) {
+      .mobile-cart-btn {
+        display: flex !important;
+      }
+
+      .desktop-only {
+        display: none;
+      }
+
+      .cart-modal {
+        max-height: 85vh;
+      }
+    }
+
     @media (max-width: 768px) {
       .table-order-container {
         padding: var(--space-2);
@@ -673,16 +872,32 @@ interface CartItem {
         height: 200px;
       }
 
-      .cart-sidebar {
-        width: 100%;
-        right: 0;
-        left: 0;
-        top: auto;
-        bottom: 0;
-        height: auto;
-        max-height: 60vh;
-        border-left: none;
-        border-top: 1px solid var(--color-border);
+      .cart-modal {
+        max-height: 90vh;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      }
+
+      .mobile-cart-btn {
+        min-width: 100px;
+        height: 48px;
+        bottom: 16px;
+        left: 16px;
+        padding: 6px 10px;
+        border-radius: 16px;
+        gap: 6px;
+        display: flex !important;
+      }
+
+      .mobile-cart-btn i {
+        font-size: 16px;
+      }
+
+      .mobile-cart-btn .cart-count {
+        font-size: 10px;
+      }
+
+      .mobile-cart-btn .cart-total {
+        font-size: 11px;
       }
     }
   `]
@@ -708,6 +923,7 @@ export class TableOrderComponent implements OnInit {
   isPlacingOrder = false;
   orderSuccess = false;
   orderId = '';
+  cartSidebarOpen = false;
 
   ngOnInit() {
     this.initializeTableOrder();
@@ -851,6 +1067,14 @@ export class TableOrderComponent implements OnInit {
     this.toastService.info('Info', 'Warenkorb geleert');
   }
 
+  openCartSidebar() {
+    this.cartSidebarOpen = true;
+  }
+
+  closeCartSidebar() {
+    this.cartSidebarOpen = false;
+  }
+
   getCartTotal(): number {
     return this.cartItems.reduce((total, item) => total + (item.total_price || 0), 0);
   }
@@ -908,6 +1132,7 @@ export class TableOrderComponent implements OnInit {
       this.orderId = response.order.id.toString();
       this.orderSuccess = true;
       this.clearCart();
+      this.closeCartSidebar(); // Close modal on mobile/tablet
 
       console.log('🎉 Order placed successfully! Order ID:', this.orderId);
       this.toastService.success('Bestellung erfolgreich!', 'Ihre Bestellung wurde aufgegeben');
