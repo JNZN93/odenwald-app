@@ -1,6 +1,5 @@
 import { Routes } from '@angular/router';
 import { RestaurantsComponent } from './features/restaurants/restaurants.component';
-import { RestaurantDetailComponent } from './features/restaurants/restaurant-detail.component';
 import { CustomerRestaurantsComponent } from './features/customer/customer-restaurants.component';
 import { RestaurantDashboardComponent } from './features/admin/restaurant-admin.component';
 import { RestaurantManagementComponent } from './features/admin/restaurant-management.component';
@@ -67,7 +66,7 @@ export const routes: Routes = [
   { path: 'customer', component: CustomerRestaurantsComponent },
   { path: 'dashboard', loadComponent: () => import('./features/customer/dashboard/customer-dashboard.component').then(m => m.CustomerDashboardComponent), canActivate: [authGuard, roleGuard(['customer'])] },
   { path: 'report-issue/:orderId', loadComponent: () => import('./features/customer/report-issue/report-issue.component').then(m => m.ReportIssueComponent), canActivate: [authGuard, roleGuard(['customer'])] },
-  { path: 'restaurant/:id', component: RestaurantDetailComponent },
+  { path: 'restaurant/:id', loadComponent: () => import('./features/restaurants/restaurant-detail.component').then(m => m.RestaurantDetailComponent) },
   { path: 'restaurants', component: RestaurantsComponent },
   { path: 'checkout', loadComponent: () => import('./features/checkout/checkout.component').then(m => m.CheckoutComponent) },
   // Stripe Connect onboarding redirects
@@ -109,6 +108,7 @@ export const routes: Routes = [
       { path: 'analytics', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-analytics.component').then(m => m.RestaurantManagerAnalyticsComponent) },
       { path: 'customers', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-customers.component').then(m => m.RestaurantManagerCustomersComponent) },
       { path: 'settings', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-settings.component').then(m => m.RestaurantManagerSettingsComponent) },
+      { path: 'details', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-details.component').then(m => m.RestaurantManagerDetailsComponent) },
       { path: 'payment-methods', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-payment-methods.component').then(m => m.RestaurantManagerPaymentMethodsComponent) },
       { path: 'wholesale', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-wholesale.component').then(m => m.RestaurantManagerWholesaleComponent) },
       { path: 'wholesale/:id', loadComponent: () => import('./features/restaurant-manager/wholesaler-detail.component').then(m => m.WholesalerDetailComponent) },

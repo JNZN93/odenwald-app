@@ -49,6 +49,17 @@ export interface Restaurant {
     card: boolean;
     paypal: boolean;
   };
+  // Manager-editable sections rendered on the customer details page
+  details_sections?: Array<{
+    id?: string;
+    type: 'text' | 'gallery' | 'video';
+    title?: string;
+    content?: string;
+    images?: string[];
+    video_url?: string;
+    visible?: boolean;
+    position?: number;
+  }>;
   rating: number;
   total_reviews: number;
   is_active: boolean;
@@ -98,6 +109,7 @@ export interface UpdateRestaurantRequest {
   payment_methods?: Partial<Restaurant['payment_methods']>;
   is_active?: boolean;
   is_verified?: boolean;
+  details_sections?: Restaurant['details_sections'];
 }
 
 export interface RestaurantSearchFilters {

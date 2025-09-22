@@ -1,10 +1,11 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { AsyncPipe, NgForOf, NgIf, CurrencyPipe, JsonPipe } from '@angular/common';
+import { AsyncPipe, NgForOf, NgIf, CurrencyPipe, JsonPipe, NgSwitch, NgSwitchCase, NgSwitchDefault } from '@angular/common';
 import { RestaurantsService, RestaurantDTO } from '../../core/services/restaurants.service';
 import { OrdersService, LoyaltyData } from '../../core/services/orders.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { MenuItemVariantsModalComponent } from './menu-item-variants-modal.component';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 import { CartService } from '../../core/services/supplier.service';
 import { ImageFallbackDirective } from '../../core/image-fallback.directive';
@@ -67,12 +68,12 @@ interface MenuCategoryWithItems {
 @Component({
   selector: 'app-restaurant-detail',
   standalone: true,
-  imports: [AsyncPipe, NgForOf, NgIf, CurrencyPipe, JsonPipe, ImageFallbackDirective, MenuItemVariantsModalComponent],
+  imports: [AsyncPipe, NgForOf, NgIf, CurrencyPipe, JsonPipe, NgSwitch, NgSwitchCase, NgSwitchDefault, ImageFallbackDirective, MenuItemVariantsModalComponent],
   template: `
     <div class="restaurant-detail" *ngIf="restaurant$ | async as restaurant">
       <!-- Restaurant Header -->
       <div class="restaurant-header">
-        <div class="header-image">
+        <div class="header-image" *ngIf="showDetailsView">
           <img [src]="restaurant.images.banner || restaurant.images.logo" [alt]="restaurant.name">
           <div class="image-overlay">
             <button class="back-btn" (click)="goBack()">
@@ -82,18 +83,32 @@ interface MenuCategoryWithItems {
           </div>
         </div>
 
-        <div class="header-content">
+        <div class="header-content" *ngIf="showDetailsView">
           <div class="restaurant-info">
             <h1 class="restaurant-name">{{ restaurant.name }}</h1>
             <p class="restaurant-description">{{ restaurant.description }}</p>
 
+            <!-- Button to switch to menu view -->
+            <div class="view-switcher">
+              <button class="switch-to-menu-btn" (click)="switchToMenuView()">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M8 6h8"/>
+                  <path d="M8 10h8"/>
+                  <path d="M8 14h8"/>
+                  <path d="M8 18h8"/>
+                  <rect x="4" y="4" width="16" height="16" rx="2"/>
+                </svg>
+                Speisekarte ansehen
+              </button>
+            </div>
+
             <div class="restaurant-meta">
-              <div class="meta-item">
+              <div class="meta-item" [style.--item-index]="0">
                 <i class="fa-solid fa-star"></i>
                 <span>{{ restaurant.rating }} ({{ restaurant.total_reviews }} Bewertungen)</span>
               </div>
-              <div class="meta-item">
-                <button class="eta-badge" 
+              <div class="meta-item" [style.--item-index]="1">
+                <button class="eta-badge"
                         [class.eta-fast]="getEtaStatus(etaSummaryMinutes !== null ? etaSummaryMinutes : restaurant.delivery_info.estimated_delivery_time_minutes) === 'fast'"
                         [class.eta-medium]="getEtaStatus(etaSummaryMinutes !== null ? etaSummaryMinutes : restaurant.delivery_info.estimated_delivery_time_minutes) === 'medium'"
                         [class.eta-slow]="getEtaStatus(etaSummaryMinutes !== null ? etaSummaryMinutes : restaurant.delivery_info.estimated_delivery_time_minutes) === 'slow'"
@@ -102,16 +117,16 @@ interface MenuCategoryWithItems {
                   <span>Aktuell: {{ etaSummaryMinutes !== null ? etaSummaryMinutes : restaurant.delivery_info.estimated_delivery_time_minutes }} Min</span>
                 </button>
               </div>
-              <div class="meta-item">
+              <div class="meta-item" [style.--item-index]="2">
                 <i class="fa-solid fa-clock"></i>
                 <span>Durchschnitt: {{ restaurant.delivery_info.estimated_delivery_time_minutes }} Min</span>
               </div>
-              <div class="meta-item">
-                <i class="fa-regular fa-euro-sign"></i>
+              <div class="meta-item" [style.--item-index]="3">
+                <i class="fa-solid fa-euro-sign"></i>
                 <span>Min. {{ restaurant.delivery_info.minimum_order_amount }}€</span>
               </div>
-              <div class="meta-item">
-                <i class="fa-regular fa-truck"></i>
+              <div class="meta-item" [style.--item-index]="4">
+                <i class="fa-solid fa-truck"></i>
                 <span>{{ restaurant.delivery_info.delivery_fee }}€ Liefergebühr</span>
               </div>
               
@@ -137,6 +152,61 @@ interface MenuCategoryWithItems {
               >
                 {{ currentLoyaltyData.discount_percent }}% Rabatt
               </button>
+            </div>
+          </div>
+
+          <!-- Manager-defined Details Sections -->
+          <div class="details-sections" *ngIf="(restaurant.details_sections?.length || 0) > 0">
+            <div class="section" *ngFor="let section of (restaurant.details_sections || []); let i = index" [style.--section-index]="i">
+              <h3 class="section-title" *ngIf="section.title">{{ section.title }}</h3>
+
+              <ng-container [ngSwitch]="section.type">
+                <!-- Text Section -->
+                <div *ngSwitchCase="'text'" class="section-text" [innerText]="section.content"></div>
+
+                <!-- Gallery Section -->
+                <div *ngSwitchCase="'gallery'" class="section-gallery">
+                  <div class="gallery-grid" *ngIf="section.images && section.images.length">
+                    <div class="gallery-item" *ngFor="let img of section.images; let i = index">
+                      <img [src]="img" [alt]="section.title || 'Galerie'" loading="lazy" />
+                      <div class="gallery-overlay">
+                        <span class="gallery-counter">{{ i + 1 }} / {{ section.images.length }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div *ngIf="!section.images || section.images.length === 0" class="empty-gallery">
+                    <i class="fa-regular fa-images"></i>
+                    <p>Keine Bilder vorhanden</p>
+                  </div>
+                </div>
+
+                <!-- Video Section -->
+                <div *ngSwitchCase="'video'" class="section-video">
+                  <div class="video-container" *ngIf="section.video_url">
+                    <iframe
+                      width="100%"
+                      height="400"
+                      [src]="sanitizeVideoUrl(section.video_url)"
+                      frameborder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowfullscreen
+                    ></iframe>
+                    <div class="video-play-button">
+                      <i class="fa-solid fa-play"></i>
+                    </div>
+                  </div>
+                  <div *ngIf="!section.video_url" class="empty-video">
+                    <i class="fa-regular fa-circle-play"></i>
+                    <p>Keine Video-URL vorhanden</p>
+                  </div>
+                </div>
+
+                <!-- Fallback unknown type -->
+                <div *ngSwitchDefault class="section-unknown">
+                  <i class="fa-regular fa-circle-question"></i>
+                  <p>Unbekannter Inhaltstyp</p>
+                </div>
+              </ng-container>
             </div>
           </div>
         </div>
@@ -190,10 +260,44 @@ interface MenuCategoryWithItems {
         </ng-template>
       </div>
 
-      <!-- Menu Categories -->
-      <div class="menu-section">
+
+      <!-- Menu Categories (only show when not in details view) -->
+      <div class="menu-section menu-compact" *ngIf="!showDetailsView">
         <div class="container">
           <h2 class="menu-title">Speisekarte</h2>
+
+
+          <!-- Back Button for Menu View -->
+          <div class="menu-back-button" *ngIf="!showDetailsView">
+            <button class="back-btn" (click)="goBack()">
+              <i class="fa-solid fa-arrow-left"></i>
+              Zurück
+            </button>
+          </div>
+
+          <!-- Sticky Category Navigation - Always visible at top of menu section -->
+          <ng-container *ngIf="menuData$ | async as menuData">
+            <div class="sticky-category-nav-inline" *ngIf="menuData?.categories && menuData.categories.length > 0">
+              <div class="nav-container">
+                <div class="category-nav">
+                  <button
+                    class="nav-item"
+                    [class.active]="activeCategory === ''"
+                    (click)="scrollToTop()">
+                    Alle
+                  </button>
+                  <button
+                    *ngFor="let category of menuData.categories"
+                    class="nav-item"
+                    [class.active]="activeCategory === category.id"
+                    (click)="scrollToCategoryAndHighlight(category.id)"
+                    [attr.data-nav-category]="category.id">
+                    {{ category.name }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </ng-container>
 
           <ng-container *ngIf="menuData$ | async as menuData; else loading">
             <div class="no-menu" *ngIf="!menuData.categories || menuData.categories.length === 0">
@@ -202,7 +306,10 @@ interface MenuCategoryWithItems {
             </div>
 
             <div class="menu-categories" *ngIf="menuData.categories && menuData.categories.length > 0">
-              <div *ngFor="let category of menuData.categories" class="menu-category">
+              <div *ngFor="let category of menuData.categories"
+                   class="menu-category"
+                   [id]="category.id"
+                   [attr.data-category-id]="category.id">
                 <h3 class="category-title">{{ category.name }}</h3>
 
                 <div class="menu-items">
@@ -218,11 +325,11 @@ interface MenuCategoryWithItems {
                         >
                       </div>
 
-                    <div class="item-info">
-                      <h4 class="item-name">{{ item.name }}</h4>
-                      <p class="item-description" *ngIf="item.description">{{ item.description }}</p>
-                      <div class="item-price">{{ item.price_cents / 100 | currency:'EUR':'symbol':'1.2-2':'de' }}</div>
-                    </div>
+                      <div class="item-info">
+                        <h4 class="item-name">{{ item.name }}</h4>
+                        <p class="item-description" *ngIf="item.description">{{ item.description }}</p>
+                        <div class="item-price">{{ item.price_cents / 100 | currency:'EUR':'symbol':'1.2-2':'de' }}</div>
+                      </div>
                     </div>
 
                     <div class="item-actions">
@@ -248,8 +355,7 @@ interface MenuCategoryWithItems {
               <p>Lade Speisekarte...</p>
             </div>
           </ng-template>
-        </div>
-      </div>
+     
 
       <!-- Shopping Cart Preview -->
       <ng-container *ngIf="(cartItemsCount$ | async) as cartCount">
@@ -274,12 +380,71 @@ interface MenuCategoryWithItems {
         (close)="closeVariantsModal()"
         (confirm)="onVariantsConfirm($event)">
       </app-menu-item-variants-modal>
-    </div>
+
   `,
   styles: [`
     .restaurant-detail {
       min-height: 100vh;
       padding-bottom: calc(80px + var(--space-6));
+    }
+
+    /* Sticky Category Navigation */
+    .sticky-category-nav-inline {
+      position: sticky;
+      top: 0;
+      background: white;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: var(--space-6);
+      padding: var(--space-4);
+      z-index: 100;
+    }
+
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 var(--space-6);
+    }
+
+    .category-nav {
+      display: flex;
+      gap: var(--space-1);
+      padding: var(--space-3) 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .category-nav::-webkit-scrollbar {
+      display: none;
+    }
+
+    .nav-item {
+      background: var(--bg-light);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-2) var(--space-4);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--color-text);
+      cursor: pointer;
+      transition: all var(--transition);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .nav-item:hover {
+      background: var(--color-primary);
+      color: white;
+      border-color: var(--color-primary);
+    }
+
+    .nav-item.active {
+      background: var(--color-primary);
+      color: white;
+      border-color: var(--color-primary);
+      font-weight: 600;
     }
 
     .restaurant-header {
@@ -349,6 +514,8 @@ interface MenuCategoryWithItems {
       font-weight: 700;
       margin-bottom: var(--space-3);
       color: var(--color-heading);
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      line-height: 1.2;
     }
 
     .restaurant-description {
@@ -356,6 +523,115 @@ interface MenuCategoryWithItems {
       color: var(--color-muted);
       margin-bottom: var(--space-5);
       max-width: 600px;
+      line-height: 1.6;
+      background: rgba(255, 255, 255, 0.8);
+      padding: var(--space-4);
+      border-radius: var(--radius-lg);
+      backdrop-filter: blur(8px);
+    }
+
+    .view-switcher {
+      margin-bottom: var(--space-6);
+    }
+
+    .switch-to-menu-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-4) var(--space-6);
+      background: var(--gradient-primary);
+      border: none;
+      border-radius: var(--radius-xl);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+      box-shadow: 0 4px 16px color-mix(in oklab, var(--color-primary) 30%, transparent);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .switch-to-menu-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: left 0.6s;
+    }
+
+    .switch-to-menu-btn:hover::before {
+      left: 100%;
+    }
+
+    .switch-to-menu-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px color-mix(in oklab, var(--color-primary) 40%, transparent);
+    }
+
+    .switch-to-menu-btn .btn-icon {
+      width: 20px;
+      height: 20px;
+      transition: transform var(--transition);
+    }
+
+    .switch-to-menu-btn:hover .btn-icon {
+      transform: scale(1.1);
+    }
+
+    .switch-to-details-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-4);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      color: var(--color-text);
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .switch-to-details-btn:hover {
+      background: var(--bg-light);
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+    }
+
+    .switch-to-details-btn .btn-icon {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* Back Button for Menu View */
+    .menu-back-button {
+      margin-bottom: var(--space-4);
+      display: flex;
+      justify-content: flex-start;
+    }
+
+    .menu-back-button .back-btn {
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      border-radius: var(--radius-lg);
+      padding: var(--space-3) var(--space-4);
+      color: var(--color-text);
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .menu-back-button .back-btn:hover {
+      background: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 
     .restaurant-meta {
@@ -371,10 +647,23 @@ interface MenuCategoryWithItems {
       gap: var(--space-2);
       color: var(--color-text);
       font-size: var(--text-sm);
+      font-weight: 500;
+      background: rgba(255, 255, 255, 0.8);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-lg);
+      backdrop-filter: blur(8px);
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition);
+    }
+
+    .meta-item:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
     }
 
     .meta-item i {
       color: var(--color-primary);
+      font-size: var(--text-lg);
     }
 
     .restaurant-status {
@@ -398,13 +687,20 @@ interface MenuCategoryWithItems {
       display: inline-flex;
       align-items: center;
       gap: var(--space-2);
-      background: var(--color-success-light);
+      background: linear-gradient(135deg, var(--color-success), color-mix(in oklab, var(--color-success) 80%, white));
       border: 2px solid var(--color-success);
-      border-radius: var(--radius-lg);
-      padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-xl);
+      padding: var(--space-3) var(--space-4);
       font-size: var(--text-sm);
       font-weight: 600;
-      color: var(--color-success);
+      color: white;
+      box-shadow: var(--shadow-md);
+      transition: all var(--transition);
+    }
+
+    .loyalty-badge:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
     }
 
     .loyalty-badge i {
@@ -415,18 +711,19 @@ interface MenuCategoryWithItems {
       background: var(--gradient-primary);
       color: white;
       border: none;
-      padding: 4px 8px;
-      border-radius: var(--radius-md);
+      padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-lg);
       font-size: var(--text-xs);
       font-weight: 600;
       cursor: pointer;
       transition: all var(--transition);
       margin-left: var(--space-2);
+      box-shadow: var(--shadow-sm);
     }
 
     .redeem-btn-small:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      transform: translateY(-2px) scale(1.05);
+      box-shadow: var(--shadow-md);
     }
 
     .eta-badge {
@@ -590,25 +887,38 @@ interface MenuCategoryWithItems {
       display: flex;
       align-items: center;
       gap: var(--space-2);
-      padding: var(--space-2) var(--space-4);
-      border-radius: var(--radius-lg);
-      font-weight: 500;
+      padding: var(--space-3) var(--space-5);
+      border-radius: var(--radius-full);
+      font-weight: 600;
       font-size: var(--text-sm);
+      box-shadow: var(--shadow-md);
+      transition: all var(--transition);
+    }
+
+    .status-badge:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
     }
 
     .status-badge.open {
-      background: color-mix(in oklab, var(--color-success) 15%, white);
-      color: var(--color-success);
+      background: linear-gradient(135deg, var(--color-success), color-mix(in oklab, var(--color-success) 80%, white));
+      color: white;
+      border: 2px solid var(--color-success);
     }
 
     .status-badge.closed {
-      background: color-mix(in oklab, var(--color-danger) 15%, white);
-      color: var(--color-danger);
+      background: linear-gradient(135deg, var(--color-danger), color-mix(in oklab, var(--color-danger) 80%, white));
+      color: white;
+      border: 2px solid var(--color-danger);
     }
 
     .menu-section {
       background: var(--bg-light);
       padding: var(--space-10) 0;
+    }
+
+    .menu-section.menu-compact {
+      padding: 0;
     }
 
     .container {
@@ -1126,8 +1436,9 @@ interface MenuCategoryWithItems {
         box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
         background: #9ca3af;
       }
+    }
 
-      .cart-content {
+    .cart-content {
         flex-direction: column;
         gap: var(--space-3);
         text-align: center;
@@ -1135,6 +1446,26 @@ interface MenuCategoryWithItems {
 
       .restaurant-detail {
         padding-bottom: calc(100px + var(--space-6));
+      }
+
+      /* Sticky Navigation Mobile Styles */
+      .sticky-category-nav {
+        top: 0; /* Ensure it stays at top on mobile */
+      }
+
+      .nav-container {
+        padding: 0 var(--space-4);
+      }
+
+      .category-nav {
+        padding: var(--space-2) 0;
+        gap: var(--space-2);
+      }
+
+      .nav-item {
+        padding: var(--space-2) var(--space-3);
+        font-size: var(--text-xs);
+        border-radius: var(--radius-md);
       }
 
       /* Additional mobile header improvements for very small screens */
@@ -1177,10 +1508,223 @@ interface MenuCategoryWithItems {
           font-size: var(--text-xs);
         }
       }
+
+      /* Enhanced Details Sections Styling */
+      .details-sections {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 var(--space-6);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-8);
+      }
+
+    .section {
+      background: var(--color-surface);
+      border-radius: var(--radius-2xl);
+      padding: var(--space-8);
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--color-border);
+      transition: all var(--transition);
+      position: relative;
+      overflow: hidden;
     }
+
+      .section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--gradient-primary);
+      }
+
+      .section-title {
+        font-size: var(--text-2xl);
+        font-weight: 700;
+        margin-bottom: var(--space-6);
+        color: var(--color-heading);
+        border-bottom: 3px solid var(--color-primary);
+        padding-bottom: var(--space-3);
+        display: inline-block;
+        position: relative;
+      }
+
+      .section-title::after {
+        content: '';
+        position: absolute;
+        bottom: -3px;
+        left: 0;
+        width: 50px;
+        height: 3px;
+        background: var(--gradient-primary);
+        border-radius: 2px;
+      }
+
+      .section-text {
+        font-size: var(--text-lg);
+        line-height: 1.8;
+        color: var(--color-text);
+        white-space: pre-wrap;
+        background: var(--bg-light);
+        padding: var(--space-6);
+        border-radius: var(--radius-lg);
+        border-left: 4px solid var(--color-primary);
+        margin: var(--space-4) 0;
+      }
+
+      .section-gallery {
+        margin-top: var(--space-6);
+      }
+
+      .gallery-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: var(--space-6);
+        margin-top: var(--space-6);
+      }
+
+      .gallery-item {
+        position: relative;
+        border-radius: var(--radius-xl);
+        overflow: hidden;
+        box-shadow: var(--shadow-md);
+        transition: all var(--transition);
+        cursor: pointer;
+      }
+
+      .gallery-item:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+      }
+
+      .gallery-item img {
+        width: 100%;
+        height: 240px;
+        object-fit: cover;
+        transition: transform var(--transition);
+      }
+
+      .gallery-item:hover img {
+        transform: scale(1.05);
+      }
+
+      .gallery-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 50%);
+        display: flex;
+        align-items: flex-end;
+        padding: var(--space-4);
+        opacity: 0;
+        transition: opacity var(--transition);
+      }
+
+      .gallery-item:hover .gallery-overlay {
+        opacity: 1;
+      }
+
+      .gallery-counter {
+        color: white;
+        font-size: var(--text-sm);
+        font-weight: 600;
+        background: rgba(0,0,0,0.7);
+        padding: var(--space-1) var(--space-3);
+        border-radius: var(--radius-full);
+        backdrop-filter: blur(4px);
+      }
+
+      .empty-gallery {
+        text-align: center;
+        padding: var(--space-12);
+        color: var(--color-muted);
+        background: var(--bg-light);
+        border-radius: var(--radius-xl);
+        border: 2px dashed var(--color-border);
+      }
+
+      .empty-gallery i {
+        font-size: 48px;
+        margin-bottom: var(--space-4);
+        color: var(--color-border);
+      }
+
+      .section-video {
+        margin-top: var(--space-6);
+      }
+
+      .video-container {
+        position: relative;
+        border-radius: var(--radius-xl);
+        overflow: hidden;
+        box-shadow: var(--shadow-lg);
+        background: #000;
+      }
+
+      .video-container iframe {
+        border-radius: var(--radius-xl);
+        display: block;
+      }
+
+      .video-play-button {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 80px;
+        height: 80px;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        color: var(--color-primary);
+        transition: all var(--transition);
+        opacity: 0.8;
+      }
+
+      .video-container:hover .video-play-button {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.1);
+      }
+
+      .empty-video {
+        text-align: center;
+        padding: var(--space-12);
+        color: var(--color-muted);
+        background: var(--bg-light);
+        border-radius: var(--radius-xl);
+        border: 2px dashed var(--color-border);
+      }
+
+      .empty-video i {
+        font-size: 48px;
+        margin-bottom: var(--space-4);
+        color: var(--color-border);
+      }
+
+      .section-unknown {
+        text-align: center;
+        padding: var(--space-12);
+        color: var(--color-muted);
+        background: var(--bg-light);
+        border-radius: var(--radius-xl);
+        border: 2px dashed var(--color-border);
+      }
+
+      .section-unknown i {
+        font-size: 48px;
+        margin-bottom: var(--space-4);
+        color: var(--color-border);
+      }
   `]
 })
-export class RestaurantDetailComponent implements OnInit {
+export class RestaurantDetailComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private restaurantsService = inject(RestaurantsService);
@@ -1205,9 +1749,17 @@ export class RestaurantDetailComponent implements OnInit {
   selectedMenuItem: MenuItem | null = null;
   currentRestaurant: RestaurantDTO | null = null;
 
+  // Category navigation
+  activeCategory = ''; // Currently active/highlighted category based on scroll position
+  showDetailsView = false; // true = show restaurant details, false = show menu
+  private scrollHandler: (() => void) | null = null;
+  private sanitizer = inject(DomSanitizer);
+
   ngOnInit() {
     const restaurantId = this.route.snapshot.paramMap.get('id');
-    console.log('🏪 Restaurant detail component initialized with ID:', restaurantId);
+    const viewParam = this.route.snapshot.queryParamMap.get('view');
+    this.showDetailsView = viewParam === 'details';
+    console.log('🏪 Restaurant detail component initialized with ID:', restaurantId, 'View:', viewParam);
 
     if (!restaurantId) {
       console.log('❌ No restaurant ID found, navigating to customer page');
@@ -1258,6 +1810,24 @@ export class RestaurantDetailComponent implements OnInit {
         this.loadLoyaltyData(restaurantId);
       }
     });
+
+    // Initialize category navigation after a short delay to ensure DOM is ready
+    setTimeout(() => {
+      this.initializeCategoryNavigation();
+    }, 1000);
+  }
+  sanitizeVideoUrl(url: string): SafeResourceUrl {
+    try {
+      return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+    } catch {
+      return '' as any;
+    }
+  }
+
+  ngOnDestroy() {
+    if (this.scrollHandler) {
+      window.removeEventListener('scroll', this.scrollHandler);
+    }
   }
 
   isOpen(restaurant: RestaurantDTO): boolean {
@@ -1506,4 +2076,114 @@ export class RestaurantDetailComponent implements OnInit {
     // TODO: Implement redemption logic for this restaurant
     alert(`Du kannst ${loyalty.discount_percent}% Rabatt bei ${loyalty.restaurant_name} einlösen!`);
   }
+
+  private initializeCategoryNavigation() {
+    // Set up scroll handler for category highlighting
+    this.scrollHandler = () => this.updateActiveCategory();
+    window.addEventListener('scroll', this.scrollHandler, { passive: true });
+
+    // Initial check
+    this.updateActiveCategory();
+
+    // Debug: Log alle verfügbaren Kategorie-IDs nach dem Laden
+    setTimeout(() => {
+      this.logAvailableCategoryIds();
+    }, 1000);
+  }
+
+  private updateActiveCategory() {
+    const categories = document.querySelectorAll('.menu-category');
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const menuSection = document.querySelector('.menu-section') as HTMLElement;
+    const menuOffset = menuSection ? menuSection.offsetTop : 0;
+
+    let currentCategory = '';
+
+    categories.forEach((category) => {
+      const rect = category.getBoundingClientRect();
+      const elementTop = rect.top + scrollTop - menuOffset;
+
+      if (scrollTop >= elementTop - 100) { // 100px threshold from menu section
+        currentCategory = category.id;
+      }
+    });
+
+    this.activeCategory = currentCategory;
+  }
+
+  scrollToTop() {
+    // Scroll to top of menu section
+    const menuSection = document.querySelector('.menu-section') as HTMLElement;
+    if (menuSection) {
+      const menuOffset = menuSection.offsetTop - 20; // Small offset from menu section
+      window.scrollTo({
+        top: menuOffset,
+        behavior: 'smooth'
+      });
+    }
+    this.activeCategory = '';
+  }
+
+  scrollToCategoryAndHighlight(categoryId: string) {
+    console.log('=== SCROLLING TO CATEGORY ===');
+    console.log('Category ID:', categoryId);
+
+    const element = document.getElementById(categoryId);
+    console.log('Element found:', element);
+
+    if (element) {
+      console.log('Element position:', element.offsetTop);
+
+      // Verwende scrollIntoView mit block: 'start' aber inline: 'nearest'
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',    // Element am Anfang des Viewports
+        inline: 'nearest'
+      });
+
+      // Nach dem Scroll die Position um 100px nach oben anpassen
+      setTimeout(() => {
+        const currentScroll = window.pageYOffset;
+        const newScroll = Math.max(0, currentScroll - 100);
+        console.log('Adjusting scroll from', currentScroll, 'to', newScroll);
+
+        window.scrollTo({
+          top: newScroll,
+          behavior: 'smooth'
+        });
+      }, 300); // Warte bis scrollIntoView fertig ist
+
+    } else {
+      console.error('❌ Element with ID', categoryId, 'not found');
+
+      // Fallback: Suche nach allen Elementen mit IDs
+      const allElements = document.querySelectorAll('[id]');
+      console.log('Available IDs:', Array.from(allElements).map(el => el.id));
+    }
+
+    this.activeCategory = categoryId;
+  }
+
+  switchToMenuView() {
+    const restaurantId = this.route.snapshot.paramMap.get('id');
+    this.router.navigate(['/restaurant', restaurantId]);
+  }
+
+  switchToDetailsView() {
+    const restaurantId = this.route.snapshot.paramMap.get('id');
+    this.router.navigate(['/restaurant', restaurantId], {
+      queryParams: { view: 'details' }
+    });
+  }
+
+  private logAvailableCategoryIds() {
+    const categoryElements = document.querySelectorAll('.menu-category[id]');
+    const ids = Array.from(categoryElements).map(el => el.id);
+    console.log('🔍 Available category IDs:', ids);
+
+    if (ids.length === 0) {
+      console.warn('⚠️ No category elements with IDs found!');
+    }
+  }
+
 }

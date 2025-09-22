@@ -257,7 +257,7 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
                       </svg>
                       Speisekarte ansehen
                     </button>
-                    <button class="btn btn-ghost" type="button">
+                    <button class="btn btn-ghost" type="button" (click)="viewDetails(r)">
                       <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <!-- Info Icon -->
                         <circle cx="12" cy="12" r="10"/>
@@ -539,6 +539,12 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
 
   viewMenu(restaurant: RestaurantDTO) {
     this.router.navigate(['/restaurant', restaurant.id]);
+  }
+
+  viewDetails(restaurant: RestaurantDTO) {
+    this.router.navigate(['/restaurant', restaurant.id], {
+      queryParams: { view: 'details' }
+    });
   }
 
   goToDashboard() {
