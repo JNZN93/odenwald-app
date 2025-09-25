@@ -671,19 +671,33 @@ export class MenuItemVariantsComponent implements OnInit {
   // Group CRUD
   async saveGroup() {
     try {
+      console.log('Saving group with data:', this.groupFormData);
+      console.log('Edit mode:', this.showEditGroupModal);
+      console.log('Selected group:', this.selectedGroup);
+      
+      // Check if form data is valid
+      if (!this.groupFormData.name || this.groupFormData.name.trim() === '') {
+        alert('Bitte geben Sie einen Namen für die Varianten-Gruppe ein.');
+        return;
+      }
+      
       if (this.showEditGroupModal && this.selectedGroup) {
+        console.log('Updating existing group...');
         await firstValueFrom(this.restaurantsService.updateVariantGroup(
           this.restaurantId,
           this.menuItemId,
           this.selectedGroup.id,
           this.groupFormData
         ));
+        console.log('Group updated successfully');
       } else {
+        console.log('Creating new group...');
         await firstValueFrom(this.restaurantsService.createVariantGroup(
           this.restaurantId,
           this.menuItemId,
           this.groupFormData
         ));
+        console.log('Group created successfully');
       }
 
       this.closeGroupModal();
@@ -691,7 +705,7 @@ export class MenuItemVariantsComponent implements OnInit {
       this.variantsChanged.emit();
     } catch (error) {
       console.error('Error saving group:', error);
-      // Handle error appropriately
+      alert('Fehler beim Speichern der Varianten-Gruppe: ' + (error instanceof Error ? error.message : 'Unbekannter Fehler'));
     }
   }
 
@@ -720,30 +734,66 @@ export class MenuItemVariantsComponent implements OnInit {
 
   // Option CRUD
   async saveOption() {
-    if (!this.selectedGroup) return;
+    // If no selectedGroup, try to find it from the current context
+    let targetGroup = this.selectedGroup;
+    
+    if (!targetGroup && this.showAddOptionModal) {
+      // If we're adding a new option but no group is selected, this is an error
+      console.error('No selected group for saving option');
+      alert('Fehler: Keine Varianten-Gruppe ausgewählt. Bitte wählen Sie zuerst eine Gruppe aus.');
+      return;
+    }
+
+    if (!targetGroup && this.showEditOptionModal && this.selectedOption) {
+      // If we're editing an option, find the group it belongs to
+      targetGroup = this.variantGroups.find(group => 
+        group.options.some(option => option.id === this.selectedOption!.id)
+      ) || null;
+    }
+
+    if (!targetGroup) {
+      console.error('Could not determine target group for saving option');
+      alert('Fehler: Varianten-Gruppe konnte nicht ermittelt werden.');
+      return;
+    }
 
     try {
+      // Check if form data is valid
+      if (!this.optionFormData.name || this.optionFormData.name.trim() === '') {
+        alert('Bitte geben Sie einen Namen für die Option ein.');
+        return;
+      }
+
       const data = {
         ...this.optionFormData,
         price_modifier_cents: Math.round(Number(this.optionFormData.price_modifier_cents || 0) * 100),
-        variant_group_id: this.selectedGroup.id
+        variant_group_id: targetGroup.id
       };
 
+      console.log('Saving option with data:', data);
+      console.log('Edit mode:', this.showEditOptionModal);
+      console.log('Selected option:', this.selectedOption);
+      console.log('Target group:', targetGroup);
+
       if (this.showEditOptionModal && this.selectedOption) {
+        console.log('Updating existing option...');
         await firstValueFrom(this.restaurantsService.updateVariantOption(
           this.restaurantId,
           this.menuItemId,
-          this.selectedGroup.id,
+          targetGroup.id,
           this.selectedOption.id,
           data
         ));
+        console.log('Option updated successfully');
       } else {
+        console.log('Creating new option...');
         await firstValueFrom(this.restaurantsService.createVariantOption(
           this.restaurantId,
           this.menuItemId,
-          this.selectedGroup.id,
+          targetGroup.id,
           data
         ));
+        console.log('Option created successfully');
       }
 
       this.closeOptionModal();
@@ -751,7 +801,7 @@ export class MenuItemVariantsComponent implements OnInit {
       this.variantsChanged.emit();
     } catch (error) {
       console.error('Error saving option:', error);
-      // Handle error appropriately
+      alert('Fehler beim Speichern der Option: ' + (error instanceof Error ? error.message : 'Unbekannter Fehler'));
     }
   }
 
@@ -787,13 +837,27 @@ export class MenuItemVariantsComponent implements OnInit {
     this.showAddGroupModal = false;
     this.showEditGroupModal = false;
     this.selectedGroup = null;
+    // Reset form data to initial state
+    this.groupFormData = {
+      name: '',
+      is_required: false,
+      min_selections: 0,
+      max_selections: 1,
+      position: 0
+    };
   }
 
   closeOptionModal() {
     this.showAddOptionModal = false;
     this.showEditOptionModal = false;
     this.selectedOption = null;
-    this.selectedGroup = null;
+    // Reset form data to initial state
+    this.optionFormData = {
+      name: '',
+      price_modifier_cents: 0,
+      is_available: true,
+      position: 0
+    };
   }
 
   // TrackBy functions for performance

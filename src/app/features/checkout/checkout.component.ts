@@ -2073,10 +2073,23 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
         if (menuItem) break;
       }
       
-      if (!menuItem || !menuItem.variants || menuItem.variants.length === 0) {
+      if (!menuItem) {
+        this.showErrorMessage('Produkt nicht gefunden.');
+        return;
+      }
+
+      // Prüfe ob Varianten vorhanden sind
+      if (!menuItem.variants || menuItem.variants.length === 0) {
         this.showErrorMessage('Keine Varianten für dieses Produkt verfügbar.');
         return;
       }
+
+      console.log('Gefundenes Menu-Item mit Varianten:', {
+        id: menuItem.id,
+        name: menuItem.name,
+        variantsCount: menuItem.variants?.length || 0,
+        variants: menuItem.variants
+      });
 
       // Bereite die bestehende Auswahl vor
       this.existingItemSelection = {
@@ -2103,18 +2116,26 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
     quantity: number;
   }): void {
     const cart = this.cartService.getCurrentCart();
-    if (!cart || !this.selectedMenuItemForEdit) return;
+    if (!cart || !this.selectedMenuItemForEdit) {
+      console.error('Cart oder selectedMenuItemForEdit ist null:', { cart, selectedMenuItemForEdit: this.selectedMenuItemForEdit });
+      this.showErrorMessage('Fehler: Keine gültigen Daten für die Aktualisierung.');
+      return;
+    }
+
+    // Speichere die Referenz vor dem asynchronen Call
+    const menuItem = this.selectedMenuItemForEdit;
+    const menuItemId = menuItem.id;
 
     // Lade Restaurant-Daten
     this.restaurantsService.getRestaurantById(cart.restaurant_id).subscribe({
       next: (restaurant: any) => {
         // Aktualisiere die Varianten im Cart
         this.cartService.updateCartItemVariants(
-          this.selectedMenuItemForEdit!.id,
+          menuItemId,
           event.selectedOptionIds,
           event.selectedOptions,
           restaurant,
-          this.selectedMenuItemForEdit!
+          menuItem
         );
 
         // Schließe das Modal
@@ -2131,6 +2152,11 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
    * Varianten-Modal schließen
    */
   closeVariantsModal(): void {
+    console.log('Schließe Varianten-Modal:', {
+      selectedMenuItemForEdit: this.selectedMenuItemForEdit?.id,
+      showVariantsModal: this.showVariantsModal
+    });
+    
     this.showVariantsModal = false;
     this.selectedMenuItemForEdit = null;
     this.existingItemSelection = null;
