@@ -2,11 +2,24 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ConfirmationService, ConfirmationDialog } from '../../core/services/confirmation.service';
 import { Subscription } from 'rxjs';
+import { trigger, state, style, transition, animate } from '@angular/animations';
 
 @Component({
   selector: 'app-confirmation-dialog',
   standalone: true,
   imports: [CommonModule],
+  animations: [
+    trigger('fadeInOut', [
+      state('in', style({ opacity: 1, transform: 'scale(1)' })),
+      transition('void => *', [
+        style({ opacity: 0, transform: 'scale(0.9)' }),
+        animate('200ms ease-out')
+      ]),
+      transition('* => void', [
+        animate('150ms ease-in', style({ opacity: 0, transform: 'scale(0.9)' }))
+      ])
+    ])
+  ],
   template: `
     <div class="confirmation-overlay" *ngIf="dialog" (click)="cancel()" [@fadeInOut]>
       <div class="confirmation-dialog" (click)="$event.stopPropagation()" [ngClass]="dialog.type">
@@ -72,7 +85,7 @@ import { Subscription } from 'rxjs';
     }
 
     .confirmation-dialog.warning {
-      border-left: 4px solid var(--color-warning);
+      border-left: 4px solid var(--color-primary-500);
     }
 
     .confirmation-dialog.info {
@@ -104,8 +117,8 @@ import { Subscription } from 'rxjs';
     }
 
     .confirmation-dialog.warning .dialog-icon {
-      background: var(--color-warning-50);
-      color: var(--color-warning);
+      background: var(--color-primary-50);
+      color: var(--color-primary-600);
     }
 
     .confirmation-dialog.info .dialog-icon {
@@ -184,11 +197,11 @@ import { Subscription } from 'rxjs';
     }
 
     .btn-confirm.warning {
-      background: var(--color-warning);
+      background: var(--color-primary-600);
     }
 
     .btn-confirm.warning:hover:not(:disabled) {
-      background: var(--color-warning-600);
+      background: var(--color-primary-700);
     }
 
     .btn-confirm.info {
@@ -273,7 +286,7 @@ export class ConfirmationDialogComponent implements OnInit, OnDestroy {
       case 'danger':
         return 'fa-solid fa-exclamation-triangle';
       case 'warning':
-        return 'fa-solid fa-exclamation-circle';
+        return 'fa-solid fa-shopping-cart';
       case 'info':
         return 'fa-solid fa-info-circle';
       default:

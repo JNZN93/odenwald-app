@@ -10,6 +10,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { RestaurantsService } from '../../core/services/restaurants.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { UserDataService } from '../../core/services/user-data.service';
+import { ConfirmationService } from '../../core/services/confirmation.service';
 import { ImageFallbackDirective } from '../../core/image-fallback.directive';
 import { Observable, map } from 'rxjs';
 
@@ -1516,6 +1517,7 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
   private restaurantsService = inject(RestaurantsService);
   private userDataService = inject(UserDataService);
   private loadingService = inject(LoadingService);
+  private confirmationService = inject(ConfirmationService);
 
   cart$ = this.cartService.cart$;
   loading = false;
@@ -1672,8 +1674,28 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
     this.cartService.updateQuantity(menuItemId, quantity);
   }
 
-  removeItem(menuItemId: string) {
-    this.cartService.removeFromCart(menuItemId);
+  async removeItem(menuItemId: string) {
+    // Get the cart item to show in the confirmation dialog
+    const cart = this.cartService.getCurrentCart();
+    const item = cart?.items.find(item => item.menu_item_id === menuItemId);
+    
+    if (!item) {
+      console.error('Item not found in cart');
+      return;
+    }
+
+    const confirmed = await this.confirmationService.confirm({
+      title: 'Artikel entfernen',
+      message: `Möchten Sie "${item.name}" aus Ihrem Warenkorb entfernen?`,
+      confirmText: 'Ja, entfernen',
+      cancelText: 'Abbrechen',
+      type: 'warning',
+      showCancel: true
+    });
+
+    if (confirmed) {
+      this.cartService.removeFromCart(menuItemId);
+    }
   }
 
   isFormValid(): boolean {

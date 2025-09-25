@@ -6,7 +6,11 @@
   --color-surface-2: #f0f9f0;
   --color-surface-3: #e8f5e8;
   --color-border: #e5e7eb;
+  --color-border-light: #f3f4f6;
   --color-muted: #6b7280;
+  --color-muted-100: #f3f4f6;
+  --color-muted-200: #e5e7eb;
+  --color-muted-600: #4b5563;
   --color-text: #111827;
   --color-heading: #0f172a;
 
@@ -14,6 +18,7 @@
   --color-primary: var(--color-primary-500);
 
   /* Brand - nature green with gradient */
+  --color-primary-25: #f7fdf8;
   --color-primary-50: #effaf1;
   --color-primary-100: #dff4e3;
   --color-primary-200: #bfe9c7;
@@ -40,8 +45,13 @@
   --color-success: #16a34a;
   --color-warning: #f59e0b;
   --color-danger: #dc2626;
+  --color-danger-50: #fef2f2;
+  --color-danger-600: #b91c1c;
   --color-error: var(--color-danger); /* Alias for backward compatibility */
   --color-info: #3b82f6;
+  --color-info-50: #eff6ff;
+  --color-warning-50: #fffbeb;
+  --color-warning-600: #d97706;
 
   /* Radius */
   --radius-sm: 6px;
