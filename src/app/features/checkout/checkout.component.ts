@@ -675,7 +675,7 @@ interface MenuItemVariantOption {
 
     .variant-price {
       color: var(--color-primary-800);
-      font-weight: 700;
+      font-weight: 600;
       font-size: var(--text-xs);
     }
 
@@ -878,6 +878,10 @@ interface MenuItemVariantOption {
         padding: 2px 4px;
       }
 
+      .variant-price {
+        font-size: 10px;
+      }
+
       .item-actions {
         grid-area: actions;
         display: flex;
@@ -992,6 +996,10 @@ interface MenuItemVariantOption {
       .variant-tag {
         font-size: 8px;
         padding: 1px 3px;
+      }
+
+      .variant-price {
+        font-size: 8px;
       }
 
       .item-actions {
