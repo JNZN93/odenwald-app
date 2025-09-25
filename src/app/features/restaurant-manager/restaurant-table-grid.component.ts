@@ -15,7 +15,7 @@ interface GridCell {
   table?: RestaurantTable;
 }
 
-type GridMode = 'placement' | 'repositioning' | 'normal';
+type GridMode = 'repositioning' | 'normal';
 
 @Component({
   selector: 'app-restaurant-table-grid',
@@ -44,17 +44,10 @@ type GridMode = 'placement' | 'repositioning' | 'normal';
         <div class="mode-buttons">
           <button 
             class="mode-btn" 
-            [class.active]="currentMode === 'placement'"
-            (click)="setMode('placement')"
-          >
-            📍 Platzierungs-Modus
-          </button>
-          <button 
-            class="mode-btn" 
             [class.active]="currentMode === 'repositioning'"
             (click)="setMode('repositioning')"
           >
-            🔄 Verschiebe-Modus
+            🔄 Layout-Modus
           </button>
           <button 
             class="mode-btn" 
@@ -65,8 +58,7 @@ type GridMode = 'placement' | 'repositioning' | 'normal';
           </button>
         </div>
         <div class="mode-description">
-          <span *ngIf="currentMode === 'placement'">Klicken Sie auf einen Tisch und dann auf eine leere Zelle zum Platzieren</span>
-          <span *ngIf="currentMode === 'repositioning'">Klicken Sie direkt auf einen Tisch im Grid und dann auf eine neue Position</span>
+          <span *ngIf="currentMode === 'repositioning'">Wählen Sie einen Tisch aus der Liste und platzieren Sie ihn, oder klicken Sie auf einen platzierten Tisch zum Verschieben</span>
           <span *ngIf="currentMode === 'normal'">Klicken Sie auf einen Tisch um die Bestellungen anzuzeigen</span>
         </div>
       </div>
@@ -74,36 +66,18 @@ type GridMode = 'placement' | 'repositioning' | 'normal';
       <div class="grid-layout">
         <!-- Table Selection Panel -->
         <div class="table-selection-panel">
-          <h3 *ngIf="currentMode === 'placement'">Verfügbare Tische</h3>
-          <h3 *ngIf="currentMode === 'repositioning'">Platzierte Tische</h3>
+          <h3 *ngIf="currentMode === 'repositioning'">Verfügbare Tische</h3>
           <h3 *ngIf="currentMode === 'normal'">Tisch-Übersicht</h3>
           
-          <p *ngIf="currentMode === 'placement'">Klicken Sie auf einen Tisch und dann auf eine Zelle im Grid</p>
-          <p *ngIf="currentMode === 'repositioning'">Klicken Sie direkt auf einen Tisch im Grid zum Auswählen</p>
+          <p *ngIf="currentMode === 'repositioning'">Wählen Sie einen Tisch aus und klicken Sie auf eine Zelle zum Platzieren/Verschieben</p>
           <p *ngIf="currentMode === 'normal'">Klicken Sie auf einen Tisch für Bestellungen</p>
           
-          <div class="table-palette" *ngIf="currentMode === 'placement'">
+          <div class="table-palette" *ngIf="currentMode === 'repositioning'">
+            <!-- Available tables for placement -->
             <div
               *ngFor="let table of availableTables$ | async"
               class="selectable-table"
               (click)="selectTable(table)"
-              [class.selected]="selectedTable?.id === table.id"
-            >
-              <div class="table-icon">
-                🪑
-              </div>
-              <div class="table-info">
-                <span class="table-number">{{ table.table_number }}</span>
-                <span class="table-capacity">{{ table.capacity }} Plätze</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="table-palette" *ngIf="currentMode === 'repositioning'">
-            <div
-              *ngFor="let table of placedTables"
-              class="selectable-table"
-              (click)="selectTableForRepositioning(table)"
               [class.selected]="selectedTable?.id === table.id"
             >
               <div class="table-icon">
@@ -826,7 +800,7 @@ export class RestaurantTableGridComponent implements OnInit {
   originalGridState: Map<string, {row: number, col: number}> = new Map();
 
   // Mode management
-  currentMode: GridMode = 'placement';
+  currentMode: GridMode = 'repositioning';
 
   // Table orders modal
   showOrdersModal = false;
@@ -919,23 +893,6 @@ export class RestaurantTableGridComponent implements OnInit {
       return;
     }
 
-    if (this.currentMode === 'placement') {
-      if (!this.selectedTable) {
-        this.toastService.warning('Warnung', 'Bitte wählen Sie zuerst einen Tisch aus');
-        return;
-      }
-
-      if (cell.table) {
-        this.toastService.warning('Warnung', 'Diese Zelle ist bereits belegt');
-        return;
-      }
-
-      // Place selected table in the clicked cell
-      cell.table = this.selectedTable;
-      this.hasChanges = true;
-      this.selectedTable = null;
-    }
-
     if (this.currentMode === 'repositioning') {
       // If clicking on a table in repositioning mode, select it for moving
       if (cell.table) {
@@ -951,12 +908,14 @@ export class RestaurantTableGridComponent implements OnInit {
         return;
       }
 
-      // If clicking on empty cell and we have a selected table, move it
+      // If clicking on empty cell
       if (this.selectedTable) {
+        // Move the selected table to the new position
         this.moveTableToPosition(this.selectedTable, cell.row, cell.col);
         this.selectedTable = null;
       } else {
-        this.toastService.warning('Warnung', 'Klicken Sie zuerst auf einen Tisch zum Verschieben');
+        // No table selected - show hint to select from sidebar or click on existing table
+        this.toastService.warning('Hinweis', 'Wählen Sie einen Tisch aus der Liste oder klicken Sie auf einen platzierten Tisch');
       }
     }
 
@@ -1065,9 +1024,6 @@ export class RestaurantTableGridComponent implements OnInit {
     this.selectedTable = null; // Clear any selected table when switching modes
   }
 
-  selectTableForRepositioning(table: RestaurantTable) {
-    this.selectedTable = table;
-  }
 
   onTableClick(table: RestaurantTable) {
     if (this.currentMode === 'normal') {
