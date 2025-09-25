@@ -167,6 +167,28 @@ export interface ManagerMenuItem {
     .manager-nav {
       display: flex;
       gap: var(--space-2);
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: var(--space-2);
+      scrollbar-width: thin;
+      scrollbar-color: var(--color-border) transparent;
+    }
+
+    .manager-nav::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .manager-nav::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .manager-nav::-webkit-scrollbar-thumb {
+      background: var(--color-border);
+      border-radius: var(--radius-full);
+    }
+
+    .manager-nav::-webkit-scrollbar-thumb:hover {
+      background: var(--color-gray-400);
     }
 
     .nav-item {
@@ -180,6 +202,8 @@ export interface ManagerMenuItem {
       transition: all var(--transition);
       position: relative;
       font-weight: 500;
+      flex-shrink: 0;
+      white-space: nowrap;
     }
 
     .nav-item:hover {
@@ -338,9 +362,11 @@ export interface ManagerMenuItem {
       }
 
       .manager-nav {
-        flex-wrap: wrap;
-        justify-content: center;
+        justify-content: flex-start;
         gap: var(--space-3);
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: var(--space-2);
       }
 
       .nav-item {
@@ -370,6 +396,11 @@ export interface ManagerMenuItem {
 
       .nav-item span:not(.badge) {
         display: none;
+      }
+
+      .nav-item {
+        flex-shrink: 0;
+        white-space: nowrap;
       }
 
       .nav-icon {
