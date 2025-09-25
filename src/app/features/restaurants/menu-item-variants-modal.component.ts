@@ -30,7 +30,7 @@ interface MenuItem {
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="modal-backdrop" (click)="closeModal()">
+    <div class="modal-backdrop" *ngIf="isOpen" (click)="closeModal()">
       <div class="modal-content" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <h2>{{ menuItem?.name }}</h2>
@@ -104,8 +104,13 @@ interface MenuItem {
         <div class="modal-footer">
           <button class="btn btn-secondary" (click)="closeModal()">Abbrechen</button>
           <button class="btn btn-primary" (click)="confirmSelection()" [disabled]="!isSelectionValid()">
-            <i class="fa-solid fa-plus"></i>
-            {{ quantity > 1 ? quantity + 'x zum Warenkorb hinzufügen' : 'Zum Warenkorb hinzufügen' }}
+            <i class="fa-solid" [class]="isEditMode ? 'fa-check' : 'fa-plus'"></i>
+            <span *ngIf="!isEditMode">
+              {{ quantity > 1 ? quantity + 'x zum Warenkorb hinzufügen' : 'Zum Warenkorb hinzufügen' }}
+            </span>
+            <span *ngIf="isEditMode">
+              {{ quantity > 1 ? quantity + 'x Varianten aktualisieren' : 'Varianten aktualisieren' }}
+            </span>
           </button>
         </div>
       </div>
@@ -379,6 +384,12 @@ interface MenuItem {
 export class MenuItemVariantsModalComponent implements OnChanges {
   @Input() menuItem: MenuItem | null = null;
   @Input() isOpen = false;
+  @Input() isEditMode = false; // New input to distinguish between add and edit mode
+  @Input() existingSelection: {
+    selectedOptionIds: string[];
+    selectedOptions: Array<{id: string, name: string, price_modifier_cents: number}>;
+    quantity: number;
+  } | null = null; // New input for existing cart item data
   @Output() close = new EventEmitter<void>();
   @Output() confirm = new EventEmitter<{
     selectedOptionIds: string[];
@@ -394,7 +405,19 @@ export class MenuItemVariantsModalComponent implements OnChanges {
     if (changes['menuItem'] && changes['menuItem'].currentValue) {
       this.selectedOptions.clear();
       this.quantity = 1; // Reset quantity to 1
-      this.autoSelectDefaultOptions();
+      
+      if (this.isEditMode && this.existingSelection) {
+        // Load existing selection for edit mode
+        this.loadExistingSelection();
+      } else {
+        // Auto-select default options for add mode
+        this.autoSelectDefaultOptions();
+      }
+    }
+    
+    // Handle changes to existingSelection in edit mode
+    if (changes['existingSelection'] && this.isEditMode && this.existingSelection) {
+      this.loadExistingSelection();
     }
   }
 
@@ -423,6 +446,34 @@ export class MenuItemVariantsModalComponent implements OnChanges {
           variantSelections.add(firstAvailableOption.id);
           this.selectedOptions.set(variant.id, variantSelections);
         }
+      }
+    }
+  }
+
+  private loadExistingSelection(): void {
+    if (!this.existingSelection || !this.menuItem?.variants) return;
+
+    // Set quantity from existing selection
+    this.quantity = this.existingSelection.quantity;
+
+    // Clear current selections
+    this.selectedOptions.clear();
+
+    // Group selected options by variant
+    for (const variant of this.menuItem.variants) {
+      const variantSelections = new Set<string>();
+      
+      // Find options that belong to this variant
+      for (const selectedOption of this.existingSelection.selectedOptions) {
+        const option = variant.options.find(opt => opt.id === selectedOption.id);
+        if (option) {
+          variantSelections.add(option.id);
+        }
+      }
+      
+      // Only set the variant selections if we found any options
+      if (variantSelections.size > 0) {
+        this.selectedOptions.set(variant.id, variantSelections);
       }
     }
   }

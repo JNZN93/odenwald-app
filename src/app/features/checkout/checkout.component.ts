@@ -12,6 +12,7 @@ import { LoadingService } from '../../core/services/loading.service';
 import { UserDataService } from '../../core/services/user-data.service';
 import { ConfirmationService } from '../../core/services/confirmation.service';
 import { ImageFallbackDirective } from '../../core/image-fallback.directive';
+import { MenuItemVariantsModalComponent } from '../restaurants/menu-item-variants-modal.component';
 import { Observable, map } from 'rxjs';
 
 interface DeliveryAddress {
@@ -26,10 +27,40 @@ interface CustomerInfo {
   phone?: string;
 }
 
+interface MenuItemWithVariants {
+  id: string;
+  name: string;
+  description: string;
+  price_cents: number;
+  is_available: boolean;
+  category_id: string | null;
+  image_url?: string;
+  is_vegetarian?: boolean;
+  is_vegan?: boolean;
+  is_gluten_free?: boolean;
+  variants?: MenuItemVariant[];
+}
+
+interface MenuItemVariant {
+  id: string;
+  name: string;
+  is_required: boolean;
+  min_selections?: number;
+  max_selections?: number;
+  options: MenuItemVariantOption[];
+}
+
+interface MenuItemVariantOption {
+  id: string;
+  name: string;
+  price_modifier_cents: number;
+  is_available: boolean;
+}
+
 @Component({
   selector: 'app-checkout',
   standalone: true,
-  imports: [CommonModule, FormsModule, ImageFallbackDirective],
+  imports: [CommonModule, FormsModule, ImageFallbackDirective, MenuItemVariantsModalComponent],
   animations: [
     trigger('fadeInOut', [
       state('in', style({ opacity: 1, transform: 'translateY(0)' })),
@@ -116,7 +147,14 @@ interface CustomerInfo {
                     </button>
                   </div>
 
-                  <div class="item-remove">
+                  <div class="item-actions-group">
+                    <button
+                      class="edit-btn"
+                      (click)="editItemVariants(item)"
+                      title="Varianten bearbeiten"
+                      *ngIf="item.selected_variant_options && item.selected_variant_options.length > 0">
+                      <i class="fa-solid fa-edit"></i>
+                    </button>
                     <button
                       class="remove-btn"
                       (click)="removeItem(item.menu_item_id)"
@@ -413,6 +451,16 @@ interface CustomerInfo {
           </button>
         </div>
       </ng-template>
+
+      <!-- Variants Modal -->
+      <app-menu-item-variants-modal
+        [menuItem]="selectedMenuItemForEdit"
+        [isOpen]="showVariantsModal"
+        [isEditMode]="true"
+        [existingSelection]="existingItemSelection"
+        (close)="closeVariantsModal()"
+        (confirm)="confirmVariantsEdit($event)">
+      </app-menu-item-variants-modal>
     </div>
   `,
   styles: [`
@@ -691,8 +739,41 @@ interface CustomerInfo {
       color: var(--color-heading);
     }
 
-    .item-remove {
+    .item-actions-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
       margin-top: var(--space-2);
+    }
+
+    .edit-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-2);
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white !important;
+      border: none;
+      border-radius: var(--radius-lg);
+      font-size: var(--text-base);
+      cursor: pointer;
+      transition: all var(--transition);
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+      text-decoration: none;
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
+    }
+
+    .edit-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    }
+
+    .edit-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
     }
 
     .remove-btn {
@@ -826,11 +907,29 @@ interface CustomerInfo {
         min-width: 20px;
       }
 
+      .item-actions-group {
+        flex-direction: row;
+        gap: var(--space-1);
+        margin-top: var(--space-1);
+      }
+
+      .edit-btn {
+        padding: var(--space-1);
+        font-size: var(--text-xs);
+        border-radius: var(--radius-md);
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+      }
+
+      .edit-btn i {
+        font-size: var(--text-xs);
+      }
+
       .remove-btn {
         padding: var(--space-1);
         font-size: var(--text-xs);
         border-radius: var(--radius-md);
-        margin-top: auto;
         width: 32px;
         height: 32px;
         min-width: 32px;
@@ -1560,6 +1659,11 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
     stamps_required: 5
   };
 
+  // Variants modal properties
+  showVariantsModal = false;
+  selectedMenuItemForEdit: MenuItemWithVariants | null = null;
+  existingItemSelection: any = null;
+
   ngOnInit() {
     // Lade gespeicherte Benutzerdaten beim Initialisieren
     this.loadSavedUserData();
@@ -1944,5 +2048,91 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
       this.orderNotes = '';
       console.log('🗑️ Gespeicherte Benutzerdaten wurden gelöscht');
     }
+  }
+
+  /**
+   * Varianten eines Cart-Items bearbeiten
+   */
+  async editItemVariants(cartItem: CartItem): Promise<void> {
+    try {
+      const cart = this.cartService.getCurrentCart();
+      if (!cart) return;
+
+      // Lade die vollständigen Menu-Daten mit Varianten
+      const menuData = await this.restaurantsService.getMenuCategoriesWithItemsAndVariants(cart.restaurant_id).toPromise();
+      
+      if (!menuData || !menuData.length) {
+        this.showErrorMessage('Keine Speisekarte verfügbar.');
+        return;
+      }
+
+      // Finde das Menu-Item in den geladenen Daten
+      let menuItem: MenuItemWithVariants | null = null;
+      for (const category of menuData) {
+        menuItem = category.items.find((item: any) => item.id === cartItem.menu_item_id) as MenuItemWithVariants;
+        if (menuItem) break;
+      }
+      
+      if (!menuItem || !menuItem.variants || menuItem.variants.length === 0) {
+        this.showErrorMessage('Keine Varianten für dieses Produkt verfügbar.');
+        return;
+      }
+
+      // Bereite die bestehende Auswahl vor
+      this.existingItemSelection = {
+        selectedOptionIds: cartItem.selected_variant_option_ids || [],
+        selectedOptions: cartItem.selected_variant_options || [],
+        quantity: cartItem.quantity
+      };
+
+      // Setze das Menu-Item und öffne das Modal
+      this.selectedMenuItemForEdit = menuItem;
+      this.showVariantsModal = true;
+    } catch (error) {
+      console.error('Fehler beim Laden der Menu-Item-Varianten:', error);
+      this.showErrorMessage('Fehler beim Laden der Produktvarianten.');
+    }
+  }
+
+  /**
+   * Varianten-Bearbeitung bestätigen
+   */
+  confirmVariantsEdit(event: {
+    selectedOptionIds: string[];
+    selectedOptions: Array<{id: string, name: string, price_modifier_cents: number}>;
+    quantity: number;
+  }): void {
+    const cart = this.cartService.getCurrentCart();
+    if (!cart || !this.selectedMenuItemForEdit) return;
+
+    // Lade Restaurant-Daten
+    this.restaurantsService.getRestaurantById(cart.restaurant_id).subscribe({
+      next: (restaurant: any) => {
+        // Aktualisiere die Varianten im Cart
+        this.cartService.updateCartItemVariants(
+          this.selectedMenuItemForEdit!.id,
+          event.selectedOptionIds,
+          event.selectedOptions,
+          restaurant,
+          this.selectedMenuItemForEdit!
+        );
+
+        // Schließe das Modal
+        this.closeVariantsModal();
+      },
+      error: (error: any) => {
+        console.error('Fehler beim Laden der Restaurant-Daten:', error);
+        this.showErrorMessage('Fehler beim Aktualisieren der Varianten.');
+      }
+    });
+  }
+
+  /**
+   * Varianten-Modal schließen
+   */
+  closeVariantsModal(): void {
+    this.showVariantsModal = false;
+    this.selectedMenuItemForEdit = null;
+    this.existingItemSelection = null;
   }
 }

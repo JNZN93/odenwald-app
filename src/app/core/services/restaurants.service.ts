@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map, catchError, of } from 'rxjs';
+import { Observable, map, catchError, of, switchMap, forkJoin } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { RestaurantDTO, UpdateRestaurantRequest } from '@odenwald/shared';
 
@@ -242,15 +242,47 @@ export class RestaurantsService {
 
   getMenuCategoriesWithItemsAndVariants(restaurantId: string): Observable<MenuCategoryWithItems[]> {
     return this.getMenuCategoriesWithItems(restaurantId).pipe(
-      map(categories => {
+      switchMap(categories => {
         // For each category, enrich items with variants
-        return categories.map(category => ({
+        const enrichedCategories = categories.map(category => ({
           ...category,
           items: category.items.map(item => ({
             ...item,
             variants: [] as VariantGroupDTO[] // Will be populated below
           }))
         }));
+
+        // Fetch variants for all items
+        const variantRequests = enrichedCategories.flatMap(category => 
+          category.items.map(item => 
+            this.getMenuItemVariants(restaurantId, item.id).pipe(
+              map(variants => ({ itemId: item.id, variants }))
+            )
+          )
+        );
+
+        if (variantRequests.length === 0) {
+          return of(enrichedCategories);
+        }
+
+        return forkJoin(variantRequests).pipe(
+          map(variantResults => {
+            // Create a map of itemId -> variants for quick lookup
+            const variantMap = new Map<string, VariantGroupDTO[]>();
+            variantResults.forEach(result => {
+              variantMap.set(result.itemId, result.variants);
+            });
+
+            // Update categories with actual variant data
+            return enrichedCategories.map(category => ({
+              ...category,
+              items: category.items.map(item => ({
+                ...item,
+                variants: variantMap.get(item.id) || []
+              }))
+            }));
+          })
+        );
       })
     );
   }

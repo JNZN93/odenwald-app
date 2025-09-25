@@ -132,7 +132,7 @@ type GridMode = 'repositioning' | 'normal';
 
               <div class="cell-content" *ngIf="cell.table">
                 <div class="placed-table" 
-                     [class.selected-for-repositioning]="selectedTable?.id === cell.table?.id && currentMode === 'repositioning'"
+                     [class.selected-for-repositioning]="selectedTable?.id === cell.table.id && currentMode === 'repositioning'"
                      (click)="onTableClick(cell.table!)">
                   <div class="table-icon">🪑</div>
                   <div class="table-info">

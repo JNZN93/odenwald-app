@@ -179,6 +179,37 @@ export class CartService {
     this.updateQuantity(menuItemId, 0);
   }
 
+  updateCartItemVariants(menuItemId: string, selectedVariantOptionIds: string[], selectedVariantOptions: Array<{id: string, name: string, price_modifier_cents: number}>, restaurant: any, menuItem: any): void {
+    const currentCart = this.getCurrentCart();
+    if (!currentCart) return;
+
+    const itemIndex = currentCart.items.findIndex(item => item.menu_item_id === menuItemId);
+    if (itemIndex < 0) return;
+
+    // Calculate new unit price with variants
+    let newUnitPrice = (menuItem.price_cents || 0) / 100;
+    selectedVariantOptions.forEach(option => {
+      newUnitPrice += option.price_modifier_cents / 100;
+    });
+
+    // Update the cart item
+    const item = currentCart.items[itemIndex];
+    item.unit_price = newUnitPrice;
+    item.total_price = item.quantity * newUnitPrice;
+    item.selected_variant_option_ids = selectedVariantOptionIds;
+    item.selected_variant_options = selectedVariantOptions;
+
+    this.updateCartTotals(currentCart);
+    this.cartSubject.next(currentCart);
+    this.saveCartToStorage(currentCart);
+
+    this.toastService.success(
+      'Varianten aktualisiert',
+      `${item.name} wurde mit neuen Varianten aktualisiert`,
+      2500
+    );
+  }
+
   clearCart(): void {
     this.cartSubject.next(null);
     this.saveCartToStorage(null);
