@@ -119,9 +119,9 @@ interface CustomerInfo {
                   <div class="item-remove">
                     <button
                       class="remove-btn"
-                      (click)="removeItem(item.menu_item_id)">
+                      (click)="removeItem(item.menu_item_id)"
+                      title="Artikel entfernen">
                       <i class="fa-solid fa-trash"></i>
-                      Entfernen
                     </button>
                   </div>
                 </div>
@@ -698,18 +698,20 @@ interface CustomerInfo {
     .remove-btn {
       display: flex;
       align-items: center;
-      gap: var(--space-1);
-      padding: var(--space-2) var(--space-3);
+      justify-content: center;
+      padding: var(--space-2);
       background: linear-gradient(135deg, #dc2626, #ef4444);
       color: white !important;
       border: none;
       border-radius: var(--radius-lg);
-      font-size: var(--text-sm);
-      font-weight: 600;
+      font-size: var(--text-base);
       cursor: pointer;
       transition: all var(--transition);
       box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
       text-decoration: none;
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
     }
 
     .remove-btn:hover {
@@ -825,15 +827,17 @@ interface CustomerInfo {
       }
 
       .remove-btn {
-        padding: var(--space-1) var(--space-2);
-        font-size: 10px;
-        gap: 2px;
+        padding: var(--space-1);
+        font-size: var(--text-xs);
         border-radius: var(--radius-md);
         margin-top: auto;
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
       }
 
       .remove-btn i {
-        font-size: 10px;
+        font-size: var(--text-xs);
       }
     }
 
@@ -875,13 +879,15 @@ interface CustomerInfo {
       }
 
       .remove-btn {
-        padding: 2px 4px;
-        font-size: 8px;
-        gap: 1px;
+        padding: 2px;
+        font-size: 10px;
+        width: 28px;
+        height: 28px;
+        min-width: 28px;
       }
 
       .remove-btn i {
-        font-size: 8px;
+        font-size: 10px;
       }
 
       .variant-tag {
