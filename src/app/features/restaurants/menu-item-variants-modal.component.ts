@@ -83,6 +83,19 @@ interface MenuItem {
             </div>
           </div>
 
+          <div class="quantity-section">
+            <div class="quantity-controls">
+              <button class="quantity-btn" (click)="decreaseQuantity()" [disabled]="quantity <= 1">
+                <i class="fa-solid fa-minus"></i>
+              </button>
+              <span class="quantity-display">{{ quantity }}</span>
+              <button class="quantity-btn" (click)="increaseQuantity()">
+                <i class="fa-solid fa-plus"></i>
+              </button>
+            </div>
+            <div class="quantity-label">Menge</div>
+          </div>
+
           <div class="total-price">
             <span>Gesamtpreis: {{ calculateTotalPrice() | currency:'EUR':'symbol':'1.2-2':'de' }}</span>
           </div>
@@ -92,7 +105,7 @@ interface MenuItem {
           <button class="btn btn-secondary" (click)="closeModal()">Abbrechen</button>
           <button class="btn btn-primary" (click)="confirmSelection()" [disabled]="!isSelectionValid()">
             <i class="fa-solid fa-plus"></i>
-            Zum Warenkorb hinzufügen
+            {{ quantity > 1 ? quantity + 'x zum Warenkorb hinzufügen' : 'Zum Warenkorb hinzufügen' }}
           </button>
         </div>
       </div>
@@ -251,13 +264,69 @@ interface MenuItem {
       color: #6b7280;
     }
 
+    .quantity-section {
+      text-align: center;
+      padding: 1rem;
+      background: #f9fafb;
+      border-radius: 8px;
+      margin-top: 1.5rem;
+    }
+
+    .quantity-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .quantity-btn {
+      width: 40px;
+      height: 40px;
+      border: 2px solid #d1d5db;
+      background: white;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      color: #374151;
+      transition: all 0.2s;
+    }
+
+    .quantity-btn:hover:not(:disabled) {
+      border-color: #3b82f6;
+      background: #eff6ff;
+      color: #3b82f6;
+    }
+
+    .quantity-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .quantity-display {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #111827;
+      min-width: 2rem;
+      text-align: center;
+    }
+
+    .quantity-label {
+      font-size: 0.875rem;
+      color: #6b7280;
+      font-weight: 500;
+    }
+
     .total-price {
       text-align: center;
       padding: 1rem;
       background: #1f2937;
       color: white;
       border-radius: 8px;
-      margin-top: 1.5rem;
+      margin-top: 1rem;
       font-size: 1.125rem;
       font-weight: 600;
     }
@@ -314,14 +383,17 @@ export class MenuItemVariantsModalComponent implements OnChanges {
   @Output() confirm = new EventEmitter<{
     selectedOptionIds: string[];
     selectedOptions: Array<{id: string, name: string, price_modifier_cents: number}>;
+    quantity: number;
   }>();
 
   selectedOptions = new Map<string, Set<string>>(); // variantId -> Set of optionIds
+  quantity = 1;
 
   ngOnChanges(changes: SimpleChanges): void {
     // Reset selections when menuItem changes
     if (changes['menuItem'] && changes['menuItem'].currentValue) {
       this.selectedOptions.clear();
+      this.quantity = 1; // Reset quantity to 1
       this.autoSelectDefaultOptions();
     }
   }
@@ -352,6 +424,16 @@ export class MenuItemVariantsModalComponent implements OnChanges {
           this.selectedOptions.set(variant.id, variantSelections);
         }
       }
+    }
+  }
+
+  increaseQuantity(): void {
+    this.quantity++;
+  }
+
+  decreaseQuantity(): void {
+    if (this.quantity > 1) {
+      this.quantity--;
     }
   }
 
@@ -400,18 +482,18 @@ export class MenuItemVariantsModalComponent implements OnChanges {
   calculateTotalPrice(): number {
     if (!this.menuItem) return 0;
 
-    let total = this.menuItem.price_cents / 100;
+    let singleItemPrice = this.menuItem.price_cents / 100;
 
     for (const variant of this.menuItem.variants || []) {
       const selectedOptionIds = this.selectedOptions.get(variant.id) || new Set<string>();
       for (const option of variant.options) {
         if (selectedOptionIds.has(option.id)) {
-          total += option.price_modifier_cents / 100;
+          singleItemPrice += option.price_modifier_cents / 100;
         }
       }
     }
 
-    return total;
+    return singleItemPrice * this.quantity;
   }
 
   isSelectionValid(): boolean {
@@ -463,7 +545,8 @@ export class MenuItemVariantsModalComponent implements OnChanges {
 
     this.confirm.emit({
       selectedOptionIds,
-      selectedOptions
+      selectedOptions,
+      quantity: this.quantity
     });
 
     this.closeModal();
@@ -471,6 +554,7 @@ export class MenuItemVariantsModalComponent implements OnChanges {
 
   closeModal(): void {
     this.selectedOptions.clear();
+    this.quantity = 1; // Reset quantity when closing
     this.close.emit();
   }
 }

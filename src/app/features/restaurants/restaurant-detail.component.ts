@@ -1977,14 +1977,17 @@ export class RestaurantDetailComponent implements OnInit, OnDestroy {
     this.selectedMenuItem = null;
   }
 
-  onVariantsConfirm(selection: { selectedOptionIds: string[], selectedOptions: Array<{id: string, name: string, price_modifier_cents: number}> }) {
+  onVariantsConfirm(selection: { selectedOptionIds: string[], selectedOptions: Array<{id: string, name: string, price_modifier_cents: number}>, quantity: number }) {
     if (this.selectedMenuItem && this.currentRestaurant) {
-      this.cartService.addToCart(
-        this.selectedMenuItem,
-        this.currentRestaurant,
-        selection.selectedOptionIds,
-        selection.selectedOptions
-      );
+      // Add the item multiple times based on quantity
+      for (let i = 0; i < selection.quantity; i++) {
+        this.cartService.addToCart(
+          this.selectedMenuItem,
+          this.currentRestaurant,
+          selection.selectedOptionIds,
+          selection.selectedOptions
+        );
+      }
     }
     this.closeVariantsModal();
   }
