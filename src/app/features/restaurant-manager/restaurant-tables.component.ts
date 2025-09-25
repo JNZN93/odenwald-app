@@ -33,6 +33,9 @@ interface QRCodeOptions {
           <p>Verwalten Sie die Tische in Ihrem Restaurant</p>
         </div>
         <div class="header-actions">
+          <button class="btn-secondary" routerLink="/restaurant-manager/tables/grid">
+            🎯 Grid-Layout
+          </button>
           <button class="btn-primary" (click)="openCreateModal()" [disabled]="isLoading">
             ➕ Neuer Tisch
           </button>

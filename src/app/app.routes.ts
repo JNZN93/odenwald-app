@@ -113,6 +113,7 @@ export const routes: Routes = [
       { path: 'wholesale', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-wholesale.component').then(m => m.RestaurantManagerWholesaleComponent) },
       { path: 'wholesale/:id', loadComponent: () => import('./features/restaurant-manager/wholesaler-detail.component').then(m => m.WholesalerDetailComponent) },
       { path: 'tables', loadComponent: () => import('./features/restaurant-manager/restaurant-tables.component').then(m => m.RestaurantTablesComponent) },
+      { path: 'tables/grid', loadComponent: () => import('./features/restaurant-manager/restaurant-table-grid.component').then(m => m.RestaurantTableGridComponent) },
       { path: 'invoices', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-invoices.component').then(m => m.RestaurantManagerInvoicesComponent) },
       { path: 'issues', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-issues.component').then(m => m.RestaurantManagerIssuesComponent) }
     ]

@@ -11,6 +11,8 @@ export interface RestaurantTable {
   location: 'indoor' | 'outdoor' | 'bar' | 'vip';
   is_active: boolean;
   qr_code?: string;
+  grid_row?: number;
+  grid_col?: number;
   created_at: string;
   updated_at: string;
 }
@@ -19,6 +21,8 @@ export interface CreateTableData {
   table_number: string;
   capacity?: number;
   location?: 'indoor' | 'outdoor' | 'bar' | 'vip';
+  grid_row?: number;
+  grid_col?: number;
 }
 
 export interface UpdateTableData {
@@ -26,6 +30,8 @@ export interface UpdateTableData {
   capacity?: number;
   location?: 'indoor' | 'outdoor' | 'bar' | 'vip';
   is_active?: boolean;
+  grid_row?: number;
+  grid_col?: number;
 }
 
 @Injectable({ providedIn: 'root' })
