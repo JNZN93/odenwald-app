@@ -66,7 +66,7 @@ type GridMode = 'placement' | 'repositioning' | 'normal';
         </div>
         <div class="mode-description">
           <span *ngIf="currentMode === 'placement'">Klicken Sie auf einen Tisch und dann auf eine leere Zelle zum Platzieren</span>
-          <span *ngIf="currentMode === 'repositioning'">Klicken Sie auf einen platzierten Tisch und dann auf eine neue Position</span>
+          <span *ngIf="currentMode === 'repositioning'">Klicken Sie direkt auf einen Tisch im Grid und dann auf eine neue Position</span>
           <span *ngIf="currentMode === 'normal'">Klicken Sie auf einen Tisch um die Bestellungen anzuzeigen</span>
         </div>
       </div>
@@ -79,7 +79,7 @@ type GridMode = 'placement' | 'repositioning' | 'normal';
           <h3 *ngIf="currentMode === 'normal'">Tisch-Übersicht</h3>
           
           <p *ngIf="currentMode === 'placement'">Klicken Sie auf einen Tisch und dann auf eine Zelle im Grid</p>
-          <p *ngIf="currentMode === 'repositioning'">Klicken Sie auf einen Tisch zum Verschieben</p>
+          <p *ngIf="currentMode === 'repositioning'">Klicken Sie direkt auf einen Tisch im Grid zum Auswählen</p>
           <p *ngIf="currentMode === 'normal'">Klicken Sie auf einen Tisch für Bestellungen</p>
           
           <div class="table-palette" *ngIf="currentMode === 'placement'">
@@ -937,25 +937,27 @@ export class RestaurantTableGridComponent implements OnInit {
     }
 
     if (this.currentMode === 'repositioning') {
-      if (!this.selectedTable) {
-        this.toastService.warning('Warnung', 'Bitte wählen Sie zuerst einen Tisch zum Verschieben aus');
+      // If clicking on a table in repositioning mode, select it for moving
+      if (cell.table) {
+        if (this.selectedTable && this.selectedTable.id === cell.table.id) {
+          // Clicking on the same selected table - deselect it
+          this.selectedTable = null;
+        } else {
+          // Select this table for repositioning
+          this.selectedTable = cell.table;
+        }
+        // Force change detection to update visual state
+        this.gridCells = [...this.gridCells];
         return;
       }
 
-      if (cell.table && cell.table.id !== this.selectedTable.id) {
-        this.toastService.warning('Warnung', 'Diese Zelle ist bereits belegt');
-        return;
-      }
-
-      if (cell.table && cell.table.id === this.selectedTable.id) {
-        // Clicking on the same table - deselect
+      // If clicking on empty cell and we have a selected table, move it
+      if (this.selectedTable) {
+        this.moveTableToPosition(this.selectedTable, cell.row, cell.col);
         this.selectedTable = null;
-        return;
+      } else {
+        this.toastService.warning('Warnung', 'Klicken Sie zuerst auf einen Tisch zum Verschieben');
       }
-
-      // Move the selected table to the new position
-      this.moveTableToPosition(this.selectedTable, cell.row, cell.col);
-      this.selectedTable = null;
     }
 
     // Force change detection
@@ -1108,8 +1110,20 @@ export class RestaurantTableGridComponent implements OnInit {
     if (!this.currentRestaurantId) return;
 
     this.tableOrdersLoading = true;
-    this.ordersService.getTableOrders(this.currentRestaurantId, tableId).subscribe({
+    
+    // Debug: Log the parameters being sent
+    console.log('Loading table orders for:', {
+      restaurantId: this.currentRestaurantId,
+      tableId: tableId,
+      tableNumber: this.selectedTableForOrders?.table_number
+    });
+
+    // Try with table_number first, as this is how orders are typically linked
+    const tableNumber = this.selectedTableForOrders?.table_number?.toString();
+    
+    this.ordersService.getTableOrders(this.currentRestaurantId, tableNumber).subscribe({
       next: (orders) => {
+        console.log('Loaded orders for table:', tableNumber, orders);
         this.tableOrders = orders;
         this.tableOrdersLoading = false;
       },

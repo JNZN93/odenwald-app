@@ -370,17 +370,31 @@ export class OrdersService {
   }
 
   // Get table orders for a restaurant
-  getTableOrders(restaurantId: string, tableId?: string): Observable<Order[]> {
+  getTableOrders(restaurantId: string, tableIdentifier?: string): Observable<Order[]> {
     const filters: OrderFilters = {
-      restaurant_id: restaurantId,
-      status: 'dine_in'
+      restaurant_id: restaurantId
+      // Get all orders for the restaurant first
     };
 
-    if (tableId) {
-      (filters as any).table_id = tableId;
-    }
-
-    return this.getOrders(filters);
+    return this.getOrders(filters).pipe(
+      map(orders => {
+        // Filter for table orders based on the identifier
+        if (!tableIdentifier) {
+          // Return all table orders if no specific table requested
+          return orders.filter(order => 
+            order.table_id || order.table_number || order.order_type === 'dine_in'
+          );
+        }
+        
+        // Filter for specific table orders
+        return orders.filter(order => 
+          order.table_id === tableIdentifier || 
+          order.table_number === tableIdentifier ||
+          order.table_id?.toString() === tableIdentifier ||
+          order.table_number?.toString() === tableIdentifier
+        );
+      })
+    );
   }
 
   // Update table order status
