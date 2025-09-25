@@ -322,6 +322,36 @@ export class MenuItemVariantsModalComponent implements OnChanges {
     // Reset selections when menuItem changes
     if (changes['menuItem'] && changes['menuItem'].currentValue) {
       this.selectedOptions.clear();
+      this.autoSelectDefaultOptions();
+    }
+  }
+
+  private autoSelectDefaultOptions(): void {
+    if (!this.menuItem?.variants) return;
+
+    for (const variant of this.menuItem.variants) {
+      // Only auto-select for required variants
+      if (!variant.is_required) continue;
+
+      // Find the first available option without price modifier (standard option)
+      const defaultOption = variant.options.find(option => 
+        option.is_available && option.price_modifier_cents === 0
+      );
+
+      if (defaultOption) {
+        // Auto-select the default option
+        const variantSelections = new Set<string>();
+        variantSelections.add(defaultOption.id);
+        this.selectedOptions.set(variant.id, variantSelections);
+      } else {
+        // If no free option is available, select the first available option
+        const firstAvailableOption = variant.options.find(option => option.is_available);
+        if (firstAvailableOption) {
+          const variantSelections = new Set<string>();
+          variantSelections.add(firstAvailableOption.id);
+          this.selectedOptions.set(variant.id, variantSelections);
+        }
+      }
     }
   }
 
