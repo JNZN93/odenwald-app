@@ -29,15 +29,20 @@ interface QRCodeOptions {
       <!-- Header -->
       <div class="header">
         <div class="header-content">
-          <h1>🪑 Tischverwaltung</h1>
+          <h1>
+            <i class="fa-solid fa-chair"></i>
+            Tischverwaltung
+          </h1>
           <p>Verwalten Sie die Tische in Ihrem Restaurant</p>
         </div>
         <div class="header-actions">
           <button class="btn-secondary" routerLink="/restaurant-manager/tables/grid">
-            🎯 Grid-Layout
+            <i class="fa-solid fa-th-large"></i>
+            Grid-Layout
           </button>
           <button class="btn-primary" (click)="openCreateModal()" [disabled]="isLoading">
-            ➕ Neuer Tisch
+            <i class="fa-solid fa-plus"></i>
+            Neuer Tisch
           </button>
         </div>
       </div>
@@ -53,7 +58,8 @@ interface QRCodeOptions {
             <div class="table-header">
               <h3>Tisch {{ table.table_number }}</h3>
               <span class="table-status" [class.active]="table.is_active">
-                {{ table.is_active ? '🟢 Aktiv' : '🔴 Inaktiv' }}
+                <i class="fa-solid" [class.fa-circle-check]="table.is_active" [class.fa-circle-xmark]="!table.is_active"></i>
+                {{ table.is_active ? 'Aktiv' : 'Inaktiv' }}
               </span>
             </div>
 
@@ -70,28 +76,34 @@ interface QRCodeOptions {
 
             <div class="table-actions">
               <button class="btn-secondary" (click)="editTable(table)" title="Bearbeiten">
-                ✏️ Bearbeiten
+                <i class="fa-solid fa-edit"></i>
+                Bearbeiten
               </button>
               <button
                 class="btn-secondary"
                 (click)="toggleTable(table)"
                 [title]="table.is_active ? 'Deaktivieren' : 'Aktivieren'"
               >
-                {{ table.is_active ? '🔴 Deaktivieren' : '🟢 Aktivieren' }}
+                <i class="fa-solid" [class.fa-check-circle]="table.is_active" [class.fa-times-circle]="!table.is_active"></i>
+                {{ table.is_active ? 'Deaktivieren' : 'Aktivieren' }}
               </button>
               <button class="btn-secondary" (click)="showQRCode(table)" title="QR-Code anzeigen">
-                📱 QR-Code
+                <i class="fa-solid fa-qrcode"></i>
+                QR-Code
               </button>
             </div>
           </div>
 
           <!-- Empty State -->
           <div *ngIf="tables.length === 0" class="empty-state">
-            <div class="empty-icon">🪑</div>
+            <div class="empty-icon">
+              <i class="fa-solid fa-chair"></i>
+            </div>
             <h3>Keine Tische vorhanden</h3>
             <p>Erstellen Sie Ihren ersten Tisch, um Tischangebote zu ermöglichen.</p>
             <button class="btn-primary" (click)="openCreateModal()">
-              ➕ Ersten Tisch erstellen
+              <i class="fa-solid fa-plus"></i>
+              Ersten Tisch erstellen
             </button>
           </div>
         </div>
@@ -187,10 +199,12 @@ interface QRCodeOptions {
 
             <div class="qr-actions">
               <button class="btn-secondary" (click)="downloadQR()">
-                📥 Herunterladen
+                <i class="fa-solid fa-download"></i>
+                Herunterladen
               </button>
               <button class="btn-secondary" (click)="printQR()">
-                🖨️ Drucken
+                <i class="fa-solid fa-print"></i>
+                Drucken
               </button>
             </div>
           </div>
@@ -217,11 +231,25 @@ interface QRCodeOptions {
       box-shadow: var(--shadow-sm);
     }
 
+    .header-actions {
+      display: flex;
+      gap: var(--space-3);
+      align-items: center;
+    }
+
     .header-content h1 {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
       font-size: var(--text-3xl);
       font-weight: 700;
       color: var(--color-text);
       margin-bottom: var(--space-2);
+    }
+
+    .header-content h1 i {
+      font-size: var(--text-2xl);
+      color: var(--color-primary-500);
     }
 
     .header-content p {
@@ -241,6 +269,11 @@ interface QRCodeOptions {
       font-weight: 500;
       cursor: pointer;
       transition: all var(--transition);
+    }
+
+    .btn-primary i,
+    .btn-secondary i {
+      font-size: var(--text-sm);
     }
 
     .btn-primary:hover:not(:disabled) {
@@ -301,10 +334,17 @@ interface QRCodeOptions {
     }
 
     .table-status {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
       padding: var(--space-1) var(--space-2);
       border-radius: var(--radius-sm);
       font-size: var(--text-xs);
       font-weight: 600;
+    }
+
+    .table-status i {
+      font-size: var(--text-xs);
     }
 
     .table-status.active {
@@ -371,6 +411,11 @@ interface QRCodeOptions {
       font-size: 4rem;
       margin-bottom: var(--space-4);
       opacity: 0.5;
+      color: var(--color-muted);
+    }
+
+    .empty-icon i {
+      font-size: inherit;
     }
 
     .empty-state h3 {
@@ -541,6 +586,12 @@ interface QRCodeOptions {
         flex-direction: column;
         gap: var(--space-4);
         padding: var(--space-4);
+      }
+
+      .header-actions {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
       }
 
       .tables-grid {

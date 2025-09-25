@@ -7,12 +7,15 @@ import { RestaurantTablesService, RestaurantTable, UpdateTableData } from '../..
 import { RestaurantManagerService } from '../../core/services/restaurant-manager.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { ToastService } from '../../core/services/toast.service';
+import { OrdersService, Order } from '../../core/services/orders.service';
 
 interface GridCell {
   row: number;
   col: number;
   table?: RestaurantTable;
 }
+
+type GridMode = 'placement' | 'repositioning' | 'normal';
 
 @Component({
   selector: 'app-restaurant-table-grid',
@@ -36,17 +39,88 @@ interface GridCell {
         </div>
       </div>
 
+      <!-- Mode Toggle -->
+      <div class="mode-toggle">
+        <div class="mode-buttons">
+          <button 
+            class="mode-btn" 
+            [class.active]="currentMode === 'placement'"
+            (click)="setMode('placement')"
+          >
+            📍 Platzierungs-Modus
+          </button>
+          <button 
+            class="mode-btn" 
+            [class.active]="currentMode === 'repositioning'"
+            (click)="setMode('repositioning')"
+          >
+            🔄 Verschiebe-Modus
+          </button>
+          <button 
+            class="mode-btn" 
+            [class.active]="currentMode === 'normal'"
+            (click)="setMode('normal')"
+          >
+            👁️ Normal-Modus
+          </button>
+        </div>
+        <div class="mode-description">
+          <span *ngIf="currentMode === 'placement'">Klicken Sie auf einen Tisch und dann auf eine leere Zelle zum Platzieren</span>
+          <span *ngIf="currentMode === 'repositioning'">Klicken Sie auf einen platzierten Tisch und dann auf eine neue Position</span>
+          <span *ngIf="currentMode === 'normal'">Klicken Sie auf einen Tisch um die Bestellungen anzuzeigen</span>
+        </div>
+      </div>
+
       <div class="grid-layout">
         <!-- Table Selection Panel -->
         <div class="table-selection-panel">
-          <h3>Verfügbare Tische</h3>
-          <p>Klicken Sie auf einen Tisch und dann auf eine Zelle im Grid</p>
-          <div class="table-palette">
+          <h3 *ngIf="currentMode === 'placement'">Verfügbare Tische</h3>
+          <h3 *ngIf="currentMode === 'repositioning'">Platzierte Tische</h3>
+          <h3 *ngIf="currentMode === 'normal'">Tisch-Übersicht</h3>
+          
+          <p *ngIf="currentMode === 'placement'">Klicken Sie auf einen Tisch und dann auf eine Zelle im Grid</p>
+          <p *ngIf="currentMode === 'repositioning'">Klicken Sie auf einen Tisch zum Verschieben</p>
+          <p *ngIf="currentMode === 'normal'">Klicken Sie auf einen Tisch für Bestellungen</p>
+          
+          <div class="table-palette" *ngIf="currentMode === 'placement'">
             <div
               *ngFor="let table of availableTables$ | async"
               class="selectable-table"
               (click)="selectTable(table)"
               [class.selected]="selectedTable?.id === table.id"
+            >
+              <div class="table-icon">
+                🪑
+              </div>
+              <div class="table-info">
+                <span class="table-number">{{ table.table_number }}</span>
+                <span class="table-capacity">{{ table.capacity }} Plätze</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-palette" *ngIf="currentMode === 'repositioning'">
+            <div
+              *ngFor="let table of placedTables"
+              class="selectable-table"
+              (click)="selectTableForRepositioning(table)"
+              [class.selected]="selectedTable?.id === table.id"
+            >
+              <div class="table-icon">
+                🪑
+              </div>
+              <div class="table-info">
+                <span class="table-number">{{ table.table_number }}</span>
+                <span class="table-capacity">{{ table.capacity }} Plätze</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-palette" *ngIf="currentMode === 'normal'">
+            <div
+              *ngFor="let table of placedTables"
+              class="selectable-table"
+              (click)="showTableOrders(table)"
             >
               <div class="table-icon">
                 🪑
@@ -83,15 +157,64 @@ interface GridCell {
               </div>
 
               <div class="cell-content" *ngIf="cell.table">
-                <div class="placed-table">
+                <div class="placed-table" 
+                     [class.selected-for-repositioning]="selectedTable?.id === cell.table?.id && currentMode === 'repositioning'"
+                     (click)="onTableClick(cell.table!)">
                   <div class="table-icon">🪑</div>
                   <div class="table-info">
                     <span class="table-number">{{ cell.table.table_number }}</span>
                     <span class="table-capacity">{{ cell.table.capacity }}</span>
                   </div>
-                  <button class="remove-btn" (click)="removeTableFromGrid(cell.table!)">
+                  <button class="remove-btn" (click)="removeTableFromGrid(cell.table!)" *ngIf="currentMode !== 'normal'">
                     ✕
                   </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table Orders Modal -->
+      <div class="modal-overlay" *ngIf="showOrdersModal" (click)="closeOrdersModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h2>🪑 Tisch {{ selectedTableForOrders?.table_number }} - Bestellungen</h2>
+            <button class="close-btn" (click)="closeOrdersModal()">✕</button>
+          </div>
+          
+          <div class="modal-body">
+            <div *ngIf="tableOrdersLoading" class="loading">
+              <p>Lade Bestellungen...</p>
+            </div>
+            
+            <div *ngIf="!tableOrdersLoading && tableOrders.length === 0" class="no-orders">
+              <p>Keine Bestellungen für diesen Tisch vorhanden.</p>
+            </div>
+            
+            <div *ngIf="!tableOrdersLoading && tableOrders.length > 0" class="orders-list">
+              <div *ngFor="let order of tableOrders" class="order-item">
+                <div class="order-header">
+                  <span class="order-id">Bestellung #{{ order.id }}</span>
+                  <span class="order-status" [class]="'status-' + order.status">
+                    {{ getStatusText(order.status) }}
+                  </span>
+                </div>
+                <div class="order-details">
+                  <p><strong>Erstellt:</strong> {{ formatDate(order.created_at) }}</p>
+                  <p><strong>Gesamtpreis:</strong> {{ order.total_price | currency:'EUR':'symbol':'1.2-2' }}</p>
+                  <p><strong>Zahlungsstatus:</strong> {{ getPaymentStatusText(order.payment_status) }}</p>
+                  <div *ngIf="order.notes" class="order-notes">
+                    <strong>Notizen:</strong> {{ order.notes }}
+                  </div>
+                </div>
+                <div class="order-items">
+                  <h4>Bestellte Artikel:</h4>
+                  <ul>
+                    <li *ngFor="let item of order.items">
+                      {{ item.quantity }}x {{ item.name }} - {{ item.total_price | currency:'EUR':'symbol':'1.2-2' }}
+                    </li>
+                  </ul>
                 </div>
               </div>
             </div>
@@ -173,6 +296,53 @@ interface GridCell {
     .btn-secondary:hover {
       background: var(--color-gray-100);
       border-color: var(--color-gray-300);
+    }
+
+    .mode-toggle {
+      background: white;
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-sm);
+      padding: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+
+    .mode-buttons {
+      display: flex;
+      gap: var(--space-2);
+      margin-bottom: var(--space-3);
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: var(--space-3) var(--space-4);
+      border: 1px solid var(--color-border);
+      background: var(--color-gray-50);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: all var(--transition);
+      font-weight: 500;
+      font-size: var(--text-sm);
+    }
+
+    .mode-btn:hover {
+      background: var(--color-gray-100);
+      border-color: var(--color-gray-300);
+    }
+
+    .mode-btn.active {
+      background: var(--color-primary-500);
+      color: white;
+      border-color: var(--color-primary-500);
+    }
+
+    .mode-description {
+      text-align: center;
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+      padding: var(--space-2);
+      background: var(--color-gray-50);
+      border-radius: var(--radius-md);
     }
 
     .grid-layout {
@@ -358,6 +528,12 @@ interface GridCell {
       cursor: grabbing;
     }
 
+    .placed-table.selected-for-repositioning {
+      background: var(--color-warning-500);
+      transform: scale(1.05);
+      box-shadow: 0 0 0 3px var(--color-warning-200);
+    }
+
     .placed-table .table-icon {
       font-size: var(--text-lg);
     }
@@ -480,6 +656,153 @@ interface GridCell {
         grid-template-rows: repeat(8, 1fr);
       }
     }
+
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: var(--space-4);
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      max-width: 800px;
+      width: 100%;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-6);
+      border-bottom: 1px solid var(--color-border);
+      background: var(--color-gray-50);
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: var(--text-xl);
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: var(--text-xl);
+      cursor: pointer;
+      color: var(--color-muted);
+      padding: var(--space-2);
+      border-radius: var(--radius-md);
+      transition: all var(--transition);
+    }
+
+    .close-btn:hover {
+      background: var(--color-gray-100);
+      color: var(--color-text);
+    }
+
+    .modal-body {
+      padding: var(--space-6);
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .loading, .no-orders {
+      text-align: center;
+      padding: var(--space-8);
+      color: var(--color-muted);
+    }
+
+    .orders-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .order-item {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      background: var(--color-gray-50);
+    }
+
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-3);
+    }
+
+    .order-id {
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .order-status {
+      padding: var(--space-1) var(--space-3);
+      border-radius: var(--radius-md);
+      font-size: var(--text-xs);
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+
+    .status-pending { background: var(--color-warning-100); color: var(--color-warning-700); }
+    .status-confirmed { background: var(--color-blue-100); color: var(--color-blue-700); }
+    .status-preparing { background: var(--color-orange-100); color: var(--color-orange-700); }
+    .status-ready { background: var(--color-green-100); color: var(--color-green-700); }
+    .status-served { background: var(--color-purple-100); color: var(--color-purple-700); }
+    .status-paid { background: var(--color-green-100); color: var(--color-green-700); }
+
+    .order-details {
+      margin-bottom: var(--space-3);
+    }
+
+    .order-details p {
+      margin: var(--space-1) 0;
+      font-size: var(--text-sm);
+      color: var(--color-text);
+    }
+
+    .order-notes {
+      margin-top: var(--space-2);
+      padding: var(--space-2);
+      background: white;
+      border-radius: var(--radius-md);
+      border-left: 3px solid var(--color-primary-400);
+    }
+
+    .order-items h4 {
+      margin: 0 0 var(--space-2) 0;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .order-items ul {
+      margin: 0;
+      padding-left: var(--space-4);
+    }
+
+    .order-items li {
+      font-size: var(--text-sm);
+      color: var(--color-text);
+      margin-bottom: var(--space-1);
+    }
   `]
 })
 export class RestaurantTableGridComponent implements OnInit {
@@ -487,6 +810,7 @@ export class RestaurantTableGridComponent implements OnInit {
   private restaurantManagerService = inject(RestaurantManagerService);
   private loadingService = inject(LoadingService);
   private toastService = inject(ToastService);
+  private ordersService = inject(OrdersService);
   private router = inject(Router);
 
   // Grid configuration
@@ -500,6 +824,16 @@ export class RestaurantTableGridComponent implements OnInit {
   hasChanges = false;
   selectedTable: RestaurantTable | null = null;
   originalGridState: Map<string, {row: number, col: number}> = new Map();
+
+  // Mode management
+  currentMode: GridMode = 'placement';
+
+  // Table orders modal
+  showOrdersModal = false;
+  selectedTableForOrders: RestaurantTable | null = null;
+  tableOrders: Order[] = [];
+  tableOrdersLoading = false;
+  currentRestaurantId: string | null = null;
 
   ngOnInit() {
     this.initializeGrid();
@@ -533,6 +867,7 @@ export class RestaurantTableGridComponent implements OnInit {
   }
 
   private loadTablesForRestaurant(restaurantId: number) {
+    this.currentRestaurantId = restaurantId.toString();
     this.availableTables$ = this.tablesService.getTables(restaurantId).pipe(
       map(tables => {
         // Clear current grid state
@@ -576,20 +911,52 @@ export class RestaurantTableGridComponent implements OnInit {
   }
 
   onCellClick(cell: GridCell) {
-    if (!this.selectedTable) {
-      this.toastService.warning('Warnung', 'Bitte wählen Sie zuerst einen Tisch aus');
+    if (this.currentMode === 'normal') {
+      // In normal mode, clicking on a cell with a table shows orders
+      if (cell.table) {
+        this.showTableOrders(cell.table);
+      }
       return;
     }
 
-    if (cell.table) {
-      this.toastService.warning('Warnung', 'Diese Zelle ist bereits belegt');
-      return;
+    if (this.currentMode === 'placement') {
+      if (!this.selectedTable) {
+        this.toastService.warning('Warnung', 'Bitte wählen Sie zuerst einen Tisch aus');
+        return;
+      }
+
+      if (cell.table) {
+        this.toastService.warning('Warnung', 'Diese Zelle ist bereits belegt');
+        return;
+      }
+
+      // Place selected table in the clicked cell
+      cell.table = this.selectedTable;
+      this.hasChanges = true;
+      this.selectedTable = null;
     }
 
-    // Place selected table in the clicked cell
-    cell.table = this.selectedTable;
-    this.hasChanges = true;
-    this.selectedTable = null;
+    if (this.currentMode === 'repositioning') {
+      if (!this.selectedTable) {
+        this.toastService.warning('Warnung', 'Bitte wählen Sie zuerst einen Tisch zum Verschieben aus');
+        return;
+      }
+
+      if (cell.table && cell.table.id !== this.selectedTable.id) {
+        this.toastService.warning('Warnung', 'Diese Zelle ist bereits belegt');
+        return;
+      }
+
+      if (cell.table && cell.table.id === this.selectedTable.id) {
+        // Clicking on the same table - deselect
+        this.selectedTable = null;
+        return;
+      }
+
+      // Move the selected table to the new position
+      this.moveTableToPosition(this.selectedTable, cell.row, cell.col);
+      this.selectedTable = null;
+    }
 
     // Force change detection
     this.gridCells = [...this.gridCells];
@@ -688,6 +1055,106 @@ export class RestaurantTableGridComponent implements OnInit {
 
   getPlacedTablesCount(): number {
     return this.gridCells.filter(cell => cell.table).length;
+  }
+
+  // Mode management methods
+  setMode(mode: GridMode) {
+    this.currentMode = mode;
+    this.selectedTable = null; // Clear any selected table when switching modes
+  }
+
+  selectTableForRepositioning(table: RestaurantTable) {
+    this.selectedTable = table;
+  }
+
+  onTableClick(table: RestaurantTable) {
+    if (this.currentMode === 'normal') {
+      this.showTableOrders(table);
+    }
+    // In other modes, the click is handled by onCellClick
+  }
+
+  moveTableToPosition(table: RestaurantTable, newRow: number, newCol: number) {
+    // Find and clear the current position
+    const currentCellIndex = this.gridCells.findIndex(cell => cell.table?.id === table.id);
+    if (currentCellIndex >= 0) {
+      this.gridCells[currentCellIndex].table = undefined;
+    }
+
+    // Place table in new position
+    this.placeTableInGrid(table, newRow, newCol);
+    this.hasChanges = true;
+  }
+
+  // Table orders modal methods
+  showTableOrders(table: RestaurantTable) {
+    if (!this.currentRestaurantId) {
+      this.toastService.error('Fehler', 'Restaurant ID nicht verfügbar');
+      return;
+    }
+
+    this.selectedTableForOrders = table;
+    this.showOrdersModal = true;
+    this.loadTableOrders(table.id.toString());
+  }
+
+  closeOrdersModal() {
+    this.showOrdersModal = false;
+    this.selectedTableForOrders = null;
+    this.tableOrders = [];
+  }
+
+  loadTableOrders(tableId: string) {
+    if (!this.currentRestaurantId) return;
+
+    this.tableOrdersLoading = true;
+    this.ordersService.getTableOrders(this.currentRestaurantId, tableId).subscribe({
+      next: (orders) => {
+        this.tableOrders = orders;
+        this.tableOrdersLoading = false;
+      },
+      error: (error) => {
+        console.error('Error loading table orders:', error);
+        this.toastService.error('Fehler', 'Bestellungen konnten nicht geladen werden');
+        this.tableOrdersLoading = false;
+      }
+    });
+  }
+
+  getStatusText(status: string): string {
+    const statusMap: Record<string, string> = {
+      'pending': 'Ausstehend',
+      'confirmed': 'Bestätigt',
+      'preparing': 'In Vorbereitung',
+      'ready': 'Bereit',
+      'served': 'Serviert',
+      'paid': 'Bezahlt',
+      'open': 'Offen',
+      'in_progress': 'In Bearbeitung',
+      'out_for_delivery': 'Unterwegs',
+      'delivered': 'Geliefert',
+      'cancelled': 'Storniert'
+    };
+    return statusMap[status] || status;
+  }
+
+  getPaymentStatusText(status: string): string {
+    const statusMap: Record<string, string> = {
+      'pending': 'Ausstehend',
+      'paid': 'Bezahlt',
+      'failed': 'Fehlgeschlagen'
+    };
+    return statusMap[status] || status;
+  }
+
+  formatDate(dateString: string): string {
+    return new Date(dateString).toLocaleString('de-DE', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 }
 
