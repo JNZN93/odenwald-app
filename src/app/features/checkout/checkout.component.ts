@@ -153,7 +153,7 @@ interface MenuItemVariantOption {
                       (click)="editItemVariants(item)"
                       title="Varianten bearbeiten"
                       *ngIf="item.selected_variant_options && item.selected_variant_options.length > 0">
-                      <i class="fa-solid fa-edit"></i>
+                      <i class="fa-solid fa-sliders-h"></i>
                     </button>
                     <button
                       class="remove-btn"
@@ -928,6 +928,8 @@ interface MenuItemVariantOption {
 
       .edit-btn i {
         font-size: var(--text-xs);
+        width: 1em;
+        height: 1em;
       }
 
       .remove-btn {
@@ -941,6 +943,8 @@ interface MenuItemVariantOption {
 
       .remove-btn i {
         font-size: var(--text-xs);
+        width: 1em;
+        height: 1em;
       }
     }
 
@@ -981,6 +985,20 @@ interface MenuItemVariantOption {
         min-width: 16px;
       }
 
+      .edit-btn {
+        padding: 2px;
+        font-size: 10px;
+        width: 28px;
+        height: 28px;
+        min-width: 28px;
+      }
+
+      .edit-btn i {
+        font-size: 10px;
+        width: 1em;
+        height: 1em;
+      }
+
       .remove-btn {
         padding: 2px;
         font-size: 10px;
@@ -991,6 +1009,8 @@ interface MenuItemVariantOption {
 
       .remove-btn i {
         font-size: 10px;
+        width: 1em;
+        height: 1em;
       }
 
       .variant-tag {
