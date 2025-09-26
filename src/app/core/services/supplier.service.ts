@@ -225,6 +225,19 @@ export class CartService {
     return cart ? cart.items.reduce((sum, item) => sum + item.quantity, 0) : 0;
   }
 
+  getItemQuantity(menuItemId: string, selectedVariantOptionIds?: string[]): number {
+    const cart = this.getCurrentCart();
+    if (!cart) return 0;
+
+    const item = cart.items.find(item => {
+      const sameMenuItem = item.menu_item_id === menuItemId;
+      const sameVariants = JSON.stringify(item.selected_variant_option_ids?.sort()) === JSON.stringify(selectedVariantOptionIds?.sort());
+      return sameMenuItem && sameVariants;
+    });
+
+    return item ? item.quantity : 0;
+  }
+
   isMinimumOrderMet(): boolean {
     const cart = this.getCurrentCart();
     return cart ? cart.subtotal >= cart.minimum_order : false;

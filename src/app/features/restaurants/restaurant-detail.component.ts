@@ -333,14 +333,27 @@ interface MenuCategoryWithItems {
                     </div>
 
                     <div class="item-actions">
+                      <!-- Menge anzeigen wenn ≥ 1, sonst + Button -->
+                      <div class="quantity-display" *ngIf="getItemQuantity(item.id) >= 1 && item.is_available">
+                        <button class="quantity-btn decrease" (click)="updateItemQuantity(item, getItemQuantity(item.id) - 1)">
+                          <i class="fa-solid fa-minus"></i>
+                        </button>
+                        <span class="quantity-number">{{ getItemQuantity(item.id) }}</span>
+                        <button class="quantity-btn increase" (click)="updateItemQuantity(item, getItemQuantity(item.id) + 1)">
+                          <i class="fa-solid fa-plus"></i>
+                        </button>
+                      </div>
+                      
+                      <!-- + Button wenn Menge = 0 -->
                       <button
                         class="add-to-cart-btn"
                         (click)="addToCart(item, restaurant)"
                         [disabled]="!item.is_available"
-                        *ngIf="item.is_available">
+                        *ngIf="getItemQuantity(item.id) === 0 && item.is_available">
                         <i class="fa-solid fa-plus"></i>
                         <span class="btn-text">Hinzufügen</span>
                       </button>
+                      
                       <span class="unavailable-text" *ngIf="!item.is_available">Nicht verfügbar</span>
                     </div>
                   </div>
@@ -1081,6 +1094,52 @@ interface MenuCategoryWithItems {
       font-style: italic;
     }
 
+    /* Quantity Display Styles */
+    .quantity-display {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      background: var(--color-primary);
+      border-radius: var(--radius-lg);
+      padding: var(--space-1);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .quantity-btn {
+      width: 28px;
+      height: 28px;
+      border: none;
+      border-radius: 50%;
+      background: white;
+      color: var(--color-primary);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .quantity-btn:hover {
+      background: var(--color-primary-50);
+      transform: scale(1.1);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+
+    .quantity-btn:active {
+      transform: scale(0.95);
+    }
+
+    .quantity-number {
+      min-width: 24px;
+      text-align: center;
+      font-weight: 600;
+      color: white;
+      font-size: var(--text-sm);
+    }
+
     .loading-state {
       text-align: center;
       padding: var(--space-12) 0;
@@ -1375,6 +1434,24 @@ interface MenuCategoryWithItems {
 
       .add-to-cart-btn .btn-text {
         display: none; /* Verstecke Text auf Mobile */
+      }
+
+      /* Mobile Quantity Display */
+      .quantity-display {
+        gap: var(--space-1);
+        padding: 2px;
+        border-radius: var(--radius-md);
+      }
+
+      .quantity-btn {
+        width: 24px;
+        height: 24px;
+        font-size: var(--text-xs);
+      }
+
+      .quantity-number {
+        min-width: 20px;
+        font-size: var(--text-xs);
       }
 
       .add-to-cart-btn:hover:not(:disabled) {
@@ -1737,6 +1814,9 @@ export class RestaurantDetailComponent implements OnInit, OnDestroy {
   cartItemsCount$ = this.cartService.cart$.pipe(
     map(cart => cart ? this.cartService.getItemCount() : 0)
   );
+  
+  // Observable für Warenkorb-Updates
+  cart$ = this.cartService.cart$;
   isLoggedIn$ = this.authService.currentUser$.pipe(map(user => !!user));
   currentLoyaltyData: LoyaltyData | null = null;
 
@@ -1754,6 +1834,20 @@ export class RestaurantDetailComponent implements OnInit, OnDestroy {
   showDetailsView = false; // true = show restaurant details, false = show menu
   private scrollHandler: (() => void) | null = null;
   private sanitizer = inject(DomSanitizer);
+
+  // Methode um die Menge eines Artikels im Warenkorb zu ermitteln
+  getItemQuantity(menuItemId: string, selectedVariantOptionIds?: string[]): number {
+    return this.cartService.getItemQuantity(menuItemId, selectedVariantOptionIds);
+  }
+
+  // Methode um die Menge eines Artikels zu aktualisieren
+  updateItemQuantity(item: MenuItem, newQuantity: number): void {
+    if (newQuantity <= 0) {
+      this.cartService.removeFromCart(item.id);
+    } else {
+      this.cartService.updateQuantity(item.id, newQuantity);
+    }
+  }
 
   ngOnInit() {
     const restaurantId = this.route.snapshot.paramMap.get('id');
