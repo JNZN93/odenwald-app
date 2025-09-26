@@ -24,7 +24,7 @@ interface GridCell {
       <!-- Header -->
       <div class="header">
         <div class="header-content">
-          <h1>🪑 Tisch-Grid Layout</h1>
+          <h1>Tisch-Grid Layout</h1>
           <p>Klicken Sie auf Tische zum Verschieben oder Doppelklick für Bestellungen</p>
         </div>
         <div class="header-actions">
@@ -67,9 +67,6 @@ interface GridCell {
               (click)="selectTable(table)"
               [class.selected]="selectedTable?.id === table.id"
             >
-              <div class="table-icon">
-                🪑
-              </div>
               <div class="table-info">
                 <span class="table-number">{{ table.table_number }}</span>
                 <span class="table-capacity">{{ table.capacity }} Plätze</span>
@@ -107,7 +104,6 @@ interface GridCell {
                      (click)="onTableClick(cell.table!, $event)"
                      (dblclick)="showTableOrders(cell.table!)">
                   <div class="table-content">
-                    <div class="table-icon">🪑</div>
                     <div class="table-info">
                       <span class="table-number">{{ cell.table.table_number }}</span>
                       <span class="table-capacity">{{ cell.table.capacity }}</span>
@@ -133,7 +129,7 @@ interface GridCell {
       <div class="modal-overlay" *ngIf="showOrdersModal" (click)="closeOrdersModal()">
         <div class="modal-content" (click)="$event.stopPropagation()">
           <div class="modal-header">
-            <h2>🪑 Tisch {{ selectedTableForOrders?.table_number }} - Bestellungen</h2>
+            <h2>Tisch {{ selectedTableForOrders?.table_number }} - Bestellungen</h2>
             <button class="close-btn" (click)="closeOrdersModal()">✕</button>
           </div>
           
@@ -342,10 +338,6 @@ interface GridCell {
       box-shadow: 0 0 0 2px var(--color-primary-200);
     }
 
-    .table-icon {
-      font-size: var(--text-xl);
-      flex-shrink: 0;
-    }
 
     .table-info {
       display: flex;
@@ -524,9 +516,6 @@ interface GridCell {
       background: var(--color-danger-dark);
     }
 
-    .placed-table .table-icon {
-      font-size: var(--text-lg);
-    }
 
     .placed-table .table-info {
       text-align: center;
