@@ -211,7 +211,6 @@ import { Subscription } from 'rxjs';
               <div class="closure-info">
                 <h3>Sofort schließen</h3>
                 <p>Schließt das Restaurant sofort, unabhängig von den Öffnungszeiten. Kunden können keine Bestellungen aufgeben.</p>
-                <p><strong>DEBUG:</strong> isImmediatelyClosed = {{ isImmediatelyClosed }}</p>
               </div>
               <div class="closure-toggle">
                 <label class="toggle">
