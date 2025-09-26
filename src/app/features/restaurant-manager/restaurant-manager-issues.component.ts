@@ -6,6 +6,7 @@ import { environment } from '../../../environments/environment';
 import { RestaurantManagerService } from '../../core/services/restaurant-manager.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { ToastService } from '../../core/services/toast.service';
+import { Router } from '@angular/router';
 
 interface OrderIssueVm {
   id: string;
@@ -499,6 +500,7 @@ export class RestaurantManagerIssuesComponent implements OnInit {
   private restaurantManagerService = inject(RestaurantManagerService);
   private loadingService = inject(LoadingService);
   private toastService = inject(ToastService);
+  private router = inject(Router);
 
   issues: OrderIssueVm[] = [];
   isLoading = false;
@@ -563,6 +565,12 @@ export class RestaurantManagerIssuesComponent implements OnInit {
         issue.status = updated.status;
         this.toastService.success('Status aktualisiert', `Reklamation wurde als "${this.getStatusLabel(newStatus)}" markiert`);
         this.updatingIssueId = null;
+        
+        // Trigger a page reload to update badge counts in the dashboard
+        // This is a simple approach - in a more complex app you might use a service or event system
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       },
       error: (error: any) => {
         console.error('Error updating issue status:', error);

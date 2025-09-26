@@ -463,6 +463,7 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
   isLoadingStats: boolean = false;
   pendingOrdersCount: number = 0;
   pendingWholesalerOrdersCount: number = 0;
+  openIssuesCount: number = 0;
   currentRestaurant: any = null;
   needsStripeSetup: boolean = false;
 
@@ -625,6 +626,26 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
         this.pendingWholesalerOrdersCount = 0;
       }
 
+      // Load open issues count for current restaurant
+      if (this.selectedRestaurantId) {
+        const issuesResponse = await this.restaurantManagerService.getHttpClient().get(
+          `${this.restaurantManagerService.getApiUrl()}/order-issues/restaurant/${this.selectedRestaurantId}`
+        ).toPromise();
+
+        console.log('Issues response:', issuesResponse);
+
+        if (Array.isArray(issuesResponse)) {
+          // Count only open issues (status: 'open')
+          this.openIssuesCount = issuesResponse.filter((issue: any) => issue.status === 'open').length;
+          console.log('Set open issues count to:', this.openIssuesCount);
+        } else {
+          console.warn('Invalid issues response format:', issuesResponse);
+          this.openIssuesCount = 0;
+        }
+      } else {
+        this.openIssuesCount = 0;
+      }
+
       // Update menu badges
       this.updateMenuBadges();
     } catch (error) {
@@ -637,6 +658,9 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
       if (this.pendingWholesalerOrdersCount === undefined) {
         this.pendingWholesalerOrdersCount = 0;
       }
+      if (this.openIssuesCount === undefined) {
+        this.openIssuesCount = 0;
+      }
       this.updateMenuBadges();
     }
   }
@@ -647,6 +671,8 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
         item.badge = this.pendingOrdersCount > 0 ? this.pendingOrdersCount.toString() : undefined;
       } else if (item.id === 'wholesale') {
         item.badge = this.pendingWholesalerOrdersCount > 0 ? this.pendingWholesalerOrdersCount.toString() : undefined;
+      } else if (item.id === 'issues') {
+        item.badge = this.openIssuesCount > 0 ? this.openIssuesCount.toString() : undefined;
       } else if (item.id === 'settings' && this.needsStripeSetup) {
         item.badge = '!';
       }
