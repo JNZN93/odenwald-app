@@ -31,8 +31,8 @@ interface OrderIssueVm {
       <!-- Header -->
       <div class="header">
         <div class="header-content">
-          <h1>Zugewiesene Reklamationen</h1>
-          <p>Verwalte Kundenreklamationen, die dir vom Administrator zugewiesen wurden</p>
+          <h1>Reklamationen</h1>
+          <p>Verwalte alle Kundenreklamationen für dein Restaurant</p>
         </div>
         <div class="header-actions">
           <button class="refresh-btn" (click)="loadIssues()" [disabled]="isLoading">
@@ -45,7 +45,7 @@ interface OrderIssueVm {
       <!-- Issues List -->
       <div class="issues-section">
         <div class="issues-header">
-          <h2>{{ issues.length }} zugewiesene Reklamation{{ issues.length !== 1 ? 'en' : '' }}</h2>
+          <h2>{{ issues.length }} Reklamation{{ issues.length !== 1 ? 'en' : '' }}</h2>
         </div>
 
         <div class="issues-list">
@@ -115,8 +115,8 @@ interface OrderIssueVm {
 
           <div *ngIf="issues.length === 0 && !isLoading" class="empty-state">
             <i class="fa-solid fa-inbox"></i>
-            <h3>Keine zugewiesenen Reklamationen</h3>
-            <p>Derzeit sind keine Reklamationen an Sie zugewiesen.</p>
+            <h3>Keine Reklamationen</h3>
+            <p>Derzeit sind keine Reklamationen für Ihr Restaurant vorhanden.</p>
           </div>
         </div>
       </div>
@@ -177,6 +177,7 @@ interface OrderIssueVm {
       opacity: 0.6;
       cursor: not-allowed;
     }
+
 
     .spin {
       animation: spin 1s linear infinite;
@@ -520,9 +521,9 @@ export class RestaurantManagerIssuesComponent implements OnInit {
         if (restaurants?.length > 0) {
           const restaurantId = restaurants[0].restaurant_id;
           console.log('Using restaurant ID:', restaurantId);
-          console.log('API URL:', `${environment.apiUrl}/order-issues/assigned-to-restaurant/${restaurantId}`);
+          console.log('API URL:', `${environment.apiUrl}/order-issues/restaurant/${restaurantId}`);
 
-          this.http.get<OrderIssueVm[]>(`${environment.apiUrl}/order-issues/assigned-to-restaurant/${restaurantId}`).subscribe({
+          this.http.get<OrderIssueVm[]>(`${environment.apiUrl}/order-issues/restaurant/${restaurantId}`).subscribe({
             next: (issues) => {
               console.log('Loaded issues:', issues);
               this.issues = issues;
@@ -551,10 +552,11 @@ export class RestaurantManagerIssuesComponent implements OnInit {
     });
   }
 
+
   updateIssueStatus(issue: OrderIssueVm, newStatus: OrderIssueVm['status']) {
     this.updatingIssueId = issue.id;
 
-    this.http.patch<OrderIssueVm>(`${environment.apiUrl}/order-issues/${issue.id}`, {
+    this.http.patch<OrderIssueVm>(`${environment.apiUrl}/order-issues/${issue.id}/restaurant-status`, {
       status: newStatus
     }).subscribe({
       next: (updated: OrderIssueVm) => {
