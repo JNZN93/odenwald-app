@@ -514,13 +514,26 @@ import { Subscription } from 'rxjs';
             </div>
           </div>
 
-          <div style="display:flex; gap:12px; flex-wrap:wrap;">
-            <button class="btn-primary" type="button" (click)="startStripeOnboarding()" [disabled]="isLoading">
+          <div class="stripe-buttons-container">
+            <button 
+              class="stripe-main-btn" 
+              [class.stripe-success]="hasActiveStripePayments()"
+              [class.stripe-warning]="hasStripeAccountButIncomplete()"
+              type="button" 
+              (click)="startStripeOnboarding()" 
+              [disabled]="isLoading"
+            >
               <i class="fa-brands fa-stripe"></i>
-              {{ currentRestaurant?.stripe_account_id ? 'Onboarding fortsetzen' : 'Stripe-Konto erstellen' }}
+              {{ getStripeButtonText() }}
             </button>
-            <button class="btn-secondary" type="button" (click)="refreshStripeStatus()" [disabled]="isLoading">
-              Status aktualisieren
+            <button 
+              class="stripe-status-btn" 
+              type="button" 
+              (click)="refreshStripeStatus()" 
+              [disabled]="isLoading"
+            >
+              <i class="fa-solid fa-sync-alt" [class.fa-spin]="isLoading"></i>
+              {{ getStatusButtonText() }}
             </button>
           </div>
         </div>
@@ -1441,6 +1454,108 @@ import { Subscription } from 'rxjs';
       font-style: italic;
     }
 
+    /* Stripe Connect Button Styles */
+    .stripe-buttons-container {
+      display: flex;
+      gap: var(--space-4);
+      flex-wrap: wrap;
+      margin-top: var(--space-6);
+    }
+
+    .stripe-main-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-4) var(--space-6);
+      background: linear-gradient(135deg, #635bff 0%, #4f46e5 100%);
+      color: white;
+      border: none;
+      border-radius: var(--radius-lg);
+      font-weight: 600;
+      font-size: var(--text-base);
+      cursor: pointer;
+      transition: all var(--transition);
+      box-shadow: 0 4px 12px rgba(99, 91, 255, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stripe-main-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    .stripe-main-btn:hover::before {
+      left: 100%;
+    }
+
+    .stripe-main-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(99, 91, 255, 0.4);
+    }
+
+    .stripe-main-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .stripe-main-btn.stripe-success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .stripe-main-btn.stripe-success:hover:not(:disabled) {
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+
+    .stripe-main-btn.stripe-warning {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    }
+
+    .stripe-main-btn.stripe-warning:hover:not(:disabled) {
+      box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+    }
+
+    .stripe-status-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-5);
+      background: var(--color-surface);
+      color: var(--color-text);
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      font-weight: 500;
+      font-size: var(--text-sm);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .stripe-status-btn:hover:not(:disabled) {
+      background: var(--color-primary-50);
+      border-color: var(--color-primary-300);
+      color: var(--color-primary-700);
+      transform: translateY(-1px);
+    }
+
+    .stripe-status-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .stripe-status-btn i {
+      font-size: var(--text-sm);
+    }
+
     /* Responsive for immediate closure */
     @media (max-width: 768px) {
       .closure-toggle-card {
@@ -1465,6 +1580,21 @@ import { Subscription } from 'rxjs';
 
       .excluded-area-row input:first-child {
         flex: 1;
+      }
+
+      .stripe-buttons-container {
+        flex-direction: column;
+        gap: var(--space-3);
+      }
+
+      .stripe-main-btn {
+        justify-content: center;
+        padding: var(--space-4);
+      }
+
+      .stripe-status-btn {
+        justify-content: center;
+        padding: var(--space-3);
       }
     }
   `]
@@ -1933,6 +2063,49 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
         this.isLoading = false;
       }
     });
+  }
+
+  getStripeButtonText(): string {
+    if (!this.currentRestaurant?.stripe_account_id) {
+      return 'Stripe-Konto erstellen';
+    }
+
+    // Check if payments are active (charges_enabled and payouts_enabled)
+    const hasActivePayments = (this.currentRestaurant as any).stripe_charges_enabled && 
+                             (this.currentRestaurant as any).stripe_payouts_enabled;
+
+    if (hasActivePayments) {
+      return 'Konto bearbeiten';
+    }
+
+    return 'Onboarding fortsetzen';
+  }
+
+  getStatusButtonText(): string {
+    if (!this.currentRestaurant?.stripe_account_id) {
+      return 'Status prüfen';
+    }
+
+    // Check if payments are active
+    const hasActivePayments = (this.currentRestaurant as any).stripe_charges_enabled && 
+                             (this.currentRestaurant as any).stripe_payouts_enabled;
+
+    if (hasActivePayments) {
+      return 'Status aktualisieren';
+    }
+
+    return 'Onboarding-Status prüfen';
+  }
+
+  hasActiveStripePayments(): boolean {
+    return !!(this.currentRestaurant?.stripe_account_id && 
+              (this.currentRestaurant as any).stripe_charges_enabled && 
+              (this.currentRestaurant as any).stripe_payouts_enabled);
+  }
+
+  hasStripeAccountButIncomplete(): boolean {
+    return !!(this.currentRestaurant?.stripe_account_id && 
+              !this.hasActiveStripePayments());
   }
 
   // Image Upload Methods
