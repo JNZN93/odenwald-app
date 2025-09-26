@@ -100,7 +100,6 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                 <th class="col-payment-status">Zahlung</th>
                 <th class="col-total">Gesamt</th>
                 <th class="col-order-type">Typ</th>
-                <th class="col-table">Tisch</th>
                 <th class="col-address">Adresse</th>
                 <th class="col-actions">Aktionen</th>
                 <th class="col-details">Details</th>
@@ -145,13 +144,6 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                     <i [ngClass]="getOrderTypeIcon(order)"></i>
                     <span>{{ getOrderTypeText(order) }}</span>
                   </div>
-                </td>
-                <td class="col-table">
-                  <div class="table-number" *ngIf="order.table_number">
-                    🪑 Tisch {{ order.table_number }}
-                    <span class="party-size" *ngIf="order.party_size">({{ order.party_size }} Pers.)</span>
-                  </div>
-                  <div class="no-table" *ngIf="!order.table_number">-</div>
                 </td>
                 <td class="col-address">
                   <div class="delivery-address" *ngIf="order.delivery_address">{{ order.delivery_address }}</div>
@@ -289,10 +281,6 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                     <i [ngClass]="getOrderTypeIcon(order)"></i>
                     <span>{{ getOrderTypeText(order) }}</span>
                   </div>
-                </div>
-                <div class="table-info" *ngIf="order.table_number">
-                  🪑 Tisch {{ order.table_number }}
-                  <span *ngIf="order.party_size"> ({{ order.party_size }} Personen)</span>
                 </div>
                 <div class="delivery-address" *ngIf="order.delivery_address">{{ order.delivery_address }}</div>
               </div>
@@ -917,30 +905,6 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       margin-bottom: var(--space-1);
     }
 
-    .table-info {
-      font-size: var(--text-sm);
-      color: var(--color-primary-600);
-      font-weight: 500;
-      margin-bottom: var(--space-1);
-    }
-
-    .table-number {
-      font-size: var(--text-sm);
-      color: var(--color-primary-600);
-      font-weight: 500;
-    }
-
-    .party-size {
-      font-size: var(--text-xs);
-      color: var(--color-muted);
-      font-weight: normal;
-    }
-
-    .no-table {
-      font-size: var(--text-sm);
-      color: var(--color-muted);
-      font-style: italic;
-    }
 
     .order-items {
       margin-bottom: var(--space-4);
@@ -1946,9 +1910,9 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
     }
 
     .orders-table th {
-      padding: var(--space-4) var(--space-3);
+      padding: var(--space-2) var(--space-2);
       text-align: left;
-      font-size: var(--text-sm);
+      font-size: var(--text-xs);
       font-weight: 700;
       color: var(--color-text);
       border-bottom: 1px solid var(--color-border);
@@ -1956,7 +1920,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
     }
 
     .orders-table td {
-      padding: var(--space-4) var(--space-3);
+      padding: var(--space-2) var(--space-2);
       border-bottom: 1px solid var(--color-border);
       vertical-align: top;
     }
@@ -1975,55 +1939,50 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
 
     /* Table Column Styles */
     .col-order-id {
+      width: 100px;
+      min-width: 100px;
+    }
+
+    .col-customer {
+      width: 180px;
+      min-width: 180px;
+    }
+
+    .col-order-status {
       width: 120px;
       min-width: 120px;
     }
 
-    .col-customer {
-      width: 200px;
-      min-width: 200px;
-    }
-
-    .col-order-status {
-      width: 140px;
-      min-width: 140px;
-    }
-
     .col-payment-status {
-      width: 140px;
-      min-width: 140px;
+      width: 120px;
+      min-width: 120px;
     }
 
     .col-total {
-      width: 100px;
-      min-width: 100px;
+      width: 90px;
+      min-width: 90px;
       text-align: right;
     }
 
     .col-order-type {
-      width: 120px;
-      min-width: 120px;
+      width: 100px;
+      min-width: 100px;
       text-align: center;
     }
 
-    .col-table {
+    .col-address {
+      width: 180px;
+      min-width: 180px;
+    }
+
+    .col-actions {
       width: 120px;
       min-width: 120px;
     }
 
-    .col-address {
-      width: 200px;
-      min-width: 200px;
-    }
-
-    .col-actions {
-      width: 140px;
-      min-width: 140px;
-    }
-
     .col-details {
-      width: 60px;
-      min-width: 60px;
+      width: 50px;
+      min-width: 50px;
       text-align: center;
     }
 
