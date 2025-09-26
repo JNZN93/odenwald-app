@@ -158,6 +158,42 @@ interface MenuItemVariantOption {
                     </button>
                   </div>
                 </div>
+
+                <!-- Notes Section -->
+                <div class="item-notes-section">
+                  <button
+                    class="notes-toggle-btn"
+                    (click)="toggleItemNotes(item.menu_item_id)"
+                    [class.active]="isNotesOpen(item.menu_item_id)">
+                    <i class="fa-solid" [class]="isNotesOpen(item.menu_item_id) ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                    <span>{{ getItemNotes(item.menu_item_id) ? 'Notiz bearbeiten' : 'Notiz hinzufügen' }}</span>
+                  </button>
+                  
+                  <div class="notes-content" [class.open]="isNotesOpen(item.menu_item_id)">
+                    <textarea
+                      [(ngModel)]="itemNotes[item.menu_item_id]"
+                      (ngModelChange)="onItemNotesChange(item.menu_item_id)"
+                      placeholder="Spezielle Wünsche für dieses Produkt..."
+                      rows="2"
+                      class="notes-textarea">
+                    </textarea>
+                    <div class="notes-actions" *ngIf="isNotesOpen(item.menu_item_id)">
+                      <button
+                        class="notes-save-btn"
+                        (click)="saveItemNotes(item.menu_item_id)"
+                        [disabled]="!itemNotes[item.menu_item_id]?.trim()">
+                        <i class="fa-solid fa-check"></i>
+                        Speichern
+                      </button>
+                      <button
+                        class="notes-cancel-btn"
+                        (click)="cancelItemNotes(item.menu_item_id)">
+                        <i class="fa-solid fa-times"></i>
+                        Abbrechen
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -546,6 +582,7 @@ interface MenuItemVariantOption {
       transition: all var(--transition);
       position: relative;
       overflow: hidden;
+      flex-wrap: wrap;
     }
 
     .cart-item::before {
@@ -786,20 +823,16 @@ interface MenuItemVariantOption {
         grid-template-columns: 1fr auto;
         grid-template-areas: 
           "details actions"
-          "details actions";
+          "notes notes";
         align-items: start;
         gap: var(--space-3);
         padding: var(--space-3);
         border-radius: var(--radius-lg);
       }
 
-      .item-details {
-        grid-area: details;
-        display: flex;
-        flex-direction: column;
-        gap: var(--space-1);
-        min-width: 0;
-      }
+      .item-details { grid-area: details; min-width: 0; }
+      .item-actions { grid-area: actions; }
+      .item-notes-section { grid-area: notes; order: initial; flex-basis: auto; }
 
       .item-header {
         display: flex;
@@ -917,9 +950,16 @@ interface MenuItemVariantOption {
     @media (max-width: 480px) {
       .cart-item {
         grid-template-columns: 1fr auto;
+        grid-template-areas:
+          "details actions"
+          "notes notes";
         padding: var(--space-2);
         gap: var(--space-2);
       }
+
+      .item-details { grid-area: details; }
+      .item-actions { grid-area: actions; }
+      .item-notes-section { grid-area: notes; }
 
       .item-name {
         font-size: var(--text-sm);
@@ -986,6 +1026,228 @@ interface MenuItemVariantOption {
       .item-actions {
         min-width: 70px;
         gap: var(--space-1);
+      }
+    }
+
+    /* ===== ITEM NOTES STYLES ===== */
+
+    .item-notes-section {
+      width: 100%;
+      margin-top: var(--space-3);
+      border-top: 1px solid var(--color-border);
+      padding-top: var(--space-3);
+      flex-basis: 100%;
+      order: 99;
+    }
+
+    .notes-toggle-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      width: 100%;
+      padding: var(--space-2) var(--space-3);
+      background: linear-gradient(135deg, var(--color-surface-2), var(--color-surface));
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      color: var(--color-text);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+      text-align: left;
+    }
+
+    .notes-toggle-btn:hover {
+      background: linear-gradient(135deg, var(--color-primary-50), var(--color-primary-25));
+      border-color: var(--color-primary-200);
+      color: var(--color-primary-700);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+    }
+
+    .notes-toggle-btn.active {
+      background: linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50));
+      border-color: var(--color-primary);
+      color: var(--color-primary-800);
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+    }
+
+    .notes-toggle-btn i {
+      font-size: var(--text-xs);
+      transition: transform var(--transition);
+    }
+
+    .notes-toggle-btn.active i {
+      transform: rotate(180deg);
+    }
+
+    .notes-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      margin-top: var(--space-2);
+    }
+
+    .notes-content.open {
+      max-height: 200px;
+      padding: var(--space-3);
+      border: 1px solid var(--color-border);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      margin-top: var(--space-2);
+    }
+
+    .notes-textarea {
+      width: 100%;
+      min-height: 60px;
+      padding: var(--space-2) var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+      font-family: inherit;
+      resize: vertical;
+      transition: border-color var(--transition);
+      background: var(--color-surface);
+      color: var(--color-text);
+    }
+
+    .notes-textarea:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    }
+
+    .notes-textarea::placeholder {
+      color: var(--color-muted);
+      font-style: italic;
+    }
+
+    .notes-actions {
+      display: flex;
+      gap: var(--space-2);
+      margin-top: var(--space-3);
+      justify-content: flex-end;
+    }
+
+    .notes-save-btn, .notes-cancel-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      padding: var(--space-2) var(--space-3);
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+      text-decoration: none;
+    }
+
+    .notes-save-btn {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+    }
+
+    .notes-save-btn:hover:not(:disabled) {
+      background: linear-gradient(135deg, #059669, #047857);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(16, 185, 129, 0.4);
+    }
+
+    .notes-save-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .notes-cancel-btn {
+      background: linear-gradient(135deg, #6b7280, #4b5563);
+      color: white;
+      box-shadow: 0 2px 4px rgba(107, 114, 128, 0.3);
+    }
+
+    .notes-cancel-btn:hover {
+      background: linear-gradient(135deg, #4b5563, #374151);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(107, 114, 128, 0.4);
+    }
+
+    .notes-save-btn i, .notes-cancel-btn i {
+      font-size: var(--text-xs);
+    }
+
+    /* Responsive Notes */
+    @media (max-width: 768px) {
+      .item-notes-section {
+        margin-top: var(--space-2);
+        padding-top: var(--space-2);
+      }
+
+      .notes-toggle-btn {
+        padding: var(--space-1) var(--space-2);
+        font-size: var(--text-xs);
+      }
+
+      .notes-content.open {
+        padding: var(--space-2);
+        margin-top: var(--space-2);
+      }
+
+      .notes-textarea {
+        min-height: 50px;
+        font-size: var(--text-xs);
+      }
+
+      .notes-actions {
+        margin-top: var(--space-2);
+        gap: var(--space-1);
+      }
+
+      .notes-save-btn, .notes-cancel-btn {
+        padding: var(--space-1) var(--space-2);
+        font-size: 10px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .item-notes-section {
+        padding-left: 0;
+        padding-right: 0;
+      }
+
+      .notes-toggle-btn {
+        padding: 6px var(--space-2);
+        font-size: 10px;
+      }
+
+      .notes-toggle-btn span {
+        flex: 1;
+        text-align: left;
+      }
+
+      .notes-content.open {
+        padding: var(--space-1);
+        margin-top: var(--space-2);
+      }
+
+      .notes-textarea {
+        min-height: 40px;
+        padding: var(--space-1) var(--space-2);
+        font-size: 10px;
+      }
+
+      .notes-actions {
+        flex-direction: column;
+        gap: var(--space-1);
+      }
+
+      .notes-save-btn, .notes-cancel-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 6px var(--space-2);
+        font-size: 9px;
       }
     }
 
@@ -1653,6 +1915,11 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
   selectedMenuItemForEdit: MenuItemWithVariants | null = null;
   existingItemSelection: any = null;
 
+  // Item notes properties
+  itemNotes: { [menuItemId: string]: string } = {};
+  openNotesItems: { [menuItemId: string]: boolean } = {};
+  tempNotes: { [menuItemId: string]: string } = {};
+
   ngOnInit() {
     // Lade gespeicherte Benutzerdaten beim Initialisieren
     this.loadSavedUserData();
@@ -2149,5 +2416,47 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
     this.showVariantsModal = false;
     this.selectedMenuItemForEdit = null;
     this.existingItemSelection = null;
+  }
+
+  /**
+   * Item Notes Management
+   */
+  toggleItemNotes(menuItemId: string): void {
+    this.openNotesItems[menuItemId] = !this.openNotesItems[menuItemId];
+    
+    if (this.openNotesItems[menuItemId]) {
+      // Speichere den aktuellen Wert als temporären Wert
+      this.tempNotes[menuItemId] = this.itemNotes[menuItemId] || '';
+    }
+  }
+
+  isNotesOpen(menuItemId: string): boolean {
+    return !!this.openNotesItems[menuItemId];
+  }
+
+  getItemNotes(menuItemId: string): string {
+    return this.itemNotes[menuItemId] || '';
+  }
+
+  onItemNotesChange(menuItemId: string): void {
+    // Automatisches Speichern bei Änderungen (optional)
+    // this.saveItemNotes(menuItemId);
+  }
+
+  saveItemNotes(menuItemId: string): void {
+    if (this.itemNotes[menuItemId]?.trim()) {
+      // Hier könntest du die Notiz an den Cart Service senden
+      // this.cartService.updateItemNotes(menuItemId, this.itemNotes[menuItemId]);
+      console.log('Notiz gespeichert für Item:', menuItemId, this.itemNotes[menuItemId]);
+    }
+    this.openNotesItems[menuItemId] = false;
+    delete this.tempNotes[menuItemId];
+  }
+
+  cancelItemNotes(menuItemId: string): void {
+    // Stelle den ursprünglichen Wert wieder her
+    this.itemNotes[menuItemId] = this.tempNotes[menuItemId] || '';
+    this.openNotesItems[menuItemId] = false;
+    delete this.tempNotes[menuItemId];
   }
 }
