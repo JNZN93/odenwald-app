@@ -11,7 +11,6 @@ import { RestaurantsService } from '../../core/services/restaurants.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { UserDataService } from '../../core/services/user-data.service';
 import { ConfirmationService } from '../../core/services/confirmation.service';
-import { ImageFallbackDirective } from '../../core/image-fallback.directive';
 import { MenuItemVariantsModalComponent } from '../restaurants/menu-item-variants-modal.component';
 import { Observable, map } from 'rxjs';
 
@@ -60,7 +59,7 @@ interface MenuItemVariantOption {
 @Component({
   selector: 'app-checkout',
   standalone: true,
-  imports: [CommonModule, FormsModule, ImageFallbackDirective, MenuItemVariantsModalComponent],
+  imports: [CommonModule, FormsModule, MenuItemVariantsModalComponent],
   animations: [
     trigger('fadeInOut', [
       state('in', style({ opacity: 1, transform: 'translateY(0)' })),
@@ -106,10 +105,6 @@ interface MenuItemVariantOption {
 
             <div class="cart-items">
               <div *ngFor="let item of cart.items" class="cart-item">
-                <div class="item-image">
-                  <img [src]="item.image_url || ''" [alt]="item.name" appImageFallback>
-                </div>
-
                 <div class="item-details">
                   <div class="item-header">
                     <h3 class="item-name">{{ item.name }}</h3>
@@ -575,28 +570,6 @@ interface MenuItemVariantOption {
       opacity: 1;
     }
 
-    .item-image {
-      width: 80px;
-      height: 80px;
-      border-radius: var(--radius-xl);
-      overflow: hidden;
-      background: linear-gradient(135deg, var(--color-border), var(--color-border-light));
-      flex-shrink: 0;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-      border: 2px solid rgba(255, 255, 255, 0.8);
-      position: relative;
-    }
-
-    .item-image img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: transform var(--transition);
-    }
-
-    .cart-item:hover .item-image img {
-      transform: scale(1.05);
-    }
 
     .item-details {
       flex: 1;
@@ -810,21 +783,14 @@ interface MenuItemVariantOption {
     @media (max-width: 768px) {
       .cart-item {
         display: grid;
-        grid-template-columns: 70px 1fr auto;
+        grid-template-columns: 1fr auto;
         grid-template-areas: 
-          "image details actions"
-          "image details actions";
+          "details actions"
+          "details actions";
         align-items: start;
         gap: var(--space-3);
         padding: var(--space-3);
         border-radius: var(--radius-lg);
-      }
-
-      .item-image {
-        grid-area: image;
-        width: 70px;
-        height: 70px;
-        justify-self: start;
       }
 
       .item-details {
@@ -950,14 +916,9 @@ interface MenuItemVariantOption {
 
     @media (max-width: 480px) {
       .cart-item {
-        grid-template-columns: 60px 1fr auto;
+        grid-template-columns: 1fr auto;
         padding: var(--space-2);
         gap: var(--space-2);
-      }
-
-      .item-image {
-        width: 60px;
-        height: 60px;
       }
 
       .item-name {
