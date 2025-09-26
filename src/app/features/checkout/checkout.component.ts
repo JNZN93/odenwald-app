@@ -148,7 +148,7 @@ interface MenuItemVariantOption {
                       (click)="editItemVariants(item)"
                       title="Varianten bearbeiten"
                       *ngIf="item.selected_variant_options && item.selected_variant_options.length > 0">
-                      <i class="fa-solid fa-sliders-h"></i>
+                      <i class="fa-solid fa-edit"></i>
                     </button>
                     <button
                       class="remove-btn"
@@ -761,14 +761,14 @@ interface MenuItemVariantOption {
       align-items: center;
       justify-content: center;
       padding: var(--space-2);
-      background: linear-gradient(135deg, #3b82f6, #2563eb);
-      color: white !important;
-      border: none;
+      background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+      color: #6b7280 !important;
+      border: 1px solid #d1d5db;
       border-radius: var(--radius-lg);
       font-size: var(--text-base);
       cursor: pointer;
       transition: all var(--transition);
-      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+      box-shadow: 0 2px 8px rgba(107, 114, 128, 0.2);
       text-decoration: none;
       width: 40px;
       height: 40px;
@@ -777,13 +777,15 @@ interface MenuItemVariantOption {
 
     .edit-btn:hover {
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+      background: linear-gradient(135deg, #e5e7eb, #d1d5db);
+      color: #374151 !important;
+      border-color: #9ca3af;
     }
 
     .edit-btn:active {
       transform: translateY(0);
-      box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+      box-shadow: 0 2px 4px rgba(107, 114, 128, 0.2);
     }
 
     .remove-btn {
@@ -923,6 +925,15 @@ interface MenuItemVariantOption {
         width: 32px;
         height: 32px;
         min-width: 32px;
+        background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+        color: #6b7280 !important;
+        border: 1px solid #d1d5db;
+      }
+
+      .edit-btn:hover {
+        background: linear-gradient(135deg, #e5e7eb, #d1d5db);
+        color: #374151 !important;
+        border-color: #9ca3af;
       }
 
       .edit-btn i {
@@ -992,6 +1003,15 @@ interface MenuItemVariantOption {
         width: 28px;
         height: 28px;
         min-width: 28px;
+        background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+        color: #6b7280 !important;
+        border: 1px solid #d1d5db;
+      }
+
+      .edit-btn:hover {
+        background: linear-gradient(135deg, #e5e7eb, #d1d5db);
+        color: #374151 !important;
+        border-color: #9ca3af;
       }
 
       .edit-btn i {
