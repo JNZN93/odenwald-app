@@ -181,7 +181,7 @@ interface MenuItemVariantOption {
                       <button
                         class="notes-save-btn"
                         (click)="saveItemNotes(item.menu_item_id)"
-                        [disabled]="!itemNotes[item.menu_item_id]?.trim()">
+                        [disabled]="!itemNotes[item.menu_item_id].trim()">
                         <i class="fa-solid fa-check"></i>
                         Speichern
                       </button>

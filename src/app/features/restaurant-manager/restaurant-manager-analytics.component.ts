@@ -30,6 +30,17 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
             <option value="week">Diese Woche</option>
             <option value="month">Dieser Monat</option>
           </select>
+          
+          <!-- Custom Date Range -->
+          <div class="custom-range-inline">
+            <input type="date" [(ngModel)]="startDate" class="date-input-inline" placeholder="Von">
+            <input type="date" [(ngModel)]="endDate" class="date-input-inline" placeholder="Bis">
+            <button class="btn-primary" (click)="loadCustomRange()" [disabled]="isLoading">
+              <i class="fa-solid fa-chart-line"></i>
+              Zeitraum-Analyse
+            </button>
+          </div>
+          
           <button class="btn-secondary" (click)="exportData()" [disabled]="isLoading">
             <i class="fa-solid fa-download"></i>
             Export
@@ -265,22 +276,174 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
         </div>
       </div>
 
-      <!-- Custom Date Range -->
-      <div class="custom-range-section">
-        <h2>Benutzerdefinierter Zeitraum</h2>
-        <div class="date-range-form">
-          <div class="form-group">
-            <label>Von:</label>
-            <input type="date" [(ngModel)]="startDate" class="date-input">
+
+      <!-- Report Modal -->
+      <div *ngIf="isReportModalOpen" class="modal-overlay" (click)="closeReportModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h2>{{ currentReport?.title }}</h2>
+            <button class="modal-close" (click)="closeReportModal()">
+              <i class="fa-solid fa-times"></i>
+            </button>
           </div>
-          <div class="form-group">
-            <label>Bis:</label>
-            <input type="date" [(ngModel)]="endDate" class="date-input">
+          
+          <div class="modal-body" *ngIf="currentReport?.data">
+            <!-- Summary Section -->
+            <div class="report-section" *ngIf="currentReport?.data?.summary">
+              <h3>Zusammenfassung</h3>
+              <div class="summary-grid">
+                <div class="summary-item" *ngIf="currentReport?.data?.summary?.total_orders !== undefined">
+                  <div class="summary-label">Bestellungen</div>
+                  <div class="summary-value">{{ currentReport?.data?.summary?.total_orders }}</div>
+                </div>
+                <div class="summary-item" *ngIf="currentReport?.data?.summary?.total_revenue !== undefined">
+                  <div class="summary-label">Umsatz</div>
+                  <div class="summary-value">€{{ currentReport?.data?.summary?.total_revenue?.toFixed(2) }}</div>
+                </div>
+                <div class="summary-item" *ngIf="currentReport?.data?.summary?.average_order_value !== undefined">
+                  <div class="summary-label">Ø Bestellwert</div>
+                  <div class="summary-value">€{{ currentReport?.data?.summary?.average_order_value?.toFixed(2) }}</div>
+                </div>
+                <div class="summary-item" *ngIf="currentReport?.data?.summary?.total_customers !== undefined">
+                  <div class="summary-label">Kunden</div>
+                  <div class="summary-value">{{ currentReport?.data?.summary?.total_customers }}</div>
+                </div>
+                <div class="summary-item" *ngIf="currentReport?.data?.summary?.peak_hour !== undefined">
+                  <div class="summary-label">Stoßzeit</div>
+                  <div class="summary-value">{{ currentReport?.data?.summary?.peak_hour }}:00 Uhr</div>
+                </div>
+                <div class="summary-item" *ngIf="currentReport?.data?.summary?.best_day">
+                  <div class="summary-label">Bester Tag</div>
+                  <div class="summary-value">{{ currentReport?.data?.summary?.best_day }}</div>
+                </div>
+                <div class="summary-item" *ngIf="currentReport?.data?.summary?.best_week !== undefined">
+                  <div class="summary-label">Beste Woche</div>
+                  <div class="summary-value">Woche {{ currentReport?.data?.summary?.best_week }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Time Period -->
+            <div class="report-section" *ngIf="currentReport?.data?.date || currentReport?.data?.week_start || currentReport?.data?.month">
+              <h3>Zeitraum</h3>
+              <div class="time-period">
+                <span *ngIf="currentReport?.data?.date">{{ currentReport?.data?.date }}</span>
+                <span *ngIf="currentReport?.data?.week_start && currentReport?.data?.week_end">
+                  {{ currentReport?.data?.week_start }} bis {{ currentReport?.data?.week_end }}
+                </span>
+                <span *ngIf="currentReport?.data?.month && currentReport?.data?.year">
+                  {{ currentReport?.data?.month }} {{ currentReport?.data?.year }}
+                </span>
+                <span *ngIf="currentReport?.data?.period">{{ currentReport?.data?.period }}</span>
+              </div>
+            </div>
+
+            <!-- Orders by Status -->
+            <div class="report-section" *ngIf="currentReport?.data?.orders_by_status">
+              <h3>Bestellungen nach Status</h3>
+              <div class="status-list">
+                <div class="status-item" *ngFor="let status of getStatusEntries(currentReport?.data?.orders_by_status || {})">
+                  <span class="status-name">{{ getStatusLabel(status.key) }}</span>
+                  <span class="status-count">{{ status.value }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Daily Breakdown (Weekly Report) -->
+            <div class="report-section" *ngIf="currentReport?.data?.daily_breakdown">
+              <h3>Tagesaufschlüsselung</h3>
+              <div class="daily-breakdown">
+                <div class="day-item" *ngFor="let day of currentReport?.data?.daily_breakdown || []">
+                  <div class="day-name">{{ day.day_name }}</div>
+                  <div class="day-stats">
+                    <span>{{ day.orders }} Bestellungen</span>
+                    <span>€{{ day.revenue?.toFixed(2) }}</span>
+                    <span>{{ day.customers }} Kunden</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Weekly Breakdown (Monthly Report) -->
+            <div class="report-section" *ngIf="currentReport?.data?.weekly_breakdown">
+              <h3>Wochenaufschlüsselung</h3>
+              <div class="weekly-breakdown">
+                <div class="week-item" *ngFor="let week of currentReport?.data?.weekly_breakdown || []">
+                  <div class="week-header">
+                    <span class="week-number">Woche {{ week.week }}</span>
+                    <span class="week-dates">{{ week.start_date }} - {{ week.end_date }}</span>
+                  </div>
+                  <div class="week-stats">
+                    <span>{{ week.orders }} Bestellungen</span>
+                    <span>€{{ week.revenue?.toFixed(2) }}</span>
+                    <span>{{ week.customers }} Kunden</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Orders by Hour (Daily Report) -->
+            <div class="report-section" *ngIf="currentReport?.data?.orders_by_hour">
+              <h3>Bestellungen nach Stunde</h3>
+              <div class="hourly-breakdown">
+                <div class="hour-item" *ngFor="let hour of getPeakHours(currentReport?.data?.orders_by_hour || [])">
+                  <div class="hour-time">{{ hour.hour }}:00</div>
+                  <div class="hour-bar">
+                    <div class="hour-bar-fill" [style.width.%]="getHourPercentage(hour.orders, currentReport?.data?.orders_by_hour || [])"></div>
+                  </div>
+                  <div class="hour-stats">
+                    <span>{{ hour.orders }} Bestellungen</span>
+                    <span>€{{ hour.revenue.toFixed(2) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Customer Breakdown -->
+            <div class="report-section" *ngIf="currentReport?.data?.customer_breakdown">
+              <h3>Kundenaufschlüsselung</h3>
+              <div class="customer-breakdown">
+                <div class="customer-item" *ngIf="currentReport?.data?.customer_breakdown?.returning_customers">
+                  <span class="customer-label">Stammkunden</span>
+                  <span class="customer-count">{{ currentReport?.data?.customer_breakdown?.returning_customers }}</span>
+                </div>
+                <div class="customer-item" *ngIf="currentReport?.data?.customer_breakdown?.guest_orders">
+                  <span class="customer-label">Gast-Bestellungen</span>
+                  <span class="customer-count">{{ currentReport?.data?.customer_breakdown?.guest_orders }}</span>
+                </div>
+                <div class="customer-item" *ngIf="currentReport?.data?.customer_breakdown?.new_customers">
+                  <span class="customer-label">Neue Kunden</span>
+                  <span class="customer-count">{{ currentReport?.data?.customer_breakdown?.new_customers }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Delivery Stats -->
+            <div class="report-section" *ngIf="currentReport?.data?.delivery_stats">
+              <h3>Lieferstatistiken</h3>
+              <div class="delivery-stats">
+                <div class="delivery-item" *ngIf="currentReport?.data?.delivery_stats?.total_deliveries">
+                  <span class="delivery-label">Lieferungen</span>
+                  <span class="delivery-count">{{ currentReport?.data?.delivery_stats?.total_deliveries }}</span>
+                </div>
+                <div class="delivery-item" *ngIf="currentReport?.data?.delivery_stats?.on_time_deliveries">
+                  <span class="delivery-label">Pünktliche Lieferungen</span>
+                  <span class="delivery-count">{{ currentReport?.data?.delivery_stats?.on_time_deliveries }}</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <button class="btn-primary" (click)="loadCustomRange()">
-            <i class="fa-solid fa-search"></i>
-            Analysieren
-          </button>
+
+          <div class="modal-footer">
+            <button class="btn-secondary" (click)="closeReportModal()">
+              <i class="fa-solid fa-times"></i>
+              Schließen
+            </button>
+            <button class="btn-primary" (click)="exportReport()">
+              <i class="fa-solid fa-download"></i>
+              Exportieren
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -315,6 +478,20 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
       border: 1px solid var(--color-border);
       border-radius: var(--radius-md);
       background: white;
+    }
+
+    .custom-range-inline {
+      display: flex;
+      gap: var(--space-2);
+      align-items: center;
+    }
+
+    .date-input-inline {
+      padding: var(--space-2) var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: white;
+      font-size: var(--text-sm);
     }
 
     .btn-secondary {
@@ -705,38 +882,6 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
       text-decoration: underline;
     }
 
-    /* Custom Range Section */
-    .custom-range-section {
-      background: white;
-      padding: var(--space-6);
-      border-radius: var(--radius-xl);
-      border: 1px solid var(--color-border);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .custom-range-section h2 {
-      margin-bottom: var(--space-6);
-      color: var(--color-text);
-      font-size: var(--text-xl);
-    }
-
-    .date-range-form {
-      display: flex;
-      gap: var(--space-4);
-      align-items: end;
-    }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-2);
-    }
-
-    .form-group label {
-      font-weight: 500;
-      color: var(--color-text);
-      font-size: var(--text-sm);
-    }
 
     .btn-primary {
       display: flex;
@@ -822,13 +967,307 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
         grid-template-columns: 1fr;
       }
 
-      .date-range-form {
+      .custom-range-inline {
         flex-direction: column;
         align-items: stretch;
+        gap: var(--space-2);
       }
 
-      .form-group {
+      .date-input-inline {
         width: 100%;
+      }
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: var(--space-4);
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      max-width: 800px;
+      width: 100%;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-6);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      color: var(--color-text);
+      font-size: var(--text-xl);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      color: var(--color-muted);
+      cursor: pointer;
+      padding: var(--space-2);
+      border-radius: var(--radius-md);
+      transition: all var(--transition);
+    }
+
+    .modal-close:hover {
+      background: var(--color-muted-100);
+      color: var(--color-text);
+    }
+
+    .modal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--space-6);
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--space-3);
+      padding: var(--space-6);
+      border-top: 1px solid var(--color-border);
+      background: var(--color-muted-50);
+    }
+
+    /* Report Section Styles */
+    .report-section {
+      margin-bottom: var(--space-6);
+    }
+
+    .report-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .report-section h3 {
+      margin: 0 0 var(--space-4) 0;
+      color: var(--color-text);
+      font-size: var(--text-lg);
+      font-weight: 600;
+      padding-bottom: var(--space-2);
+      border-bottom: 2px solid var(--color-primary-500);
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--space-4);
+    }
+
+    .summary-item {
+      background: var(--color-muted-50);
+      padding: var(--space-4);
+      border-radius: var(--radius-lg);
+      text-align: center;
+    }
+
+    .summary-label {
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+      margin-bottom: var(--space-2);
+    }
+
+    .summary-value {
+      font-size: var(--text-xl);
+      font-weight: 700;
+      color: var(--color-text);
+    }
+
+    .time-period {
+      background: var(--color-primary-50);
+      padding: var(--space-4);
+      border-radius: var(--radius-lg);
+      text-align: center;
+      font-size: var(--text-lg);
+      font-weight: 600;
+      color: var(--color-primary-700);
+    }
+
+    .status-list {
+      display: grid;
+      gap: var(--space-3);
+    }
+
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-3);
+      background: var(--color-muted-50);
+      border-radius: var(--radius-md);
+    }
+
+    .status-name {
+      font-weight: 500;
+      color: var(--color-text);
+    }
+
+    .status-count {
+      background: var(--color-primary-500);
+      color: white;
+      padding: var(--space-1) var(--space-3);
+      border-radius: var(--radius-full);
+      font-size: var(--text-sm);
+      font-weight: 600;
+    }
+
+    .daily-breakdown, .weekly-breakdown {
+      display: grid;
+      gap: var(--space-3);
+    }
+
+    .day-item, .week-item {
+      background: var(--color-muted-50);
+      padding: var(--space-4);
+      border-radius: var(--radius-lg);
+    }
+
+    .day-name {
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: var(--space-2);
+    }
+
+    .day-stats, .week-stats {
+      display: flex;
+      gap: var(--space-4);
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+    }
+
+    .week-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-2);
+    }
+
+    .week-number {
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .week-dates {
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+    }
+
+    .hourly-breakdown {
+      display: grid;
+      gap: var(--space-3);
+    }
+
+    .hour-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      background: var(--color-muted-50);
+      border-radius: var(--radius-md);
+    }
+
+    .hour-time {
+      min-width: 60px;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .hour-bar {
+      flex: 1;
+      height: 12px;
+      background: var(--color-muted-200);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+
+    .hour-bar-fill {
+      height: 100%;
+      background: var(--color-info-500);
+      border-radius: var(--radius-sm);
+    }
+
+    .hour-stats {
+      display: flex;
+      gap: var(--space-3);
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+    }
+
+    .customer-breakdown, .delivery-stats {
+      display: grid;
+      gap: var(--space-3);
+    }
+
+    .customer-item, .delivery-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-3);
+      background: var(--color-muted-50);
+      border-radius: var(--radius-md);
+    }
+
+    .customer-label, .delivery-label {
+      font-weight: 500;
+      color: var(--color-text);
+    }
+
+    .customer-count, .delivery-count {
+      background: var(--color-success-500);
+      color: white;
+      padding: var(--space-1) var(--space-3);
+      border-radius: var(--radius-full);
+      font-size: var(--text-sm);
+      font-weight: 600;
+    }
+
+    /* Responsive Modal */
+    @media (max-width: 768px) {
+      .modal-overlay {
+        padding: var(--space-2);
+      }
+
+      .modal-content {
+        max-height: 95vh;
+      }
+
+      .modal-header, .modal-body, .modal-footer {
+        padding: var(--space-4);
+      }
+
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .day-stats, .week-stats, .hour-stats {
+        flex-direction: column;
+        gap: var(--space-2);
+      }
+
+      .week-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-1);
       }
     }
   `]
@@ -926,6 +1365,8 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
   selectedRestaurantId: string | null = null;
   managedRestaurants: any[] = [];
   showPeakHoursByDay: boolean = false;
+  isReportModalOpen: boolean = false;
+  currentReport: { title: string; data: any } | null = null;
 
   get peakHours() {
     return this.currentStats?.peak_hours || [];
@@ -1169,28 +1610,274 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
   }
 
   generateDailyReport() {
-    console.log('Generating daily report...');
-    alert('Tagesbericht wird generiert (Mock-Funktionalität)');
+    if (!this.selectedRestaurantId) {
+      this.toastService.error('Fehler', 'Bitte wählen Sie ein Restaurant aus');
+      return;
+    }
+
+    this.loadingService.start('report-generation');
+    this.restaurantManagerService.generateDailyReport(this.selectedRestaurantId).subscribe({
+      next: (report) => {
+        this.loadingService.stop('report-generation');
+        if (report) {
+          this.showReportModal('Tagesbericht', report);
+        } else {
+          this.toastService.error('Fehler', 'Fehler beim Generieren des Tagesberichts');
+        }
+      },
+      error: (error) => {
+        this.loadingService.stop('report-generation');
+        console.error('Error generating daily report:', error);
+        this.toastService.error('Fehler', 'Fehler beim Generieren des Tagesberichts');
+      }
+    });
   }
 
   generateWeeklyReport() {
-    console.log('Generating weekly report...');
-    alert('Wochenbericht wird generiert (Mock-Funktionalität)');
+    if (!this.selectedRestaurantId) {
+      this.toastService.error('Fehler', 'Bitte wählen Sie ein Restaurant aus');
+      return;
+    }
+
+    this.loadingService.start('report-generation');
+    this.restaurantManagerService.generateWeeklyReport(this.selectedRestaurantId).subscribe({
+      next: (report) => {
+        this.loadingService.stop('report-generation');
+        if (report) {
+          this.showReportModal('Wochenbericht', report);
+        } else {
+          this.toastService.error('Fehler', 'Fehler beim Generieren des Wochenberichts');
+        }
+      },
+      error: (error) => {
+        this.loadingService.stop('report-generation');
+        console.error('Error generating weekly report:', error);
+        this.toastService.error('Fehler', 'Fehler beim Generieren des Wochenberichts');
+      }
+    });
   }
 
   generateMonthlyReport() {
-    console.log('Generating monthly report...');
-    alert('Monatsbericht wird generiert (Mock-Funktionalität)');
+    if (!this.selectedRestaurantId) {
+      this.toastService.error('Fehler', 'Bitte wählen Sie ein Restaurant aus');
+      return;
+    }
+
+    this.loadingService.start('report-generation');
+    this.restaurantManagerService.generateMonthlyReport(this.selectedRestaurantId).subscribe({
+      next: (report) => {
+        this.loadingService.stop('report-generation');
+        if (report) {
+          this.showReportModal('Monatsbericht', report);
+        } else {
+          this.toastService.error('Fehler', 'Fehler beim Generieren des Monatsberichts');
+        }
+      },
+      error: (error) => {
+        this.loadingService.stop('report-generation');
+        console.error('Error generating monthly report:', error);
+        this.toastService.error('Fehler', 'Fehler beim Generieren des Monatsberichts');
+      }
+    });
   }
 
   generateMenuReport() {
-    console.log('Generating menu report...');
-    alert('Menü-Bericht wird generiert (Mock-Funktionalität)');
+    if (!this.selectedRestaurantId) {
+      this.toastService.error('Fehler', 'Bitte wählen Sie ein Restaurant aus');
+      return;
+    }
+
+    this.loadingService.start('report-generation');
+    this.restaurantManagerService.generateMenuAnalysisReport(this.selectedRestaurantId, '30d').subscribe({
+      next: (report) => {
+        this.loadingService.stop('report-generation');
+        if (report) {
+          this.showReportModal('Menü-Analyse', report);
+        } else {
+          this.toastService.error('Fehler', 'Fehler beim Generieren der Menü-Analyse');
+        }
+      },
+      error: (error) => {
+        this.loadingService.stop('report-generation');
+        console.error('Error generating menu analysis report:', error);
+        this.toastService.error('Fehler', 'Fehler beim Generieren der Menü-Analyse');
+      }
+    });
+  }
+
+  private showReportModal(title: string, report: any) {
+    this.currentReport = {
+      title,
+      data: report
+    };
+    this.isReportModalOpen = true;
+  }
+
+  closeReportModal() {
+    this.isReportModalOpen = false;
+    this.currentReport = null;
+  }
+
+  exportReport() {
+    if (!this.currentReport) return;
+    
+    const reportData = {
+      title: this.currentReport.title,
+      generated_at: new Date().toISOString(),
+      data: this.currentReport.data
+    };
+    
+    this.downloadReportCSV(reportData);
+    this.toastService.success('Erfolg', 'Bericht wurde erfolgreich exportiert');
+  }
+
+  private downloadReportCSV(data: any) {
+    const csvContent = this.convertReportToCSV(data);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${data.title.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  }
+
+  private convertReportToCSV(data: any): string {
+    const report = data.data;
+    if (!report) return 'Keine Daten verfügbar';
+
+    const headers = ['Bericht', 'Generiert am'];
+    const values = [data.title, data.generated_at];
+
+    if (report.summary) {
+      headers.push('Bestellungen', 'Umsatz (€)', 'Ø Bestellwert (€)', 'Kunden');
+      values.push(
+        report.summary.total_orders || 0,
+        report.summary.total_revenue || 0,
+        report.summary.average_order_value || 0,
+        report.summary.total_customers || 0
+      );
+    }
+
+    if (report.date) {
+      headers.push('Datum');
+      values.push(report.date);
+    }
+    if (report.week_start && report.week_end) {
+      headers.push('Woche von', 'Woche bis');
+      values.push(report.week_start, report.week_end);
+    }
+    if (report.month && report.year) {
+      headers.push('Monat', 'Jahr');
+      values.push(report.month, report.year);
+    }
+    if (report.period) {
+      headers.push('Zeitraum');
+      values.push(report.period);
+    }
+
+    return [headers.join(','), values.join(',')].join('\n');
+  }
+
+  getStatusEntries(statusObj: Record<string, number>): Array<{ key: string; value: number }> {
+    return Object.entries(statusObj).map(([key, value]) => ({ key, value }));
+  }
+
+  getStatusLabel(status: string): string {
+    const statusLabels: Record<string, string> = {
+      'pending': 'Ausstehend',
+      'confirmed': 'Bestätigt',
+      'preparing': 'In Vorbereitung',
+      'ready': 'Bereit',
+      'picked_up': 'Abgeholt',
+      'delivered': 'Geliefert',
+      'cancelled': 'Storniert'
+    };
+    return statusLabels[status] || status;
+  }
+
+  getPeakHours(hours: Array<{ hour: number; orders: number; revenue: number }>): Array<{ hour: number; orders: number; revenue: number }> {
+    return hours.filter(hour => hour.orders > 0);
+  }
+
+  getHourPercentage(hourOrders: number, allHours: Array<{ hour: number; orders: number; revenue: number }>): number {
+    const maxOrders = Math.max(...allHours.map(h => h.orders));
+    return maxOrders > 0 ? (hourOrders / maxOrders) * 100 : 0;
   }
 
   loadCustomRange() {
-    console.log('Loading custom range:', this.startDate, this.endDate);
-    alert(`Daten für Zeitraum ${this.startDate} bis ${this.endDate} werden geladen (Mock-Funktionalität)`);
+    if (!this.selectedRestaurantId) {
+      this.toastService.error('Fehler', 'Bitte wählen Sie ein Restaurant aus');
+      return;
+    }
+
+    if (!this.startDate || !this.endDate) {
+      this.toastService.error('Fehler', 'Bitte wählen Sie Start- und Enddatum aus');
+      return;
+    }
+
+    // Validate date range
+    const start = new Date(this.startDate);
+    const end = new Date(this.endDate);
+    
+    if (start > end) {
+      this.toastService.error('Fehler', 'Das Startdatum muss vor dem Enddatum liegen');
+      return;
+    }
+
+    // Check if date range is not too large (max 1 year)
+    const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysDiff > 365) {
+      this.toastService.error('Fehler', 'Der Zeitraum darf maximal 365 Tage betragen');
+      return;
+    }
+
+    this.isLoading = true;
+    this.error = null;
+
+    this.restaurantManagerService.getRestaurantStatsForCustomRange(
+      this.selectedRestaurantId, 
+      this.startDate, 
+      this.endDate
+    ).subscribe({
+      next: (customStats) => {
+        this.isLoading = false;
+        
+        // Update current stats with custom range data
+        this.currentStats = {
+          total_orders_today: customStats.total_orders,
+          total_revenue_today: customStats.total_revenue,
+          total_orders_this_week: customStats.total_orders,
+          total_revenue_this_week: customStats.total_revenue,
+          total_orders_this_month: customStats.total_orders,
+          total_revenue_this_month: customStats.total_revenue,
+          average_order_value: customStats.average_order_value,
+          popular_items: customStats.popular_items,
+          peak_hours: customStats.peak_hours,
+          peak_hours_by_day: customStats.peak_hours_by_day
+        };
+
+        // Update charts with custom range data
+        this.updateChartsForCustomRange(customStats.daily_breakdown);
+        
+        // Update period label to show custom range
+        this.selectedPeriod = 'custom';
+        
+        this.toastService.success('Erfolg', `Analytics für Zeitraum ${this.startDate} bis ${this.endDate} geladen`);
+        console.log('Custom range analytics loaded:', customStats);
+      },
+      error: (error) => {
+        this.isLoading = false;
+        this.error = 'Fehler beim Laden der benutzerdefinierten Analytics-Daten.';
+        console.error('Error loading custom range analytics:', error);
+        this.toastService.error('Fehler', 'Fehler beim Laden der benutzerdefinierten Analytics-Daten');
+      }
+    });
   }
 
   getCurrentPeriodOrders(): number {
@@ -1227,9 +1914,54 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
         return 'diese Woche';
       case 'month':
         return 'dieser Monat';
+      case 'custom':
+        return `vom ${this.startDate} bis ${this.endDate}`;
       default:
         return 'heute';
     }
+  }
+
+  private updateChartsForCustomRange(dailyBreakdown: Array<{ date: string; orders: number; revenue: number }>) {
+    if (!dailyBreakdown || dailyBreakdown.length === 0) {
+      return;
+    }
+
+    // Update revenue chart
+    const revenueLabels = dailyBreakdown.map(item => {
+      const date = new Date(item.date);
+      return date.toLocaleDateString('de-DE', { month: 'short', day: 'numeric' });
+    });
+    const revenueData = dailyBreakdown.map(item => Math.round(item.revenue));
+
+    this.revenueChartData = {
+      labels: revenueLabels,
+      datasets: [{
+        data: revenueData,
+        label: 'Umsatz (€)',
+        fill: true,
+        tension: 0.4,
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)'
+      }]
+    };
+
+    // Update orders chart
+    const ordersLabels = dailyBreakdown.map(item => {
+      const date = new Date(item.date);
+      return date.toLocaleDateString('de-DE', { month: 'short', day: 'numeric' });
+    });
+    const ordersData = dailyBreakdown.map(item => item.orders);
+
+    this.ordersChartData = {
+      labels: ordersLabels,
+      datasets: [{
+        data: ordersData,
+        label: 'Bestellungen',
+        backgroundColor: '#10b981',
+        borderColor: '#059669',
+        borderWidth: 1
+      }]
+    };
   }
 
   exportData() {
@@ -1237,7 +1969,70 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    console.log('Exporting data...');
-    this.toastService.info('Info', 'Export-Funktionalität wird bald verfügbar sein');
+    this.loadingService.start('report-generation');
+    
+    // Generate a comprehensive report for export
+    const exportData = {
+      restaurant_id: this.selectedRestaurantId,
+      period: this.selectedPeriod,
+      generated_at: new Date().toISOString(),
+      stats: this.currentStats,
+      charts: {
+        revenue: this.revenueChartData,
+        orders: this.ordersChartData
+      }
+    };
+
+    // Create and download CSV file
+    this.downloadCSV(exportData);
+    
+    this.loadingService.stop('report-generation');
+    this.toastService.success('Erfolg', 'Daten wurden erfolgreich exportiert');
+  }
+
+  private downloadCSV(data: any) {
+    const csvContent = this.convertToCSV(data);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `restaurant-analytics-${this.selectedRestaurantId}-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  }
+
+  private convertToCSV(data: any): string {
+    const headers = [
+      'Restaurant ID',
+      'Zeitraum',
+      'Generiert am',
+      'Bestellungen heute',
+      'Umsatz heute',
+      'Bestellungen diese Woche',
+      'Umsatz diese Woche',
+      'Bestellungen dieser Monat',
+      'Umsatz dieser Monat',
+      'Ø Bestellwert'
+    ];
+
+    const values = [
+      data.restaurant_id || '',
+      data.period || '',
+      data.generated_at || '',
+      data.stats?.total_orders_today || 0,
+      data.stats?.total_revenue_today || 0,
+      data.stats?.total_orders_this_week || 0,
+      data.stats?.total_revenue_this_week || 0,
+      data.stats?.total_orders_this_month || 0,
+      data.stats?.total_revenue_this_month || 0,
+      data.stats?.average_order_value || 0
+    ];
+
+    return [headers.join(','), values.join(',')].join('\n');
   }
 }

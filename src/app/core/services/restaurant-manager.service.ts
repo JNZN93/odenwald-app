@@ -176,4 +176,73 @@ export class RestaurantManagerService {
       })
     );
   }
+
+  // Report Generation Methods
+  generateDailyReport(restaurantId: string, date?: string): Observable<any> {
+    const params = date ? `?date=${date}` : '';
+    return this.http.get<{ report: any }>(`${environment.apiUrl}/orders/restaurant/${restaurantId}/reports/daily${params}`).pipe(
+      map(response => response.report),
+      catchError(error => {
+        console.error('Error generating daily report:', error);
+        return of(null);
+      })
+    );
+  }
+
+  generateWeeklyReport(restaurantId: string, week?: string): Observable<any> {
+    const params = week ? `?week=${week}` : '';
+    return this.http.get<{ report: any }>(`${environment.apiUrl}/orders/restaurant/${restaurantId}/reports/weekly${params}`).pipe(
+      map(response => response.report),
+      catchError(error => {
+        console.error('Error generating weekly report:', error);
+        return of(null);
+      })
+    );
+  }
+
+  generateMonthlyReport(restaurantId: string, month?: string): Observable<any> {
+    const params = month ? `?month=${month}` : '';
+    return this.http.get<{ report: any }>(`${environment.apiUrl}/orders/restaurant/${restaurantId}/reports/monthly${params}`).pipe(
+      map(response => response.report),
+      catchError(error => {
+        console.error('Error generating monthly report:', error);
+        return of(null);
+      })
+    );
+  }
+
+  generateMenuAnalysisReport(restaurantId: string, period: string = '30d'): Observable<any> {
+    return this.http.get<{ report: any }>(`${environment.apiUrl}/orders/restaurant/${restaurantId}/reports/menu-analysis?period=${period}`).pipe(
+      map(response => response.report),
+      catchError(error => {
+        console.error('Error generating menu analysis report:', error);
+        return of(null);
+      })
+    );
+  }
+
+  // Get restaurant statistics for custom date range
+  getRestaurantStatsForCustomRange(restaurantId: string, startDate: string, endDate: string): Observable<any> {
+    const params = new URLSearchParams({
+      start_date: startDate,
+      end_date: endDate
+    });
+
+    return this.http.get<{ stats: any }>(`${environment.apiUrl}/orders/restaurant/${restaurantId}/stats/custom-range?${params}`).pipe(
+      map(response => response.stats),
+      catchError(error => {
+        console.error('Error fetching custom range stats:', error);
+        return of({
+          total_orders: 0,
+          total_revenue: 0,
+          average_order_value: 0,
+          popular_items: [],
+          peak_hours: [],
+          peak_hours_by_day: [],
+          orders_by_status: {},
+          daily_breakdown: []
+        });
+      })
+    );
+  }
 }
