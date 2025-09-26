@@ -36,7 +36,7 @@ interface QRCodeOptions {
           <p>Verwalten Sie die Tische in Ihrem Restaurant</p>
         </div>
         <div class="header-actions">
-          <button class="btn-secondary" routerLink="/restaurant-manager/tables/grid">
+          <button class="btn-secondary btn-grid" routerLink="/restaurant-manager/tables/grid">
             <i class="fa-solid fa-th-large"></i>
             Grid-Layout
           </button>
@@ -75,19 +75,20 @@ interface QRCodeOptions {
             </div>
 
             <div class="table-actions">
-              <button class="btn-secondary" (click)="editTable(table)" title="Bearbeiten">
+              <button class="btn-secondary btn-edit" (click)="editTable(table)" title="Bearbeiten">
                 <i class="fa-solid fa-edit"></i>
                 Bearbeiten
               </button>
               <button
-                class="btn-secondary"
+                class="btn-secondary btn-toggle"
+                [class.activate]="!table.is_active"
                 (click)="toggleTable(table)"
                 [title]="table.is_active ? 'Deaktivieren' : 'Aktivieren'"
               >
                 <i class="fa-solid" [class.fa-check-circle]="table.is_active" [class.fa-times-circle]="!table.is_active"></i>
                 {{ table.is_active ? 'Deaktivieren' : 'Aktivieren' }}
               </button>
-              <button class="btn-secondary" (click)="showQRCode(table)" title="QR-Code anzeigen">
+              <button class="btn-secondary btn-qr" (click)="showQRCode(table)" title="QR-Code anzeigen">
                 <i class="fa-solid fa-qrcode"></i>
                 QR-Code
               </button>
@@ -216,25 +217,39 @@ interface QRCodeOptions {
     .tables-container {
       max-width: 1200px;
       margin: 0 auto;
-      padding: var(--space-6);
+      padding: var(--space-4);
     }
 
     .header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: var(--space-6);
-      padding: var(--space-6);
+      margin-bottom: var(--space-4);
+      padding: var(--space-4);
       background: white;
-      border-radius: var(--radius-xl);
+      border-radius: var(--radius-lg);
       border: 1px solid var(--color-border);
       box-shadow: var(--shadow-sm);
     }
 
     .header-actions {
       display: flex;
-      gap: var(--space-3);
+      gap: var(--space-2);
       align-items: center;
+    }
+
+    .header-actions .btn-secondary,
+    .header-actions .btn-primary {
+      min-width: 140px;
+      justify-content: center;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      padding: var(--space-2) var(--space-3);
+    }
+
+    .header-actions .btn-secondary i,
+    .header-actions .btn-primary i {
+      font-size: var(--text-sm);
     }
 
     .header-content h1 {
@@ -260,25 +275,34 @@ interface QRCodeOptions {
     .btn-primary {
       display: flex;
       align-items: center;
-      gap: var(--space-2);
-      padding: var(--space-3) var(--space-4);
-      background: var(--color-primary-500);
+      gap: var(--space-1);
+      padding: var(--space-2) var(--space-3);
+      background: var(--gradient-primary);
       color: white;
       border: none;
       border-radius: var(--radius-lg);
-      font-weight: 500;
+      font-weight: 600;
+      font-size: var(--text-sm);
       cursor: pointer;
       transition: all var(--transition);
+      box-shadow: 0 4px 12px color-mix(in oklab, var(--color-primary-600) 25%, transparent);
     }
 
-    .btn-primary i,
-    .btn-secondary i {
+    /* Override for header buttons to ensure consistency */
+    .header-actions .btn-primary {
+      font-size: var(--text-sm) !important;
+      font-weight: 600 !important;
+      padding: var(--space-2) var(--space-3) !important;
+    }
+
+    .btn-primary i {
       font-size: var(--text-sm);
     }
 
     .btn-primary:hover:not(:disabled) {
-      background: var(--color-primary-600);
+      background: var(--color-primary-800);
       transform: translateY(-1px);
+      box-shadow: 0 6px 20px color-mix(in oklab, var(--color-primary-600) 35%, transparent);
     }
 
     .btn-primary:disabled {
@@ -289,22 +313,22 @@ interface QRCodeOptions {
 
     .tables-section {
       background: white;
-      border-radius: var(--radius-xl);
+      border-radius: var(--radius-lg);
       border: 1px solid var(--color-border);
       box-shadow: var(--shadow-sm);
-      padding: var(--space-6);
+      padding: var(--space-4);
     }
 
     .tables-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: var(--space-4);
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: var(--space-3);
     }
 
     .table-card {
       border: 1px solid var(--color-border);
       border-radius: var(--radius-lg);
-      padding: var(--space-4);
+      padding: var(--space-3);
       background: white;
       transition: all var(--transition);
     }
@@ -323,11 +347,11 @@ interface QRCodeOptions {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: var(--space-3);
+      margin-bottom: var(--space-2);
     }
 
     .table-header h3 {
-      font-size: var(--text-xl);
+      font-size: var(--text-lg);
       font-weight: 600;
       color: var(--color-text);
       margin: 0;
@@ -338,9 +362,11 @@ interface QRCodeOptions {
       align-items: center;
       gap: var(--space-1);
       padding: var(--space-1) var(--space-2);
-      border-radius: var(--radius-sm);
+      border-radius: var(--radius-full);
       font-size: var(--text-xs);
       font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .table-status i {
@@ -348,19 +374,26 @@ interface QRCodeOptions {
     }
 
     .table-status.active {
-      background: var(--color-success-50);
-      color: var(--color-success);
+      background: var(--color-primary-50);
+      color: var(--color-primary-700);
+      border: 1px solid var(--color-primary-200);
+    }
+
+    .table-status:not(.active) {
+      background: var(--color-danger-50);
+      color: var(--color-danger);
+      border: 1px solid var(--color-danger);
     }
 
     .table-info {
-      margin-bottom: var(--space-4);
+      margin-bottom: var(--space-3);
     }
 
     .info-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: var(--space-2) 0;
+      padding: var(--space-1) 0;
       border-bottom: 1px solid var(--color-gray-100);
     }
 
@@ -369,36 +402,121 @@ interface QRCodeOptions {
     }
 
     .info-item .label {
-      font-weight: 500;
+      font-weight: 600;
       color: var(--color-text);
+      font-size: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .info-item .value {
-      color: var(--color-muted);
+      color: var(--color-text);
+      font-weight: 500;
+      font-size: var(--text-sm);
     }
 
     .table-actions {
       display: flex;
-      gap: var(--space-2);
+      gap: var(--space-1);
       flex-wrap: wrap;
     }
 
     .btn-secondary {
       display: flex;
       align-items: center;
-      padding: var(--space-2) var(--space-3);
-      background: var(--color-gray-50);
+      gap: var(--space-1);
+      padding: var(--space-1) var(--space-2);
+      background: var(--color-surface);
       color: var(--color-text);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-md);
-      font-size: var(--text-sm);
+      font-size: var(--text-xs);
+      font-weight: 500;
       cursor: pointer;
       transition: all var(--transition);
+      white-space: nowrap;
     }
 
     .btn-secondary:hover {
-      background: var(--color-gray-100);
-      border-color: var(--color-gray-300);
+      background: var(--bg-light-green);
+      border-color: var(--color-primary-200);
+      color: var(--color-text);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .btn-secondary i {
+      font-size: var(--text-xs);
+    }
+
+    /* Logical button colors based on function */
+    .btn-edit {
+      background: var(--color-muted-100);
+      color: var(--color-muted-600);
+      border-color: var(--color-muted-200);
+    }
+
+    .btn-edit:hover {
+      background: var(--color-muted-200);
+      border-color: var(--color-muted-300);
+      color: var(--color-muted-700);
+    }
+
+    .btn-toggle {
+      background: var(--color-danger-50);
+      color: var(--color-danger);
+      border-color: var(--color-danger);
+    }
+
+    .btn-toggle:hover {
+      background: color-mix(in oklab, var(--color-danger) 10%, white);
+      border-color: var(--color-danger);
+      color: var(--color-danger-600);
+    }
+
+    /* Special styling for activate button (when table is inactive) */
+    .btn-toggle.activate {
+      background: var(--color-primary-50);
+      color: var(--color-primary-700);
+      border-color: var(--color-primary-200);
+    }
+
+    .btn-toggle.activate:hover {
+      background: var(--color-primary-100);
+      border-color: var(--color-primary-300);
+      color: var(--color-primary-800);
+    }
+
+    .btn-qr {
+      background: var(--color-primary-50);
+      color: var(--color-primary-700);
+      border-color: var(--color-primary-200);
+    }
+
+    .btn-qr:hover {
+      background: var(--color-primary-100);
+      border-color: var(--color-primary-300);
+      color: var(--color-primary-800);
+    }
+
+    /* Header Grid Button */
+    .btn-grid {
+      background: var(--color-primary-50);
+      color: var(--color-primary-700);
+      border-color: var(--color-primary-200);
+      font-size: var(--text-sm) !important;
+      font-weight: 600 !important;
+      padding: var(--space-2) var(--space-3) !important;
+    }
+
+    .btn-grid:hover {
+      background: var(--color-primary-100);
+      border-color: var(--color-primary-300);
+      color: var(--color-primary-800);
+    }
+
+    .btn-grid i {
+      font-size: var(--text-sm) !important;
     }
 
     .empty-state {
@@ -447,7 +565,7 @@ interface QRCodeOptions {
 
     .modal {
       background: white;
-      border-radius: var(--radius-xl);
+      border-radius: var(--radius-lg);
       box-shadow: var(--shadow-xl);
       width: 100%;
       max-width: 500px;
@@ -461,7 +579,7 @@ interface QRCodeOptions {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: var(--space-6);
+      padding: var(--space-4);
       border-bottom: 1px solid var(--color-border);
       background: var(--color-gray-50);
     }
@@ -490,7 +608,7 @@ interface QRCodeOptions {
     }
 
     .modal-body {
-      padding: var(--space-6);
+      padding: var(--space-4);
       flex: 1;
       overflow-y: auto;
     }
@@ -530,6 +648,18 @@ interface QRCodeOptions {
       gap: var(--space-3);
       padding-top: var(--space-4);
       border-top: 1px solid var(--color-border);
+    }
+
+    .form-actions .btn-secondary {
+      background: var(--color-surface);
+      color: var(--color-muted);
+      border-color: var(--color-border);
+    }
+
+    .form-actions .btn-secondary:hover {
+      background: var(--bg-light-green);
+      color: var(--color-text);
+      border-color: var(--color-primary-200);
     }
 
     /* QR Modal */
@@ -577,29 +707,56 @@ interface QRCodeOptions {
       justify-content: center;
     }
 
+    .qr-actions .btn-secondary {
+      background: var(--color-primary-50);
+      color: var(--color-primary-700);
+      border-color: var(--color-primary-200);
+    }
+
+    .qr-actions .btn-secondary:hover {
+      background: var(--color-primary-100);
+      color: var(--color-primary-800);
+      border-color: var(--color-primary-300);
+    }
+
     @media (max-width: 768px) {
       .tables-container {
-        padding: var(--space-4);
+        padding: var(--space-3);
       }
 
       .header {
         flex-direction: column;
-        gap: var(--space-4);
-        padding: var(--space-4);
+        gap: var(--space-3);
+        padding: var(--space-3);
       }
 
       .header-actions {
         width: 100%;
         justify-content: center;
         flex-wrap: wrap;
+        gap: var(--space-2);
+      }
+
+      .header-actions .btn-secondary,
+      .header-actions .btn-primary {
+        min-width: 120px;
+        flex: 1;
       }
 
       .tables-grid {
         grid-template-columns: 1fr;
+        gap: var(--space-2);
       }
 
       .table-actions {
-        flex-direction: column;
+        flex-direction: row;
+        justify-content: space-between;
+      }
+
+      .btn-secondary {
+        flex: 1;
+        justify-content: center;
+        min-width: 0;
       }
 
       .form-actions {
