@@ -24,7 +24,7 @@ interface GridCell {
       <!-- Header -->
       <div class="header">
         <div class="header-content">
-          <h1>Tisch-Grid Layout</h1>
+          <h1>Tisch-Plan</h1>
           <p>Klicken Sie auf Tische zum Verschieben oder Doppelklick für Bestellungen</p>
         </div>
         <div class="header-actions">
@@ -32,7 +32,7 @@ interface GridCell {
             ← Zurück zur Tischverwaltung
           </button>
           <button class="btn-primary" (click)="saveGridLayout()" [disabled]="isSaving || !hasChanges">
-            💾 Layout speichern
+            💾 Plan speichern
           </button>
         </div>
       </div>
@@ -980,7 +980,7 @@ export class RestaurantTableGridComponent implements OnInit {
 
       await Promise.all(updatePromises);
 
-      this.toastService.success('Erfolg', 'Grid-Layout wurde gespeichert');
+      this.toastService.success('Erfolg', 'Tisch-Plan wurde gespeichert');
       this.hasChanges = false;
 
       // Update original state
@@ -993,7 +993,7 @@ export class RestaurantTableGridComponent implements OnInit {
 
     } catch (error: any) {
       console.error('Error saving grid layout:', error);
-      this.toastService.error('Fehler', 'Grid-Layout konnte nicht gespeichert werden');
+      this.toastService.error('Fehler', 'Tisch-Plan konnte nicht gespeichert werden');
     } finally {
       this.isSaving = false;
       this.loadingService.stop('save-grid');

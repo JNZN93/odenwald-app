@@ -38,7 +38,7 @@ interface QRCodeOptions {
         <div class="header-actions">
           <button class="btn-secondary btn-grid" routerLink="/restaurant-manager/tables/grid">
             <i class="fa-solid fa-th-large"></i>
-            Grid-Layout
+            Tisch-Plan
           </button>
           <button class="btn-primary" (click)="openCreateModal()" [disabled]="isLoading">
             <i class="fa-solid fa-plus"></i>
