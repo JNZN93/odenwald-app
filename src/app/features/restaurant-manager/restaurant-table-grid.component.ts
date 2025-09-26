@@ -15,8 +15,6 @@ interface GridCell {
   table?: RestaurantTable;
 }
 
-type GridMode = 'repositioning' | 'normal';
-
 @Component({
   selector: 'app-restaurant-table-grid',
   standalone: true,
@@ -27,7 +25,7 @@ type GridMode = 'repositioning' | 'normal';
       <div class="header">
         <div class="header-content">
           <h1>🪑 Tisch-Grid Layout</h1>
-          <p>Verschieben Sie Ihre Tische im Grid-System</p>
+          <p>Klicken Sie auf Tische zum Verschieben oder Doppelklick für Bestellungen</p>
         </div>
         <div class="header-actions">
           <button class="btn-secondary" (click)="goBack()">
@@ -39,62 +37,35 @@ type GridMode = 'repositioning' | 'normal';
         </div>
       </div>
 
-      <!-- Mode Toggle -->
-      <div class="mode-toggle">
-        <div class="mode-buttons">
-          <button 
-            class="mode-btn" 
-            [class.active]="currentMode === 'repositioning'"
-            (click)="setMode('repositioning')"
-          >
-            🔄 Layout-Modus
-          </button>
-          <button 
-            class="mode-btn" 
-            [class.active]="currentMode === 'normal'"
-            (click)="setMode('normal')"
-          >
-            👁️ Normal-Modus
-          </button>
+      <!-- Smart Mode Instructions -->
+      <div class="instructions">
+        <div class="instruction-item">
+          <span class="instruction-icon">👆</span>
+          <span>Einfacher Klick: Tisch für Verschieben auswählen</span>
         </div>
-        <div class="mode-description">
-          <span *ngIf="currentMode === 'repositioning'">Wählen Sie einen Tisch aus der Liste und platzieren Sie ihn, oder klicken Sie auf einen platzierten Tisch zum Verschieben</span>
-          <span *ngIf="currentMode === 'normal'">Klicken Sie auf einen Tisch um die Bestellungen anzuzeigen</span>
+        <div class="instruction-item">
+          <span class="instruction-icon">👆👆</span>
+          <span>Doppelklick: Bestellungen anzeigen</span>
+        </div>
+        <div class="instruction-item">
+          <span class="instruction-icon">➕</span>
+          <span>Klick auf leere Zelle: Tisch platzieren</span>
         </div>
       </div>
 
       <div class="grid-layout">
         <!-- Table Selection Panel -->
         <div class="table-selection-panel">
-          <h3 *ngIf="currentMode === 'repositioning'">Verfügbare Tische</h3>
-          <h3 *ngIf="currentMode === 'normal'">Tisch-Übersicht</h3>
+          <h3>Verfügbare Tische</h3>
+          <p>Wählen Sie einen Tisch aus und klicken Sie auf eine leere Zelle zum Platzieren</p>
           
-          <p *ngIf="currentMode === 'repositioning'">Wählen Sie einen Tisch aus und klicken Sie auf eine Zelle zum Platzieren/Verschieben</p>
-          <p *ngIf="currentMode === 'normal'">Klicken Sie auf einen Tisch für Bestellungen</p>
-          
-          <div class="table-palette" *ngIf="currentMode === 'repositioning'">
+          <div class="table-palette">
             <!-- Available tables for placement -->
             <div
               *ngFor="let table of availableTables$ | async"
               class="selectable-table"
               (click)="selectTable(table)"
               [class.selected]="selectedTable?.id === table.id"
-            >
-              <div class="table-icon">
-                🪑
-              </div>
-              <div class="table-info">
-                <span class="table-number">{{ table.table_number }}</span>
-                <span class="table-capacity">{{ table.capacity }} Plätze</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="table-palette" *ngIf="currentMode === 'normal'">
-            <div
-              *ngFor="let table of placedTables"
-              class="selectable-table"
-              (click)="showTableOrders(table)"
             >
               <div class="table-icon">
                 🪑
@@ -132,16 +103,26 @@ type GridMode = 'repositioning' | 'normal';
 
               <div class="cell-content" *ngIf="cell.table">
                 <div class="placed-table" 
-                     [class.selected-for-repositioning]="selectedTable?.id === cell.table.id && currentMode === 'repositioning'"
-                     (click)="onTableClick(cell.table!)">
-                  <div class="table-icon">🪑</div>
-                  <div class="table-info">
-                    <span class="table-number">{{ cell.table.table_number }}</span>
-                    <span class="table-capacity">{{ cell.table.capacity }}</span>
+                     [class.selected]="selectedTable?.id === cell.table.id"
+                     (click)="onTableClick(cell.table!, $event)"
+                     (dblclick)="showTableOrders(cell.table!)">
+                  <div class="table-content">
+                    <div class="table-icon">🪑</div>
+                    <div class="table-info">
+                      <span class="table-number">{{ cell.table.table_number }}</span>
+                      <span class="table-capacity">{{ cell.table.capacity }}</span>
+                    </div>
                   </div>
-                  <button class="remove-btn" (click)="removeTableFromGrid(cell.table!)" *ngIf="currentMode !== 'normal'">
-                    ✕
-                  </button>
+                  
+                  <!-- Quick Actions (appear when selected) -->
+                  <div class="quick-actions" *ngIf="selectedTable?.id === cell.table.id">
+                    <button class="action-btn orders" (click)="showTableOrders(cell.table!)" title="Bestellungen anzeigen">
+                      <i class="fa-solid fa-receipt"></i>
+                    </button>
+                    <button class="action-btn remove" (click)="removeTableFromGrid(cell.table!)" title="Tisch entfernen">
+                      <i class="fa-solid fa-trash"></i>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -272,51 +253,33 @@ type GridMode = 'repositioning' | 'normal';
       border-color: var(--color-gray-300);
     }
 
-    .mode-toggle {
+    .instructions {
       background: white;
       border-radius: var(--radius-xl);
       border: 1px solid var(--color-border);
       box-shadow: var(--shadow-sm);
       padding: var(--space-4);
       margin-bottom: var(--space-6);
-    }
-
-    .mode-buttons {
       display: flex;
-      gap: var(--space-2);
-      margin-bottom: var(--space-3);
+      gap: var(--space-6);
+      justify-content: center;
+      flex-wrap: wrap;
     }
 
-    .mode-btn {
-      flex: 1;
-      padding: var(--space-3) var(--space-4);
-      border: 1px solid var(--color-border);
+    .instruction-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
       background: var(--color-gray-50);
       border-radius: var(--radius-lg);
-      cursor: pointer;
-      transition: all var(--transition);
-      font-weight: 500;
       font-size: var(--text-sm);
+      color: var(--color-text);
     }
 
-    .mode-btn:hover {
-      background: var(--color-gray-100);
-      border-color: var(--color-gray-300);
-    }
-
-    .mode-btn.active {
-      background: var(--color-primary-500);
-      color: white;
-      border-color: var(--color-primary-500);
-    }
-
-    .mode-description {
-      text-align: center;
-      color: var(--color-muted);
-      font-size: var(--text-sm);
-      padding: var(--space-2);
-      background: var(--color-gray-50);
-      border-radius: var(--radius-md);
+    .instruction-icon {
+      font-size: var(--text-lg);
+      flex-shrink: 0;
     }
 
     .grid-layout {
@@ -482,6 +445,7 @@ type GridMode = 'repositioning' | 'normal';
     }
 
     .placed-table {
+      position: relative;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -495,17 +459,69 @@ type GridMode = 'repositioning' | 'normal';
       width: 100%;
       height: 100%;
       box-sizing: border-box;
-      cursor: grab;
+      cursor: pointer;
+      transition: all var(--transition);
     }
 
-    .placed-table:active {
-      cursor: grabbing;
+    .placed-table:hover {
+      transform: scale(1.02);
+      box-shadow: var(--shadow-sm);
     }
 
-    .placed-table.selected-for-repositioning {
+    .placed-table.selected {
       background: var(--color-warning-500);
       transform: scale(1.05);
       box-shadow: 0 0 0 3px var(--color-warning-200);
+    }
+
+    .table-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-1);
+    }
+
+    .quick-actions {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      display: flex;
+      gap: var(--space-1);
+      background: white;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      padding: var(--space-1);
+    }
+
+    .action-btn {
+      width: 24px;
+      height: 24px;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--text-xs);
+      transition: all var(--transition);
+    }
+
+    .action-btn.orders {
+      background: var(--color-blue-500);
+      color: white;
+    }
+
+    .action-btn.orders:hover {
+      background: var(--color-blue-600);
+    }
+
+    .action-btn.remove {
+      background: var(--color-danger);
+      color: white;
+    }
+
+    .action-btn.remove:hover {
+      background: var(--color-danger-dark);
     }
 
     .placed-table .table-icon {
@@ -591,6 +607,15 @@ type GridMode = 'repositioning' | 'normal';
 
     /* Responsive */
     @media (max-width: 1024px) {
+      .instructions {
+        flex-direction: column;
+        gap: var(--space-3);
+      }
+
+      .instruction-item {
+        justify-content: center;
+      }
+
       .grid-layout {
         flex-direction: column;
       }
@@ -799,8 +824,7 @@ export class RestaurantTableGridComponent implements OnInit {
   selectedTable: RestaurantTable | null = null;
   originalGridState: Map<string, {row: number, col: number}> = new Map();
 
-  // Mode management
-  currentMode: GridMode = 'repositioning';
+  // Smart mode - no separate modes needed
 
   // Table orders modal
   showOrdersModal = false;
@@ -885,38 +909,19 @@ export class RestaurantTableGridComponent implements OnInit {
   }
 
   onCellClick(cell: GridCell) {
-    if (this.currentMode === 'normal') {
-      // In normal mode, clicking on a cell with a table shows orders
-      if (cell.table) {
-        this.showTableOrders(cell.table);
-      }
+    if (cell.table) {
+      // Clicking on a table - handled by onTableClick
       return;
     }
 
-    if (this.currentMode === 'repositioning') {
-      // If clicking on a table in repositioning mode, select it for moving
-      if (cell.table) {
-        if (this.selectedTable && this.selectedTable.id === cell.table.id) {
-          // Clicking on the same selected table - deselect it
-          this.selectedTable = null;
-        } else {
-          // Select this table for repositioning
-          this.selectedTable = cell.table;
-        }
-        // Force change detection to update visual state
-        this.gridCells = [...this.gridCells];
-        return;
-      }
-
-      // If clicking on empty cell
-      if (this.selectedTable) {
-        // Move the selected table to the new position
-        this.moveTableToPosition(this.selectedTable, cell.row, cell.col);
-        this.selectedTable = null;
-      } else {
-        // No table selected - show hint to select from sidebar or click on existing table
-        this.toastService.warning('Hinweis', 'Wählen Sie einen Tisch aus der Liste oder klicken Sie auf einen platzierten Tisch');
-      }
+    // Clicking on empty cell
+    if (this.selectedTable) {
+      // Move the selected table to the new position
+      this.moveTableToPosition(this.selectedTable, cell.row, cell.col);
+      this.selectedTable = null;
+    } else {
+      // No table selected - show hint
+      this.toastService.warning('Hinweis', 'Wählen Sie einen Tisch aus der Liste oder klicken Sie auf einen platzierten Tisch');
     }
 
     // Force change detection
@@ -1018,18 +1023,23 @@ export class RestaurantTableGridComponent implements OnInit {
     return this.gridCells.filter(cell => cell.table).length;
   }
 
-  // Mode management methods
-  setMode(mode: GridMode) {
-    this.currentMode = mode;
-    this.selectedTable = null; // Clear any selected table when switching modes
-  }
-
-
-  onTableClick(table: RestaurantTable) {
-    if (this.currentMode === 'normal') {
-      this.showTableOrders(table);
+  // Smart mode table interaction
+  onTableClick(table: RestaurantTable, event: MouseEvent) {
+    // Prevent double-click from triggering single click
+    if (event.detail === 2) {
+      return;
     }
-    // In other modes, the click is handled by onCellClick
+
+    if (this.selectedTable && this.selectedTable.id === table.id) {
+      // Clicking on the same selected table - deselect it
+      this.selectedTable = null;
+    } else {
+      // Select this table for repositioning
+      this.selectedTable = table;
+    }
+    
+    // Force change detection to update visual state
+    this.gridCells = [...this.gridCells];
   }
 
   moveTableToPosition(table: RestaurantTable, newRow: number, newCol: number) {
