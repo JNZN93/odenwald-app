@@ -168,7 +168,7 @@ export interface ManagerMenuItem {
       display: flex;
       gap: var(--space-2);
       overflow-x: auto;
-      overflow-y: hidden;
+      overflow-y: visible;
       padding-bottom: var(--space-2);
       scrollbar-width: thin;
       scrollbar-color: var(--color-border) transparent;
@@ -242,8 +242,8 @@ export interface ManagerMenuItem {
       font-size: var(--text-xs);
       font-weight: 600;
       position: absolute;
-      top: -8px;
-      right: -8px;
+      top: 2px;
+      right: 2px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -365,7 +365,7 @@ export interface ManagerMenuItem {
         justify-content: flex-start;
         gap: var(--space-3);
         overflow-x: auto;
-        overflow-y: hidden;
+        overflow-y: visible;
         padding-bottom: var(--space-2);
       }
 
