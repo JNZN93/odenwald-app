@@ -197,10 +197,6 @@ import { Subscription } from 'rxjs';
                 <i class="fa-solid fa-save" *ngIf="!isLoading"></i>
                 {{ isLoading ? 'Wird gespeichert...' : 'Speichern' }}
               </button>
-              <button type="button" class="btn-secondary" (click)="saveAddressSettings()" [disabled]="isLoading">
-                <i class="fa-solid fa-location-arrow" *ngIf="!isLoading"></i>
-                Adresse speichern
-              </button>
             </div>
           </form>
         </div>
@@ -1693,6 +1689,12 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
       contact_info: {
         phone: this.restaurant.phone,
         email: this.restaurant.email
+      },
+      address: {
+        street: this.restaurant.address_street,
+        postal_code: this.restaurant.address_postal_code,
+        city: this.restaurant.address_city,
+        country: this.restaurant.address_country
       }
     };
 
@@ -1711,31 +1713,6 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
     this.subscriptions.push(sub);
   }
 
-  saveAddressSettings() {
-    if (!this.currentRestaurant) return;
-
-    this.isLoading = true;
-    const address = {
-      street: this.restaurant.address_street,
-      postal_code: this.restaurant.address_postal_code,
-      city: this.restaurant.address_city,
-      country: this.restaurant.address_country
-    };
-
-    const sub = this.restaurantsService.updateRestaurantAddress(this.currentRestaurant.id, address).subscribe({
-      next: (updatedRestaurant) => {
-        this.currentRestaurant = updatedRestaurant;
-        this.toastService.success('Erfolg', 'Adresse wurde gespeichert');
-        this.isLoading = false;
-      },
-      error: (error) => {
-        console.error('Error saving address:', error);
-        this.toastService.error('Fehler', 'Adresse konnte nicht gespeichert werden');
-        this.isLoading = false;
-      }
-    });
-    this.subscriptions.push(sub);
-  }
 
   saveOperatingHours() {
     if (!this.currentRestaurant) return;
