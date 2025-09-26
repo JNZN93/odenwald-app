@@ -114,15 +114,14 @@ interface GridCell {
                     </div>
                   </div>
                   
-                  <!-- Quick Actions (appear when selected) -->
-                  <div class="quick-actions" *ngIf="selectedTable?.id === cell.table.id">
-                    <button class="action-btn orders" (click)="showTableOrders(cell.table!)" title="Bestellungen anzeigen">
-                      <i class="fa-solid fa-receipt"></i>
-                    </button>
-                    <button class="action-btn remove" (click)="removeTableFromGrid(cell.table!)" title="Tisch entfernen">
-                      <i class="fa-solid fa-trash"></i>
-                    </button>
-                  </div>
+                  <!-- Orders button (appears when selected) -->
+                  <button 
+                    class="action-btn orders" 
+                    *ngIf="selectedTable?.id === cell.table.id"
+                    (click)="showTableOrders(cell.table!)" 
+                    title="Bestellungen anzeigen">
+                    <i class="fa-solid fa-receipt"></i>
+                  </button>
                 </div>
               </div>
             </div>
@@ -481,38 +480,39 @@ interface GridCell {
       gap: var(--space-1);
     }
 
-    .quick-actions {
+
+    .action-btn {
       position: absolute;
       top: -8px;
       right: -8px;
-      display: flex;
-      gap: var(--space-1);
-      background: white;
+      width: 28px;
+      height: 28px;
+      border: 2px solid white;
       border-radius: var(--radius-md);
-      box-shadow: var(--shadow-sm);
-      padding: var(--space-1);
-    }
-
-    .action-btn {
-      width: 24px;
-      height: 24px;
-      border: none;
-      border-radius: var(--radius-sm);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: var(--text-xs);
+      font-size: var(--text-sm);
       transition: all var(--transition);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(4px);
     }
 
     .action-btn.orders {
-      background: var(--color-blue-500);
+      background: var(--color-blue-600);
       color: white;
+      border-color: var(--color-blue-700);
     }
 
     .action-btn.orders:hover {
-      background: var(--color-blue-600);
+      background: var(--color-blue-700);
+      border-color: var(--color-blue-800);
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(6px);
     }
 
     .action-btn.remove {
