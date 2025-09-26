@@ -12,6 +12,7 @@ export interface OrderItem {
   total_price: number;
   price_cents?: number;
   image_url?: string;
+  special_instructions?: string;
   selected_variant_options?: Array<{
     id: string;
     name: string;
@@ -105,6 +106,7 @@ export class OrdersService {
     unit_price: Number(item.unit_price) || 0,
     total_price: Number(item.total_price) || 0,
     image_url: item.image_url,
+    special_instructions: item.special_instructions,
     selected_variant_options: item.selected_variant_options
   });
 

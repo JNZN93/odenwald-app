@@ -310,6 +310,17 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                     </div>
                     <span class="item-price">€{{ item.total_price.toFixed(2) }}</span>
                   </div>
+                  
+                  <!-- Item Special Instructions (Mobile) -->
+                  <div class="item-special-instructions-mobile" *ngIf="item.special_instructions">
+                    <div class="special-instructions-header-mobile">
+                      <i class="fa-solid fa-sticky-note"></i>
+                      <span class="special-instructions-label-mobile">Spezielle Anweisungen:</span>
+                    </div>
+                    <div class="special-instructions-content-mobile">
+                      {{ item.special_instructions }}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -486,6 +497,17 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                       </div>
                     </div>
                     <span class="item-price">€{{ item.total_price.toFixed(2) }}</span>
+                  </div>
+                  
+                  <!-- Item Special Instructions -->
+                  <div class="item-special-instructions" *ngIf="item.special_instructions">
+                    <div class="special-instructions-header">
+                      <i class="fa-solid fa-sticky-note"></i>
+                      <span class="special-instructions-label">Spezielle Anweisungen:</span>
+                    </div>
+                    <div class="special-instructions-content">
+                      {{ item.special_instructions }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1578,6 +1600,78 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       font-weight: 600;
       color: var(--color-primary-600);
       font-size: var(--text-lg);
+    }
+
+    /* Item Special Instructions Styles */
+    .item-special-instructions {
+      margin-top: var(--space-3);
+      padding: var(--space-3);
+      background: linear-gradient(135deg, #fff3cd 0%, #fef3c7 100%);
+      border: 1px solid #fbbf24;
+      border-radius: var(--radius-md);
+      border-left: 4px solid #f59e0b;
+    }
+
+    .special-instructions-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin-bottom: var(--space-2);
+    }
+
+    .special-instructions-header i {
+      color: #f59e0b;
+      font-size: var(--text-sm);
+    }
+
+    .special-instructions-label {
+      font-weight: 600;
+      color: #92400e;
+      font-size: var(--text-sm);
+    }
+
+    .special-instructions-content {
+      color: #92400e;
+      font-size: var(--text-sm);
+      line-height: 1.4;
+      font-style: italic;
+      padding-left: var(--space-6);
+    }
+
+    /* Mobile Item Special Instructions Styles */
+    .item-special-instructions-mobile {
+      margin-top: var(--space-2);
+      padding: var(--space-2);
+      background: linear-gradient(135deg, #fff3cd 0%, #fef3c7 100%);
+      border: 1px solid #fbbf24;
+      border-radius: var(--radius-sm);
+      border-left: 3px solid #f59e0b;
+    }
+
+    .special-instructions-header-mobile {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      margin-bottom: var(--space-1);
+    }
+
+    .special-instructions-header-mobile i {
+      color: #f59e0b;
+      font-size: var(--text-xs);
+    }
+
+    .special-instructions-label-mobile {
+      font-weight: 600;
+      color: #92400e;
+      font-size: var(--text-xs);
+    }
+
+    .special-instructions-content-mobile {
+      color: #92400e;
+      font-size: var(--text-xs);
+      line-height: 1.3;
+      font-style: italic;
+      padding-left: var(--space-4);
     }
 
     /* Total Section */

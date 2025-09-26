@@ -1952,6 +1952,9 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
       } else {
         // Load payment methods for the restaurant
         this.loadRestaurantPaymentMethods(cart.restaurant_id);
+        
+        // Load existing item notes from cart
+        this.loadItemNotesFromCart(cart);
       }
     });
 
@@ -2464,11 +2467,8 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
   }
 
   saveItemNotes(menuItemId: string): void {
-    if (this.itemNotes[menuItemId]?.trim()) {
-      // Hier könntest du die Notiz an den Cart Service senden
-      // this.cartService.updateItemNotes(menuItemId, this.itemNotes[menuItemId]);
-      console.log('Notiz gespeichert für Item:', menuItemId, this.itemNotes[menuItemId]);
-    }
+    // Speichere die Notiz im Cart Service
+    this.cartService.updateItemNotes(menuItemId, this.itemNotes[menuItemId] || '');
     this.openNotesItems[menuItemId] = false;
     delete this.tempNotes[menuItemId];
   }
@@ -2478,5 +2478,16 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
     this.itemNotes[menuItemId] = this.tempNotes[menuItemId] || '';
     this.openNotesItems[menuItemId] = false;
     delete this.tempNotes[menuItemId];
+  }
+
+  /**
+   * Lade bestehende Item-Notizen aus dem Cart
+   */
+  private loadItemNotesFromCart(cart: Cart): void {
+    cart.items.forEach(item => {
+      if (item.special_instructions) {
+        this.itemNotes[item.menu_item_id] = item.special_instructions;
+      }
+    });
   }
 }

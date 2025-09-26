@@ -18,6 +18,7 @@ export interface CartItem {
     name: string;
     price_modifier_cents: number;
   }>;
+  special_instructions?: string; // Notes for this specific item
 }
 
 export interface Cart {
@@ -210,6 +211,34 @@ export class CartService {
     );
   }
 
+  updateItemNotes(menuItemId: string, notes: string): void {
+    const currentCart = this.getCurrentCart();
+    if (!currentCart) return;
+
+    const item = currentCart.items.find(item => item.menu_item_id === menuItemId);
+    if (!item) return;
+
+    // Update the item's special instructions
+    item.special_instructions = notes?.trim() || undefined;
+
+    this.cartSubject.next(currentCart);
+    this.saveCartToStorage(currentCart);
+
+    if (notes?.trim()) {
+      this.toastService.success(
+        'Notiz gespeichert',
+        `Notiz für "${item.name}" wurde gespeichert`,
+        2000
+      );
+    } else {
+      this.toastService.info(
+        'Notiz entfernt',
+        `Notiz für "${item.name}" wurde entfernt`,
+        2000
+      );
+    }
+  }
+
   clearCart(): void {
     this.cartSubject.next(null);
     this.saveCartToStorage(null);
@@ -260,7 +289,8 @@ export class CartService {
         menu_item_id: item.menu_item_id,
         quantity: item.quantity,
         unit_price: item.unit_price,
-        selected_variant_option_ids: item.selected_variant_option_ids
+        selected_variant_option_ids: item.selected_variant_option_ids,
+        special_instructions: item.special_instructions
       }))
     };
 
