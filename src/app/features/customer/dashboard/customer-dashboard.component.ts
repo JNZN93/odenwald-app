@@ -361,44 +361,69 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
     }
 
     .dashboard-header {
-      text-align: center;
-      margin-bottom: var(--space-8);
-      padding-bottom: var(--space-6);
-      border-bottom: 1px solid var(--color-border);
+      background: linear-gradient(135deg, var(--color-primary-50), var(--color-primary-25));
+      border: 1px solid var(--color-primary-200);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      margin-bottom: var(--space-4);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dashboard-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--gradient-primary);
     }
 
     .dashboard-header h1 {
-      font-size: var(--text-3xl);
-      font-weight: 700;
-      color: var(--color-heading);
-      margin-bottom: var(--space-2);
+      font-size: var(--text-lg);
+      font-weight: 600;
+      color: var(--color-primary-700);
+      margin-bottom: var(--space-1);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .dashboard-header h1::before {
+      content: '👋';
+      font-size: var(--text-base);
     }
 
     .dashboard-header p {
-      color: var(--color-muted);
-      font-size: var(--text-lg);
+      color: var(--color-primary-600);
+      font-size: var(--text-sm);
+      margin: 0;
+      font-weight: 500;
     }
 
     .dashboard-content {
       display: flex;
       flex-direction: column;
-      gap: var(--space-8);
+      gap: var(--space-4);
     }
 
     .quick-actions {
       display: flex;
-      gap: var(--space-4);
+      gap: var(--space-2);
       flex-wrap: wrap;
       justify-content: center;
+      margin-bottom: var(--space-1);
     }
 
     .action-btn {
       display: flex;
       align-items: center;
-      gap: var(--space-2);
-      padding: var(--space-4) var(--space-6);
-      border-radius: var(--radius-lg);
+      gap: var(--space-1);
+      padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-md);
       font-weight: 600;
+      font-size: var(--text-xs);
       cursor: pointer;
       transition: all var(--transition);
       border: none;
@@ -429,23 +454,23 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
     .dashboard-section {
       background: var(--color-surface);
       border: 1px solid var(--color-border);
-      border-radius: var(--radius-2xl);
-      padding: var(--space-6);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
     }
 
     .section-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: var(--space-6);
-      padding-bottom: var(--space-4);
+      margin-bottom: var(--space-3);
+      padding-bottom: var(--space-2);
       border-bottom: 1px solid var(--color-border);
     }
 
     .section-header h2 {
-      font-size: var(--text-2xl);
+      font-size: var(--text-lg);
       font-weight: 600;
-      color: var(--color-heading);
+      color: var(--color-primary-700);
       margin: 0;
     }
 
