@@ -7,6 +7,7 @@ import { AccountSettingsService, UserProfile, CustomerSettings, PasswordChangeRe
 import { AuthService } from '../../../core/auth/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { PasswordChangeComponent } from '../../../shared/components/password-change.component';
+import { UserDataService, DeliveryAddress } from '../../../core/services/user-data.service';
 
 @Component({
   selector: 'app-account-settings',
@@ -117,19 +118,29 @@ import { PasswordChangeComponent } from '../../../shared/components/password-cha
           <p class="section-description">Verwalten Sie Ihre gespeicherten Lieferadressen für schnelle Bestellungen.</p>
           
           <div class="addresses-list" *ngIf="savedAddresses.length > 0">
-            <div class="address-card" *ngFor="let address of savedAddresses; let i = index">
+            <div class="address-card" *ngFor="let address of savedAddresses; let i = index" [class.default-address]="address.is_default">
               <div class="address-info">
-                <h4>{{ address.name || 'Adresse ' + (i + 1) }}</h4>
-                <p>{{ address.street }}</p>
-                <p>{{ address.postalCode }} {{ address.city }}</p>
-                <p *ngIf="address.instructions" class="instructions">{{ address.instructions }}</p>
+                <div class="address-header">
+                  <h4>{{ address.name || 'Adresse ' + (i + 1) }}</h4>
+                  <span class="default-badge" *ngIf="address.is_default">Standard</span>
+                </div>
+                <p class="address-street">{{ address.street }}</p>
+                <p class="address-location">{{ address.postal_code }} {{ address.city }}</p>
+                <p class="address-date" *ngIf="address.created_at">
+                  <i class="fa-solid fa-calendar"></i>
+                  Hinzugefügt: {{ address.created_at | date:'dd.MM.yyyy' }}
+                </p>
               </div>
               <div class="address-actions">
-                <button class="btn-ghost" (click)="editAddress(address, i)">
+                <button class="btn-ghost" (click)="setAsDefault(address)" *ngIf="!address.is_default" title="Als Standard setzen">
+                  <i class="fa-solid fa-star"></i>
+                  Standard
+                </button>
+                <button class="btn-ghost" (click)="editAddress(address)">
                   <i class="fa-solid fa-edit"></i>
                   Bearbeiten
                 </button>
-                <button class="btn-danger" (click)="deleteAddress(i)">
+                <button class="btn-danger" (click)="deleteAddress(address)" [disabled]="address.is_default && savedAddresses.length === 1">
                   <i class="fa-solid fa-trash"></i>
                   Löschen
                 </button>
@@ -141,6 +152,7 @@ import { PasswordChangeComponent } from '../../../shared/components/password-cha
             <i class="fa-solid fa-map-marker-alt"></i>
             <h3>Keine gespeicherten Adressen</h3>
             <p>Fügen Sie Ihre erste Lieferadresse hinzu, um schneller bestellen zu können.</p>
+            <p class="address-hint">Adressen werden automatisch gespeichert, wenn Sie eine Bestellung aufgeben.</p>
           </div>
 
           <button class="btn-primary" (click)="addNewAddress()">
@@ -290,6 +302,92 @@ import { PasswordChangeComponent } from '../../../shared/components/password-cha
         <div *ngIf="activeTab === 'password'" class="settings-section">
           <h2>Passwort ändern</h2>
           <app-password-change (passwordChanged)="onPasswordChanged()"></app-password-change>
+        </div>
+      </div>
+
+      <!-- Address Modal -->
+      <div *ngIf="showAddressModal" class="modal-overlay" (click)="closeAddressModal()">
+        <div class="modal-content address-modal" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>{{ editingAddress ? 'Adresse bearbeiten' : 'Neue Adresse hinzufügen' }}</h3>
+            <button class="close-btn" (click)="closeAddressModal()">
+              <i class="fa-solid fa-times"></i>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form (ngSubmit)="saveAddress()" #addressForm="ngForm">
+              <div class="form-group">
+                <label for="addressName">Name der Adresse (optional)</label>
+                <input 
+                  id="addressName" 
+                  type="text" 
+                  [(ngModel)]="currentAddress.name" 
+                  name="name"
+                  placeholder="z.B. Zuhause, Arbeit, etc."
+                >
+              </div>
+
+              <div class="form-group">
+                <label for="addressStreet">Straße und Hausnummer *</label>
+                <input 
+                  id="addressStreet" 
+                  type="text" 
+                  [(ngModel)]="currentAddress.street" 
+                  name="street"
+                  placeholder="Musterstraße 123"
+                  required
+                >
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="addressCity">Stadt *</label>
+                  <input 
+                    id="addressCity" 
+                    type="text" 
+                    [(ngModel)]="currentAddress.city" 
+                    name="city"
+                    placeholder="Musterstadt"
+                    required
+                  >
+                </div>
+
+                <div class="form-group">
+                  <label for="addressPostalCode">PLZ *</label>
+                  <input 
+                    id="addressPostalCode" 
+                    type="text" 
+                    [(ngModel)]="currentAddress.postal_code" 
+                    name="postal_code"
+                    placeholder="12345"
+                    required
+                  >
+                </div>
+              </div>
+
+
+              <div class="form-group" *ngIf="!editingAddress">
+                <label class="checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    [(ngModel)]="setAsDefaultAddress" 
+                    name="setAsDefault"
+                  >
+                  <span class="checkmark"></span>
+                  Als Standard-Adresse setzen
+                </label>
+              </div>
+
+              <div class="modal-actions">
+                <button type="button" class="btn-secondary" (click)="closeAddressModal()">Abbrechen</button>
+                <button type="submit" class="btn-primary" [disabled]="!addressForm.valid || isSaving">
+                  <i class="fa-solid fa-spinner fa-spin" *ngIf="isSaving"></i>
+                  <i class="fa-solid fa-save" *ngIf="!isSaving"></i>
+                  {{ isSaving ? 'Wird gespeichert...' : 'Speichern' }}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </div>
@@ -575,10 +673,6 @@ import { PasswordChangeComponent } from '../../../shared/components/password-cha
       font-size: var(--text-sm);
     }
 
-    .instructions {
-      font-style: italic;
-      color: var(--color-primary);
-    }
 
     .default-badge {
       background: var(--color-primary);
@@ -736,6 +830,134 @@ import { PasswordChangeComponent } from '../../../shared/components/password-cha
       font-size: var(--text-lg);
     }
 
+    /* Address Management Styles */
+    .address-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-2);
+    }
+
+    .address-header h4 {
+      margin: 0;
+      color: var(--color-text);
+      font-size: var(--text-lg);
+    }
+
+    .address-street {
+      font-weight: 600;
+      color: var(--color-heading);
+      margin: 0 0 var(--space-1) 0;
+    }
+
+    .address-location {
+      color: var(--color-muted);
+      margin: 0 0 var(--space-2) 0;
+    }
+
+    .address-date {
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+      margin: var(--space-2) 0 0 0;
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+    }
+
+    .address-date i {
+      font-size: var(--text-xs);
+    }
+
+    .address-hint {
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+      font-style: italic;
+      margin-top: var(--space-2);
+    }
+
+    .default-address {
+      border: 2px solid var(--color-primary);
+      background: color-mix(in oklab, var(--color-primary) 5%, white);
+    }
+
+    .default-address .address-header h4::after {
+      content: ' ⭐';
+      color: var(--color-warning);
+    }
+
+    /* Address Modal Styles */
+    .address-modal .modal-content {
+      max-width: 600px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-4);
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      cursor: pointer;
+      font-weight: 500;
+      color: var(--color-text);
+    }
+
+    .checkbox-label input[type="checkbox"] {
+      display: none;
+    }
+
+    .checkmark {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition);
+      background: white;
+    }
+
+    .checkbox-label input[type="checkbox"]:checked + .checkmark {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+    }
+
+    .checkbox-label input[type="checkbox"]:checked + .checkmark::after {
+      content: '✓';
+      color: white;
+      font-size: var(--text-sm);
+      font-weight: bold;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--space-3);
+      padding-top: var(--space-6);
+      border-top: 1px solid var(--color-border);
+      margin-top: var(--space-6);
+    }
+
+    .btn-secondary {
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      color: var(--color-text);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      font-weight: 500;
+      transition: all var(--transition);
+    }
+
+    .btn-secondary:hover {
+      background: var(--color-surface);
+      border-color: var(--color-primary-300);
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
       .account-settings-container {
@@ -765,6 +987,10 @@ import { PasswordChangeComponent } from '../../../shared/components/password-cha
         grid-template-columns: 1fr;
       }
 
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
       .setting-item {
         flex-direction: column;
         align-items: flex-start;
@@ -782,6 +1008,23 @@ import { PasswordChangeComponent } from '../../../shared/components/password-cha
         width: 100%;
         justify-content: flex-end;
       }
+
+      .address-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-2);
+      }
+
+      .modal-actions {
+        flex-direction: column;
+        gap: var(--space-2);
+      }
+
+      .btn-secondary,
+      .btn-primary {
+        width: 100%;
+        justify-content: center;
+      }
     }
   `]
 })
@@ -789,6 +1032,7 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
   private accountSettingsService = inject(AccountSettingsService);
   private authService = inject(AuthService);
   private toastService = inject(ToastService);
+  private userDataService = inject(UserDataService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private subscriptions: Subscription[] = [];
@@ -819,8 +1063,20 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
     marketing_emails: false
   };
 
-  savedAddresses: any[] = [];
+  savedAddresses: DeliveryAddress[] = [];
   savedPaymentMethods: any[] = [];
+
+  // Address modal properties
+  showAddressModal: boolean = false;
+  editingAddress: DeliveryAddress | null = null;
+  currentAddress: DeliveryAddress = {
+    street: '',
+    city: '',
+    postal_code: '',
+    name: '',
+    instructions: ''
+  };
+  setAsDefaultAddress: boolean = false;
 
   settingsTabs = [
     { id: 'personal', title: 'Persönliche Daten', icon: 'fa-solid fa-user' },
@@ -847,6 +1103,7 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
     );
     
     this.loadData();
+    this.loadSavedAddresses();
   }
 
   switchTab(tabId: string) {
@@ -944,19 +1201,107 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
   }
 
   // Address Management Methods
-  addNewAddress() {
-    // TODO: Implement address management modal
-    this.toastService.show('info', 'Adressverwaltung wird in Kürze verfügbar sein', 'Diese Funktion wird bald implementiert.');
+  loadSavedAddresses(): void {
+    this.savedAddresses = this.userDataService.getDeliveryAddresses();
   }
 
-  editAddress(address: any, index: number) {
-    // TODO: Implement address editing modal
-    this.toastService.show('info', 'Adressbearbeitung wird in Kürze verfügbar sein', 'Diese Funktion wird bald implementiert.');
+  addNewAddress(): void {
+    this.editingAddress = null;
+    this.currentAddress = {
+      street: '',
+      city: '',
+      postal_code: '',
+      name: '',
+    };
+    this.setAsDefaultAddress = false;
+    this.showAddressModal = true;
   }
 
-  deleteAddress(index: number) {
-    // TODO: Implement address deletion
-    this.toastService.show('info', 'Adresslöschung wird in Kürze verfügbar sein', 'Diese Funktion wird bald implementiert.');
+  editAddress(address: DeliveryAddress): void {
+    this.editingAddress = address;
+    this.currentAddress = { ...address };
+    this.setAsDefaultAddress = false;
+    this.showAddressModal = true;
+  }
+
+  deleteAddress(address: DeliveryAddress): void {
+    if (address.is_default && this.savedAddresses.length === 1) {
+      this.toastService.show('error', 'Standard-Adresse kann nicht gelöscht werden', 'Es muss mindestens eine Adresse vorhanden sein.');
+      return;
+    }
+
+    if (confirm(`Möchten Sie die Adresse "${address.name || address.street}" wirklich löschen?`)) {
+      this.userDataService.deleteDeliveryAddress(address.id!);
+      this.loadSavedAddresses();
+      this.toastService.show('success', 'Adresse gelöscht', 'Die Adresse wurde erfolgreich entfernt.');
+    }
+  }
+
+  setAsDefault(address: DeliveryAddress): void {
+    this.userDataService.setDefaultAddress(address.id!);
+    this.loadSavedAddresses();
+    this.toastService.show('success', 'Standard-Adresse gesetzt', `"${address.name || address.street}" ist jetzt Ihre Standard-Adresse.`);
+  }
+
+  closeAddressModal(): void {
+    this.showAddressModal = false;
+    this.editingAddress = null;
+    this.currentAddress = {
+      street: '',
+      city: '',
+      postal_code: '',
+      name: '',
+    };
+    this.setAsDefaultAddress = false;
+  }
+
+  saveAddress(): void {
+    if (!this.currentAddress.street.trim() || !this.currentAddress.city.trim() || !this.currentAddress.postal_code.trim()) {
+      this.toastService.show('error', 'Pflichtfelder ausfüllen', 'Bitte füllen Sie alle Pflichtfelder aus.');
+      return;
+    }
+
+    this.isSaving = true;
+
+    try {
+      if (this.editingAddress) {
+        // Update existing address
+        this.userDataService.updateDeliveryAddress(this.editingAddress.id!, {
+          ...this.currentAddress,
+          street: this.currentAddress.street.trim(),
+          city: this.currentAddress.city.trim(),
+          postal_code: this.currentAddress.postal_code.trim(),
+          name: this.currentAddress.name?.trim() || undefined,
+        });
+        this.toastService.show('success', 'Adresse aktualisiert', 'Die Adresse wurde erfolgreich bearbeitet.');
+      } else {
+        // Add new address
+        const newAddress: DeliveryAddress = {
+          ...this.currentAddress,
+          street: this.currentAddress.street.trim(),
+          city: this.currentAddress.city.trim(),
+          postal_code: this.currentAddress.postal_code.trim(),
+          name: this.currentAddress.name?.trim() || undefined,
+          is_default: this.setAsDefaultAddress
+        };
+
+        this.userDataService.addDeliveryAddress(newAddress);
+
+        if (this.setAsDefaultAddress) {
+          this.userDataService.setDefaultAddress(newAddress.id!);
+        }
+
+        this.toastService.show('success', 'Adresse hinzugefügt', 'Die neue Adresse wurde erfolgreich gespeichert.');
+      }
+
+      this.loadSavedAddresses();
+      this.closeAddressModal();
+    } catch (error) {
+      console.error('Error saving address:', error);
+      this.toastService.show('error', 'Fehler beim Speichern', 'Die Adresse konnte nicht gespeichert werden.');
+    } finally {
+      this.isSaving = false;
+    }
   }
 
   // Payment Methods Management

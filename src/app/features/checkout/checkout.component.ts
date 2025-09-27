@@ -15,9 +15,14 @@ import { MenuItemVariantsModalComponent } from '../restaurants/menu-item-variant
 import { Observable, map } from 'rxjs';
 
 interface DeliveryAddress {
+  id?: string;
+  name?: string;
   street: string;
   city: string;
   postal_code: string;
+  instructions?: string;
+  is_default?: boolean;
+  created_at?: string;
 }
 
 interface CustomerInfo {
@@ -211,7 +216,66 @@ interface MenuItemVariantOption {
           <div class="delivery-section">
             <h2>Lieferadresse</h2>
 
-            <div class="address-form">
+            <!-- Saved Addresses Selection -->
+            <div class="saved-addresses" *ngIf="savedAddresses.length > 0">
+              <h3>Gespeicherte Adressen</h3>
+              <div class="address-selection">
+                <div class="address-option" *ngFor="let address of savedAddresses" 
+                     [class.selected]="selectedAddressId === address.id"
+                     (click)="selectSavedAddress(address)">
+                  <div class="address-radio">
+                    <input type="radio" 
+                           [id]="'address_' + address.id"
+                           [value]="address.id" 
+                           [(ngModel)]="selectedAddressId"
+                           name="addressSelection">
+                    <label [for]="'address_' + address.id"></label>
+                  </div>
+                  <div class="address-info">
+                    <div class="address-name">
+                      <strong>{{ address.name || 'Adresse' }}</strong>
+                      <span class="default-badge" *ngIf="address.is_default">Standard</span>
+                    </div>
+                    <div class="address-details">
+                      {{ address.street }}, {{ address.postal_code }} {{ address.city }}
+                    </div>
+                    <div class="address-instructions" *ngIf="address.instructions">
+                      {{ address.instructions }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="address-selection-actions">
+                <button type="button" class="btn-ghost" (click)="useNewAddress()">
+                  <i class="fa-solid fa-plus"></i>
+                  Neue Adresse eingeben
+                </button>
+                <button type="button" class="btn-ghost" (click)="manageAddresses()">
+                  <i class="fa-solid fa-cog"></i>
+                  Adressen verwalten
+                </button>
+              </div>
+            </div>
+
+            <!-- Manual Address Entry -->
+            <div class="address-form" [class.hidden]="selectedAddressId && !showManualEntry">
+              <div class="manual-entry-header" *ngIf="savedAddresses.length > 0">
+                <h3>Neue Adresse eingeben</h3>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="addressName">Name der Adresse (optional)</label>
+                  <input
+                    id="addressName"
+                    type="text"
+                    [(ngModel)]="newAddressName"
+                    placeholder="z.B. Zuhause, Arbeit"
+                  >
+                </div>
+              </div>
+
               <div class="form-row">
                 <div class="form-group">
                   <label for="street">Straße und Hausnummer</label>
@@ -221,7 +285,7 @@ interface MenuItemVariantOption {
                     [(ngModel)]="deliveryAddress.street"
                     (ngModelChange)="onAddressChange()"
                     placeholder="Musterstraße 123"
-                    required
+                    [required]="!selectedAddressId"
                   >
                 </div>
               </div>
@@ -235,7 +299,7 @@ interface MenuItemVariantOption {
                     [(ngModel)]="deliveryAddress.city"
                     (ngModelChange)="onAddressChange()"
                     placeholder="Musterstadt"
-                    required
+                    [required]="!selectedAddressId"
                   >
                 </div>
 
@@ -247,11 +311,20 @@ interface MenuItemVariantOption {
                     [(ngModel)]="deliveryAddress.postal_code"
                     (ngModelChange)="onAddressChange()"
                     placeholder="12345"
-                    required
+                    [required]="!selectedAddressId"
                   >
                 </div>
               </div>
 
+              <div class="form-group">
+                <label for="deliveryInstructions">Lieferhinweise (optional)</label>
+                <textarea
+                  id="deliveryInstructions"
+                  [(ngModel)]="deliveryInstructions"
+                  placeholder="z.B. Klingel an der Hintertür, 2. Stock, etc."
+                  rows="2">
+                </textarea>
+              </div>
 
               <div class="form-group">
                 <label for="notes">Zusätzliche Hinweise (optional)</label>
@@ -1048,6 +1121,16 @@ interface MenuItemVariantOption {
         font-size: 10px;
       }
 
+      .btn-ghost {
+        padding: var(--space-2) var(--space-3);
+        font-size: var(--text-xs);
+        gap: var(--space-1);
+      }
+
+      .btn-ghost i {
+        font-size: var(--text-xs);
+      }
+
       .cart-item {
         grid-template-columns: 1fr auto;
         grid-template-areas:
@@ -1366,6 +1449,161 @@ interface MenuItemVariantOption {
       gap: var(--space-4);
     }
 
+    .address-form.hidden {
+      display: none;
+    }
+
+    .manual-entry-header h3 {
+      margin: 0 0 var(--space-4) 0;
+      color: var(--color-heading);
+      font-size: var(--text-lg);
+      font-weight: 600;
+    }
+
+    .saved-addresses {
+      margin-bottom: var(--space-6);
+    }
+
+    .saved-addresses h3 {
+      margin: 0 0 var(--space-4) 0;
+      color: var(--color-heading);
+      font-size: var(--text-lg);
+      font-weight: 600;
+    }
+
+    .address-selection {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+    }
+
+    .address-option {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-3);
+      padding: var(--space-4);
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: all var(--transition);
+      background: var(--color-surface);
+    }
+
+    .address-option:hover {
+      border-color: var(--color-primary-300);
+      background: color-mix(in oklab, var(--color-primary) 5%, white);
+    }
+
+    .address-option.selected {
+      border-color: var(--color-primary);
+      background: color-mix(in oklab, var(--color-primary) 10%, white);
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+    }
+
+    .address-radio {
+      margin-top: var(--space-1);
+    }
+
+    .address-radio input[type="radio"] {
+      display: none;
+    }
+
+    .address-radio label {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--color-border);
+      border-radius: 50%;
+      display: block;
+      cursor: pointer;
+      position: relative;
+      transition: all var(--transition);
+    }
+
+    .address-option.selected .address-radio label {
+      border-color: var(--color-primary);
+      background: var(--color-primary);
+    }
+
+    .address-option.selected .address-radio label::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: white;
+    }
+
+    .address-info {
+      flex: 1;
+    }
+
+    .address-name {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin-bottom: var(--space-1);
+    }
+
+    .address-name strong {
+      color: var(--color-heading);
+      font-size: var(--text-base);
+    }
+
+    .address-details {
+      color: var(--color-text);
+      font-size: var(--text-sm);
+      margin-bottom: var(--space-1);
+    }
+
+    .address-instructions {
+      color: var(--color-muted);
+      font-size: var(--text-xs);
+      font-style: italic;
+    }
+
+    .address-selection-actions {
+      display: flex;
+      gap: var(--space-3);
+      flex-wrap: wrap;
+    }
+
+    .btn-ghost {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-4);
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      color: var(--color-text);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+      text-decoration: none;
+    }
+
+    .btn-ghost:hover {
+      background: var(--color-surface);
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-ghost:active {
+      transform: translateY(0);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-ghost i {
+      font-size: var(--text-sm);
+    }
+
     .form-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1629,6 +1867,18 @@ interface MenuItemVariantOption {
 
       .form-row {
         grid-template-columns: 1fr;
+      }
+
+      .address-selection-actions {
+        flex-direction: column;
+        gap: var(--space-2);
+      }
+
+      .btn-ghost {
+        width: 100%;
+        justify-content: center;
+        padding: var(--space-3);
+        font-size: var(--text-sm);
       }
 
       .cart-item {
@@ -1997,6 +2247,13 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
   };
 
   orderNotes = '';
+  deliveryInstructions = '';
+  newAddressName = '';
+
+  // Address management
+  savedAddresses: DeliveryAddress[] = [];
+  selectedAddressId: string | null = null;
+  showManualEntry = false;
 
   customerInfo: CustomerInfo = {
     name: '',
@@ -2032,6 +2289,7 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
   ngOnInit() {
     // Lade gespeicherte Benutzerdaten beim Initialisieren
     this.loadSavedUserData();
+    this.loadSavedAddresses();
 
     // Check if cart is empty and redirect if needed
     this.cart$.subscribe(cart => {
@@ -2200,23 +2458,6 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
     }
   }
 
-  isFormValid(): boolean {
-    const deliveryValid = !!(
-      this.deliveryAddress.street.trim() &&
-      this.deliveryAddress.city.trim() &&
-      this.deliveryAddress.postal_code.trim()
-    );
-
-    const paymentMethodValid = !!this.selectedPaymentMethod && this.isPaymentMethodAvailable(this.selectedPaymentMethod);
-
-    const customerInfoValid = this.isAuthenticated || (
-      !!this.customerInfo.name.trim() &&
-      !!this.customerInfo.email.trim() &&
-      !!this.customerInfo.phone?.trim()
-    );
-
-    return deliveryValid && paymentMethodValid && customerInfoValid;
-  }
 
   public hasAvailablePaymentMethods(): boolean {
     if (!this.availablePaymentMethods) return true;
@@ -2227,77 +2468,6 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
     return this.cartService.isMinimumOrderMet();
   }
 
-  placeOrder() {
-    if (!this.isFormValid()) return;
-
-    // Clear any previous messages
-    this.clearMessages();
-
-    this.loading = true;
-    this.loadingService.start('place-order');
-
-    const fullAddress = `${this.deliveryAddress.street}, ${this.deliveryAddress.postal_code} ${this.deliveryAddress.city}`;
-
-    // Prepare customer info for guest orders
-    const customerInfo = this.isAuthenticated ? undefined : {
-      name: this.customerInfo.name.trim(),
-      email: this.customerInfo.email.trim(),
-      phone: this.customerInfo.phone?.trim() || undefined
-    };
-
-    // Guests can now use online payments (card/paypal)
-
-    this.cartService.createOrder(fullAddress, '', this.selectedPaymentMethod, customerInfo, this.useLoyaltyReward, this.orderNotes)
-      .subscribe({
-        next: (response) => {
-          console.log('Order placed successfully:', response);
-          const orderId = response.order.id;
-
-          // Speichere die Daten nach erfolgreicher Bestellung
-          this.saveUserData();
-
-          // Clear cart after successful order creation
-          this.cartService.clearCart();
-          this.loading = false;
-          this.loadingService.stopAll(); // Stoppe alle Loading-Zustände
-
-          if (this.selectedPaymentMethod === 'card' || this.selectedPaymentMethod === 'paypal') {
-            // Create Stripe checkout session and redirect (includes PayPal option)
-            const successUrl = window.location.origin + '/order-confirmation/' + orderId;
-            const cancelUrl = window.location.origin + '/checkout';
-            const customerEmail = this.isAuthenticated ? undefined : this.customerInfo.email;
-            this.loadingService.start('place-order');
-            this.paymentsService.createStripeCheckoutSession(orderId, successUrl, cancelUrl, customerEmail).subscribe({
-              next: (data) => {
-                this.loadingService.stopAll(); // Stoppe alle Loading-Zustände
-                if (data.url) {
-                  window.location.href = data.url;
-                } else {
-                  // Fallback: go to confirmation and let webhook update status
-                  this.router.navigate(['/order-confirmation', orderId]);
-                }
-              },
-              error: (err) => {
-                console.error('Failed to create checkout session:', err);
-                this.loadingService.stopAll(); // Stoppe alle Loading-Zustände
-                // Show failure alert and stay on checkout
-                this.showErrorMessage('Zahlung konnte nicht gestartet werden. Bitte versuchen Sie es erneut.');
-              }
-            });
-          } else {
-            // Navigate to order confirmation immediately
-            this.router.navigate(['/order-confirmation', orderId]);
-          }
-        },
-        error: (error) => {
-          this.loading = false;
-          this.loadingService.stopAll(); // Stoppe alle Loading-Zustände
-          console.error('Order placement failed:', error);
-          // Show failure alert and stay on checkout
-          this.showErrorMessage('Bestellung konnte nicht aufgegeben werden. Bitte versuchen Sie es erneut.');
-        }
-      });
-  }
 
   toggleLoyalty() {
     if (!this.loyaltyAvailable) return;
@@ -2602,5 +2772,202 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
         this.itemNotes[item.menu_item_id] = item.special_instructions;
       }
     });
+  }
+
+  /**
+   * Lade gespeicherte Adressen
+   */
+  loadSavedAddresses(): void {
+    this.savedAddresses = this.userDataService.getDeliveryAddresses();
+    
+    // Auto-select default address if available
+    if (this.savedAddresses.length > 0) {
+      const defaultAddress = this.savedAddresses.find(addr => addr.is_default);
+      if (defaultAddress) {
+        this.selectSavedAddress(defaultAddress);
+      }
+    }
+  }
+
+  /**
+   * Wähle eine gespeicherte Adresse aus
+   */
+  selectSavedAddress(address: DeliveryAddress): void {
+    this.selectedAddressId = address.id!;
+    this.showManualEntry = false;
+    
+    // Update delivery address fields
+    this.deliveryAddress = {
+      street: address.street,
+      city: address.city,
+      postal_code: address.postal_code
+    };
+    
+    // Clear delivery instructions when selecting saved address (hints are not saved with addresses)
+    this.deliveryInstructions = '';
+    
+    // Save the address selection
+    this.saveUserData();
+  }
+
+  /**
+   * Verwende neue Adresse (manuelle Eingabe)
+   */
+  useNewAddress(): void {
+    this.selectedAddressId = null;
+    this.showManualEntry = true;
+    
+    // Clear address fields
+    this.deliveryAddress = {
+      street: '',
+      city: '',
+      postal_code: ''
+    };
+    this.deliveryInstructions = '';
+    this.newAddressName = '';
+  }
+
+  /**
+   * Navigiere zu den Account Settings für Adressverwaltung
+   */
+  manageAddresses(): void {
+    this.router.navigate(['/account-settings'], { queryParams: { tab: 'addresses' } });
+  }
+
+  /**
+   * Erweiterte isFormValid-Methode für Adressauswahl
+   */
+  isFormValid(): boolean {
+    // Check if we have a selected address or manual entry is valid
+    const hasSelectedAddress: boolean = this.selectedAddressId !== null && this.selectedAddressId !== '';
+    const hasValidManualAddress: boolean = Boolean(
+      this.deliveryAddress.street.trim() &&
+      this.deliveryAddress.city.trim() &&
+      this.deliveryAddress.postal_code.trim()
+    );
+    const addressValid: boolean = hasSelectedAddress || hasValidManualAddress;
+
+    const paymentMethodValid: boolean = !!this.selectedPaymentMethod && this.isPaymentMethodAvailable(this.selectedPaymentMethod);
+
+    const customerInfoValid: boolean = this.isAuthenticated || (
+      !!this.customerInfo.name.trim() &&
+      !!this.customerInfo.email.trim() &&
+      !!this.customerInfo.phone?.trim()
+    );
+
+    return addressValid && paymentMethodValid && customerInfoValid;
+  }
+
+  /**
+   * Erweiterte placeOrder-Methode mit automatischem Adressspeichern
+   */
+  placeOrder() {
+    if (!this.isFormValid()) return;
+
+    // Clear any previous messages
+    this.clearMessages();
+
+    this.loading = true;
+    this.loadingService.start('place-order');
+
+    // Determine the full address to use
+    let fullAddress: string;
+    let addressToSave: DeliveryAddress | null = null;
+
+    if (this.selectedAddressId) {
+      // Use selected saved address
+      const selectedAddress = this.savedAddresses.find(addr => addr.id === this.selectedAddressId);
+      if (selectedAddress) {
+        fullAddress = `${selectedAddress.street}, ${selectedAddress.postal_code} ${selectedAddress.city}`;
+        // Add delivery instructions if provided
+        if (this.deliveryInstructions.trim()) {
+          fullAddress += ` (${this.deliveryInstructions.trim()})`;
+        }
+      } else {
+        // Fallback to manual address
+        fullAddress = `${this.deliveryAddress.street}, ${this.deliveryAddress.postal_code} ${this.deliveryAddress.city}`;
+        if (this.deliveryInstructions.trim()) {
+          fullAddress += ` (${this.deliveryInstructions.trim()})`;
+        }
+      }
+    } else {
+      // Use manual address entry
+      fullAddress = `${this.deliveryAddress.street}, ${this.deliveryAddress.postal_code} ${this.deliveryAddress.city}`;
+      if (this.deliveryInstructions.trim()) {
+        fullAddress += ` (${this.deliveryInstructions.trim()})`;
+      }
+
+      // Prepare address for automatic saving (without delivery instructions/hints)
+      addressToSave = {
+        street: this.deliveryAddress.street.trim(),
+        city: this.deliveryAddress.city.trim(),
+        postal_code: this.deliveryAddress.postal_code.trim(),
+        name: this.newAddressName.trim() || undefined
+        // Note: instructions/hints are not saved with the address - only used for current order
+      };
+    }
+
+    // Prepare customer info for guest orders
+    const customerInfo = this.isAuthenticated ? undefined : {
+      name: this.customerInfo.name.trim(),
+      email: this.customerInfo.email.trim(),
+      phone: this.customerInfo.phone?.trim() || undefined
+    };
+
+    this.cartService.createOrder(fullAddress, '', this.selectedPaymentMethod, customerInfo, this.useLoyaltyReward, this.orderNotes)
+      .subscribe({
+        next: (response) => {
+          console.log('Order placed successfully:', response);
+          const orderId = response.order.id;
+
+          // Automatically save new address if it was manually entered
+          if (addressToSave && !this.selectedAddressId) {
+            this.userDataService.saveDeliveryAddressAutomatically(addressToSave);
+          }
+
+          // Speichere die Daten nach erfolgreicher Bestellung
+          this.saveUserData();
+
+          // Clear cart after successful order creation
+          this.cartService.clearCart();
+          this.loading = false;
+          this.loadingService.stopAll();
+
+          if (this.selectedPaymentMethod === 'card' || this.selectedPaymentMethod === 'paypal') {
+            // Create Stripe checkout session and redirect (includes PayPal option)
+            const successUrl = window.location.origin + '/order-confirmation/' + orderId;
+            const cancelUrl = window.location.origin + '/checkout';
+            const customerEmail = this.isAuthenticated ? undefined : this.customerInfo.email;
+            this.loadingService.start('place-order');
+            this.paymentsService.createStripeCheckoutSession(orderId, successUrl, cancelUrl, customerEmail).subscribe({
+              next: (data) => {
+                this.loadingService.stopAll();
+                if (data.url) {
+                  window.location.href = data.url;
+                } else {
+                  // Fallback: go to confirmation and let webhook update status
+                  this.router.navigate(['/order-confirmation', orderId]);
+                }
+              },
+              error: (err) => {
+                console.error('Failed to create checkout session:', err);
+                this.loadingService.stopAll();
+                // Show failure alert and stay on checkout
+                this.showErrorMessage('Zahlung konnte nicht gestartet werden. Bitte versuchen Sie es erneut.');
+              }
+            });
+          } else {
+            // Navigate to order confirmation immediately
+            this.router.navigate(['/order-confirmation', orderId]);
+          }
+        },
+        error: (error) => {
+          this.loading = false;
+          this.loadingService.stopAll();
+          console.error('Order placement failed:', error);
+          // Show failure alert and stay on checkout
+          this.showErrorMessage('Bestellung konnte nicht aufgegeben werden. Bitte versuchen Sie es erneut.');
+        }
+      });
   }
 }
