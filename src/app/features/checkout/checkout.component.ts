@@ -1487,18 +1487,21 @@ interface MenuItemVariantOption {
       border-radius: var(--radius-lg);
       cursor: pointer;
       transition: all var(--transition);
-      background: var(--color-surface);
+      background: var(--color-surface-2);
     }
 
     .address-option:hover {
       border-color: var(--color-primary-300);
-      background: color-mix(in oklab, var(--color-primary) 5%, white);
+      background: color-mix(in oklab, var(--color-primary) 15%, white);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
     }
 
     .address-option.selected {
       border-color: var(--color-primary);
-      background: color-mix(in oklab, var(--color-primary) 10%, white);
-      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+      background: color-mix(in oklab, var(--color-primary) 20%, white);
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25);
+      transform: translateY(-1px);
     }
 
     .address-radio {
@@ -1539,6 +1542,15 @@ interface MenuItemVariantOption {
 
     .address-info {
       flex: 1;
+      padding: var(--space-2);
+      background: color-mix(in oklab, var(--color-primary) 5%, white);
+      border-radius: var(--radius-md);
+      border: 1px solid color-mix(in oklab, var(--color-primary) 10%, transparent);
+    }
+
+    .address-option.selected .address-info {
+      background: color-mix(in oklab, var(--color-primary) 8%, white);
+      border-color: color-mix(in oklab, var(--color-primary) 15%, transparent);
     }
 
     .address-name {
@@ -1557,12 +1569,24 @@ interface MenuItemVariantOption {
       color: var(--color-text);
       font-size: var(--text-sm);
       margin-bottom: var(--space-1);
+      font-weight: 500;
     }
 
     .address-instructions {
       color: var(--color-muted);
       font-size: var(--text-xs);
       font-style: italic;
+    }
+
+    .default-badge {
+      background: var(--color-primary);
+      color: white;
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      display: inline-block;
+      box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
     }
 
     .address-selection-actions {
@@ -1576,7 +1600,7 @@ interface MenuItemVariantOption {
       align-items: center;
       gap: var(--space-2);
       padding: var(--space-3) var(--space-4);
-      background: var(--color-surface-2);
+      background: var(--color-surface);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-lg);
       color: var(--color-text);
@@ -1585,14 +1609,15 @@ interface MenuItemVariantOption {
       cursor: pointer;
       transition: all var(--transition);
       text-decoration: none;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
 
     .btn-ghost:hover {
-      background: var(--color-surface);
+      background: color-mix(in oklab, var(--color-primary) 10%, white);
       border-color: var(--color-primary);
       color: var(--color-primary);
       transform: translateY(-1px);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
     }
 
     .btn-ghost:active {
