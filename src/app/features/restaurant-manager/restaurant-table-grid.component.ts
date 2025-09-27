@@ -101,6 +101,7 @@ interface GridCell {
               <div class="cell-content" *ngIf="cell.table">
                 <div class="placed-table" 
                      [class.selected]="selectedTable?.id === cell.table.id"
+                     [class.has-unpaid-orders]="hasUnpaidOrders(cell.table!)"
                      (click)="onTableClick(cell.table!, $event)"
                      (dblclick)="showTableOrders(cell.table!)">
                   <div class="table-content">
@@ -153,7 +154,11 @@ interface GridCell {
                 <div class="order-details">
                   <p><strong>Erstellt:</strong> {{ formatDate(order.created_at) }}</p>
                   <p><strong>Gesamtpreis:</strong> {{ order.total_price | currency:'EUR':'symbol':'1.2-2' }}</p>
-                  <p><strong>Zahlungsstatus:</strong> {{ getPaymentStatusText(order.payment_status) }}</p>
+                  <p><strong>Zahlungsstatus:</strong> 
+                    <span [class]="'payment-status-' + order.payment_status">
+                      {{ getPaymentStatusText(order.payment_status) }}
+                    </span>
+                  </p>
                   <div *ngIf="order.notes" class="order-notes">
                     <strong>Notizen:</strong> {{ order.notes }}
                   </div>
@@ -165,6 +170,39 @@ interface GridCell {
                       {{ item.quantity }}x {{ item.name }} - {{ item.total_price | currency:'EUR':'symbol':'1.2-2' }}
                     </li>
                   </ul>
+                </div>
+                
+                <!-- Status Update Controls -->
+                <div class="order-actions">
+                  <h4>Status ändern:</h4>
+                  <div class="status-buttons">
+                    <button 
+                      *ngFor="let status of getAvailableStatuses(order.status)"
+                      class="status-btn"
+                      [class]="'status-btn-' + status"
+                      [disabled]="updatingOrderId === order.id"
+                      (click)="updateTableOrderStatus(order.id, status)">
+                      {{ getStatusText(status) }}
+                    </button>
+                  </div>
+                  
+                  <!-- Payment Status -->
+                  <div class="payment-actions" *ngIf="order.payment_status !== 'paid'">
+                    <button 
+                      class="payment-btn"
+                      [disabled]="updatingOrderId === order.id"
+                      (click)="markOrderAsPaid(order.id)">
+                      Als bezahlt markieren
+                    </button>
+                  </div>
+                  
+                  <!-- Payment Status Display -->
+                  <div class="payment-status-display" *ngIf="order.payment_status === 'paid'">
+                    <span class="payment-status-paid">
+                      <i class="fa-solid fa-check-circle"></i>
+                      Bezahlt
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -463,6 +501,19 @@ interface GridCell {
       background: var(--color-warning-500);
       transform: scale(1.05);
       box-shadow: 0 0 0 3px var(--color-warning-200);
+    }
+
+    .placed-table.has-unpaid-orders {
+      background: #dc2626 !important;
+      color: white !important;
+      border: 2px solid #b91c1c !important;
+      box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.3);
+    }
+
+    .placed-table.has-unpaid-orders:hover {
+      background: #b91c1c !important;
+      transform: scale(1.02);
+      box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.4);
     }
 
     .table-content {
@@ -791,6 +842,156 @@ interface GridCell {
       color: var(--color-text);
       margin-bottom: var(--space-1);
     }
+
+    .order-actions {
+      margin-top: var(--space-4);
+      padding-top: var(--space-4);
+      border-top: 1px solid var(--color-border);
+    }
+
+    .order-actions h4 {
+      margin: 0 0 var(--space-3) 0;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .status-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      margin-bottom: var(--space-3);
+    }
+
+    .status-btn {
+      padding: var(--space-2) var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--text-xs);
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+      background: white;
+    }
+
+    .status-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .status-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .status-btn-ordered { 
+      background: var(--color-gray-100); 
+      color: var(--color-text);
+      border-color: var(--color-gray-300);
+    }
+    .status-btn-confirmed { 
+      background: var(--color-blue-100); 
+      color: var(--color-blue-700);
+      border-color: var(--color-blue-300);
+    }
+    .status-btn-preparing { 
+      background: var(--color-orange-100); 
+      color: var(--color-orange-700);
+      border-color: var(--color-orange-300);
+    }
+    .status-btn-ready { 
+      background: var(--color-green-100); 
+      color: var(--color-green-700);
+      border-color: var(--color-green-300);
+    }
+    .status-btn-served { 
+      background: var(--color-purple-100); 
+      color: var(--color-purple-700);
+      border-color: var(--color-purple-300);
+    }
+    .status-btn-paid { 
+      background: var(--color-green-100); 
+      color: var(--color-green-700);
+      border-color: var(--color-green-300);
+    }
+
+    .payment-actions {
+      margin-top: var(--space-3);
+    }
+
+    .payment-btn {
+      padding: var(--space-2) var(--space-4);
+      background: #22c55e !important;
+      color: white !important;
+      border: 2px solid #16a34a !important;
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .payment-btn:hover:not(:disabled) {
+      background: #16a34a !important;
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .payment-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .payment-status-display {
+      margin-top: var(--space-3);
+    }
+
+    .payment-status-paid {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      background: var(--color-green-100);
+      color: var(--color-green-700);
+      border: 1px solid var(--color-green-300);
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+      font-weight: 500;
+    }
+
+    .payment-status-paid i {
+      color: var(--color-green-600);
+    }
+
+    .payment-status-pending {
+      color: #dc2626 !important;
+      font-weight: 600;
+      background: #fef2f2;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #fecaca;
+    }
+
+    .payment-status-failed {
+      color: #dc2626 !important;
+      font-weight: 600;
+      background: #fef2f2;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #fecaca;
+    }
+
+    .payment-status-paid {
+      color: #16a34a !important;
+      font-weight: 600;
+      background: #f0fdf4;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #bbf7d0;
+    }
   `]
 })
 export class RestaurantTableGridComponent implements OnInit {
@@ -821,6 +1022,10 @@ export class RestaurantTableGridComponent implements OnInit {
   tableOrders: Order[] = [];
   tableOrdersLoading = false;
   currentRestaurantId: string | null = null;
+  updatingOrderId: string | null = null;
+  
+  // Cache for table order status
+  tableOrderStatusCache = new Map<string, { hasUnpaid: boolean; lastChecked: number }>();
 
   ngOnInit() {
     this.initializeGrid();
@@ -1124,6 +1329,136 @@ export class RestaurantTableGridComponent implements OnInit {
       hour: '2-digit',
       minute: '2-digit'
     });
+  }
+
+  // Get available statuses for table orders based on current status
+  getAvailableStatuses(currentStatus: string): string[] {
+    const statusFlow: Record<string, string[]> = {
+      'pending': ['confirmed', 'cancelled'],
+      'ordered': ['confirmed', 'cancelled'],
+      'confirmed': ['preparing', 'cancelled'],
+      'preparing': ['ready', 'cancelled'],
+      'ready': ['served', 'cancelled'],
+      'served': ['paid'],
+      'paid': [],
+      'cancelled': []
+    };
+    
+    return statusFlow[currentStatus] || [];
+  }
+
+  // Update table order status
+  updateTableOrderStatus(orderId: string, newStatus: string) {
+    this.updatingOrderId = orderId;
+    console.log('Starting table order status update:', { orderId, newStatus });
+
+    this.ordersService.updateTableOrderStatus(orderId, newStatus as any).subscribe({
+      next: (response) => {
+        console.log('Table order status update response:', response);
+
+        // Update local order
+        const index = this.tableOrders.findIndex(o => String(o.id) === String(orderId));
+        if (index !== -1) {
+          this.tableOrders[index] = {
+            ...this.tableOrders[index],
+            status: response.order.status,
+            updated_at: response.order.updated_at || this.tableOrders[index].updated_at
+          };
+          console.log('Updated local table order:', this.tableOrders[index]);
+        }
+
+        // Force Angular change detection
+        this.tableOrders = [...this.tableOrders];
+
+        this.toastService.success('Status aktualisiert', `Bestellung ${this.getStatusText(newStatus)}`);
+        this.updatingOrderId = null;
+      },
+      error: (error: any) => {
+        console.error('Error updating table order status:', error);
+        this.toastService.error('Status aktualisieren', 'Fehler beim Aktualisieren des Bestellstatus');
+        this.updatingOrderId = null;
+      }
+    });
+  }
+
+  // Check if table has unpaid orders
+  hasUnpaidOrders(table: RestaurantTable): boolean {
+    if (!this.currentRestaurantId) return false;
+    
+    const cacheKey = `${table.id}`;
+    const cached = this.tableOrderStatusCache.get(cacheKey);
+    const now = Date.now();
+    
+    // Use cache if it's less than 30 seconds old
+    if (cached && (now - cached.lastChecked) < 30000) {
+      return cached.hasUnpaid;
+    }
+    
+    // Check orders for this table
+    this.ordersService.getTableOrders(this.currentRestaurantId, table.table_number?.toString()).subscribe({
+      next: (orders) => {
+        const hasUnpaid = orders.some(order => 
+          order.payment_status === 'pending' || order.payment_status === 'failed'
+        );
+        
+        // Update cache
+        this.tableOrderStatusCache.set(cacheKey, {
+          hasUnpaid,
+          lastChecked: now
+        });
+        
+        // Force change detection to update UI
+        this.gridCells = [...this.gridCells];
+      },
+      error: (error) => {
+        console.error('Error checking table orders:', error);
+      }
+    });
+    
+    // Return cached value or false as fallback
+    return cached?.hasUnpaid || false;
+  }
+
+  // Mark order as paid
+  markOrderAsPaid(orderId: string) {
+    if (confirm('Sind Sie sicher, dass Sie diese Bestellung als bezahlt markieren möchten?')) {
+      this.updatingOrderId = orderId;
+      console.log('Starting payment status update:', { orderId, paymentStatus: 'paid' });
+
+      this.ordersService.updateOrderPaymentStatus(orderId, 'paid').subscribe({
+        next: (response) => {
+          console.log('Payment status update response:', response);
+
+          // Update local order
+          const index = this.tableOrders.findIndex(o => String(o.id) === String(orderId));
+          if (index !== -1) {
+            this.tableOrders[index] = {
+              ...this.tableOrders[index],
+              payment_status: 'paid',
+              updated_at: response.order.updated_at || this.tableOrders[index].updated_at
+            };
+            console.log('Updated order payment status:', this.tableOrders[index]);
+          }
+
+          // Force Angular change detection
+          this.tableOrders = [...this.tableOrders];
+
+          // Clear cache for this table to refresh the red indicator
+          if (this.selectedTableForOrders) {
+            this.tableOrderStatusCache.delete(this.selectedTableForOrders.id.toString());
+            this.gridCells = [...this.gridCells];
+          }
+
+          this.toastService.success('Zahlung bestätigt', 'Die Bestellung wurde als bezahlt markiert');
+          this.updatingOrderId = null;
+        },
+        error: (error: any) => {
+          console.error('Error updating order payment status:', error);
+          this.toastService.error('Zahlung bestätigen', 'Fehler beim Aktualisieren des Zahlungsstatus');
+          this.updatingOrderId = null;
+        }
+      });
+    }
   }
 }
 
