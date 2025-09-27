@@ -1220,8 +1220,8 @@ export class DriverDashboardComponent implements OnInit {
 
   ngOnInit() {
     this.loadDriverData();
-    // Refresh orders every 30 seconds when available
-    interval(30000).subscribe(() => {
+    // Refresh orders every 1 minute (60 seconds) when available - balanced polling
+    interval(60000).subscribe(() => {
       if (this.driverStats.currentStatus === 'available') {
         this.loadAvailableOrders();
       }

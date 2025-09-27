@@ -2015,8 +2015,8 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
     this.loadPendingOrders();
     this.loadDriverStats();
 
-    // Auto-refresh every 30 seconds
-    const refreshSub = interval(30000).subscribe(() => {
+    // Auto-refresh every 1 minute (60 seconds) - balanced polling
+    const refreshSub = interval(60000).subscribe(() => {
       this.refreshData();
     });
     this.subscriptions.push(refreshSub);

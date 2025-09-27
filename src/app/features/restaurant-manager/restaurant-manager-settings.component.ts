@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule, ActivatedRoute } from '@angular/router';
+import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { RestaurantsService, RestaurantDTO } from '../../core/services/restaurants.service';
 import { AuthService, User } from '../../core/auth/auth.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -25,7 +25,7 @@ import { Subscription } from 'rxjs';
         <button
           *ngFor="let tab of settingsTabs"
           [class.active]="activeTab === tab.id"
-          (click)="activeTab = tab.id"
+          (click)="switchTab(tab.id)"
           class="tab-button"
         >
           <i [ngClass]="tab.icon"></i>
@@ -2585,6 +2585,7 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private toastService = inject(ToastService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private subscriptions: Subscription[] = [];
 
   activeTab: string = 'general';
@@ -2678,6 +2679,25 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
     if (tabParam && this.settingsTabs.some(tab => tab.id === tabParam)) {
       this.activeTab = tabParam;
     }
+
+    // Listen for route changes to update active tab
+    this.subscriptions.push(
+      this.route.queryParams.subscribe(params => {
+        if (params['tab'] && this.settingsTabs.some(tab => tab.id === params['tab'])) {
+          this.activeTab = params['tab'];
+        }
+      })
+    );
+  }
+
+  switchTab(tabId: string) {
+    this.activeTab = tabId;
+    // Update URL with tab parameter
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab: tabId },
+      queryParamsHandling: 'merge'
+    });
   }
 
   ngOnDestroy() {

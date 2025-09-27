@@ -2359,19 +2359,31 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
   ];
 
   private refreshSubscription?: Subscription;
+  private isPageVisible = true;
+  private visibilityChangeHandler = () => {
+    this.isPageVisible = !document.hidden;
+  };
 
   ngOnInit() {
     this.loadOrders();
-    // Auto-refresh every 30 seconds
-    this.refreshSubscription = interval(30000).subscribe(() => {
-      this.loadOrders();
+    // Auto-refresh every 1 minute (60 seconds) - balanced polling
+    this.refreshSubscription = interval(60000).subscribe(() => {
+      // Only refresh if page is visible and user is active
+      if (this.isPageVisible && !document.hidden) {
+        this.loadOrders();
+      }
     });
+
+    // Listen for page visibility changes to pause/resume polling
+    document.addEventListener('visibilitychange', this.visibilityChangeHandler);
   }
 
   ngOnDestroy() {
     if (this.refreshSubscription) {
       this.refreshSubscription.unsubscribe();
     }
+    // Remove event listener
+    document.removeEventListener('visibilitychange', this.visibilityChangeHandler);
   }
 
   loadOrders() {

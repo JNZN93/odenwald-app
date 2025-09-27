@@ -29,7 +29,7 @@ import { PasswordChangeComponent } from '../../../shared/components/password-cha
         <button
           *ngFor="let tab of settingsTabs"
           [class.active]="activeTab === tab.id"
-          (click)="activeTab = tab.id"
+          (click)="switchTab(tab.id)"
           class="tab-button"
         >
           <i [ngClass]="tab.icon"></i>
@@ -837,7 +837,26 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
       this.activeTab = tabQueryParam;
     }
     
+    // Listen for route changes to update active tab
+    this.subscriptions.push(
+      this.route.queryParams.subscribe(params => {
+        if (params['tab'] && this.settingsTabs.some(tab => tab.id === params['tab'])) {
+          this.activeTab = params['tab'];
+        }
+      })
+    );
+    
     this.loadData();
+  }
+
+  switchTab(tabId: string) {
+    this.activeTab = tabId;
+    // Update URL with tab parameter
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab: tabId },
+      queryParamsHandling: 'merge'
+    });
   }
 
   ngOnDestroy() {

@@ -491,8 +491,8 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
     this.loadManagedRestaurants();
     this.loadBadgeCounts();
 
-    // Auto-refresh badge counts every 30 seconds
-    this.badgeRefreshSubscription = interval(30000).subscribe(() => {
+    // Auto-refresh badge counts every 1 minute (60 seconds) - balanced polling
+    this.badgeRefreshSubscription = interval(60000).subscribe(() => {
       this.loadBadgeCounts();
     });
   }
