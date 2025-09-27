@@ -64,6 +64,7 @@ export const routes: Routes = [
   { path: 'auth/register-wholesaler', loadComponent: () => import('./features/auth/wholesaler-registration.component').then(m => m.WholesalerRegistrationComponent) },
   { path: 'restaurant-registration', loadComponent: () => import('./features/restaurant-registration/restaurant-registration.component').then(m => m.RestaurantRegistrationComponent), canActivate: [authGuard, roleGuard(['manager'])] },
   { path: 'customer', component: CustomerRestaurantsComponent },
+  { path: 'customer/filters', loadComponent: () => import('./features/customer/customer-filters.component').then(m => m.CustomerFiltersComponent) },
   { path: 'dashboard', loadComponent: () => import('./features/customer/dashboard/customer-dashboard.component').then(m => m.CustomerDashboardComponent), canActivate: [authGuard, roleGuard(['customer'])] },
   { path: 'report-issue/:orderId', loadComponent: () => import('./features/customer/report-issue/report-issue.component').then(m => m.ReportIssueComponent), canActivate: [authGuard, roleGuard(['customer'])] },
   { path: 'restaurant/:id', loadComponent: () => import('./features/restaurants/restaurant-detail.component').then(m => m.RestaurantDetailComponent) },

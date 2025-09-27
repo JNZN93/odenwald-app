@@ -3,12 +3,14 @@ import { NgForOf, AsyncPipe, NgIf, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { RestaurantsService, RestaurantDTO } from '../../core/services/restaurants.service';
+import { CustomerFiltersService } from '../../core/services/customer-filters.service';
+import { AIService, ChatResponse } from '../../core/services/ai.service';
 import { ReviewsService } from '../../core/services/reviews.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { GeocodingService, GeocodeResult } from '../../core/services/geocoding.service';
 import { ImageFallbackDirective } from '../../core/image-fallback.directive';
 import { RestaurantSkeletonComponent } from '../../shared/components/restaurant-skeleton.component';
-import { Observable, Subscription, combineLatest, BehaviorSubject, of } from 'rxjs';
+import { Observable, Subscription, combineLatest, BehaviorSubject, of, forkJoin } from 'rxjs';
 import { from } from 'rxjs';
 import { map, startWith, debounceTime, distinctUntilChanged, catchError } from 'rxjs/operators';
 
@@ -121,15 +123,15 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
             </div>
           </div>
 
-          <!-- Current Location Bar -->
-          <div class="current-location-bar" *ngIf="userCoordinates && !isCompactMode">
+          <!-- Current Location Bar - Compact after selection -->
+          <div class="current-location-bar" [class.compact]="formattedAddress && isCompactMode" *ngIf="userCoordinates">
             <div class="location-info">
               <i class="fa-solid fa-map-marker-alt location-icon"></i>
               <span class="location-text">{{ formattedAddress || deliveryAddress }}</span>
             </div>
             <button class="change-address-btn" (click)="clearAddress()" type="button">
               <i class="fa-solid fa-edit"></i>
-              Adresse ändern
+              <span *ngIf="!isCompactMode">Adresse ändern</span>
             </button>
           </div>
         </div>
@@ -139,8 +141,70 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
       <!-- Results Section -->
       <div class="results-section" *ngIf="userCoordinates">
         <div class="container">
-          <div class="results-header">
-            <h2 class="results-title" *ngIf="!isMobileOrTablet()">Restaurants in deiner Nähe</h2>
+          <!-- Title removed: no heading above results on desktop -->
+          
+          <!-- Search bar like Lieferando: search items/categories and filter restaurants offering them -->
+          <div class="search-bar" *ngIf="!isMobileOrTablet()">
+            <div class="search-input-wrapper">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input
+                type="text"
+                class="search-input"
+                placeholder="Suche nach Gerichten, Kategorien oder Zutaten (z.B. Pizza, Sushi, vegan)"
+                [(ngModel)]="globalSearchTerm"
+                (input)="onGlobalSearchChanged()"
+              >
+              <button class="clear-search-btn" *ngIf="globalSearchTerm" (click)="clearGlobalSearch()" type="button">
+                <i class="fa-solid fa-times"></i>
+              </button>
+            </div>
+            <div class="search-status" *ngIf="isSearching">
+              <i class="fa-solid fa-spinner fa-spin"></i> Suche passende Angebote...
+            </div>
+          </div>
+
+          <!-- Popular Categories like Lieferando -->
+          <div class="popular-categories" *ngIf="!isMobileOrTablet()">
+            <div class="category-chips">
+              <button 
+                *ngFor="let category of popularCategories" 
+                class="category-chip" 
+                (click)="selectPredefinedCategory(category.name)"
+                [class.active]="globalSearchTerm === category.name"
+              >
+                <span class="category-icon">{{ category.icon }}</span>
+                <span class="category-name">{{ category.name }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Filters row: open-now, free delivery, min order, rating -->
+          <div class="filters-row" *ngIf="!isMobileOrTablet()">
+            <label class="toggle">
+              <input type="checkbox" [(ngModel)]="filterOpenNow" (change)="onFiltersChanged()">
+              <span>Jetzt geöffnet</span>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" [(ngModel)]="filterFreeDelivery" (change)="onFiltersChanged()">
+              <span>Kostenlose Lieferung</span>
+            </label>
+            <label class="select">
+              <span>Mind.-bestellwert</span>
+              <select [(ngModel)]="filterMinOrder" (change)="onFiltersChanged()">
+                <option value="all">Alle</option>
+                <option value="10">10,00 € oder weniger</option>
+                <option value="15">15,00 € oder weniger</option>
+              </select>
+            </label>
+            <label class="select">
+              <span>Bewertung</span>
+              <select [(ngModel)]="filterRatingMin" (change)="onFiltersChanged()">
+                <option [ngValue]="0">Alle</option>
+                <option [ngValue]="3">ab 3★</option>
+                <option [ngValue]="4">ab 4★</option>
+                <option [ngValue]="4.5">ab 4.5★</option>
+              </select>
+            </label>
           </div>
           
           <!-- Show skeleton cards while loading -->
@@ -157,7 +221,9 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
                 <path d="M21 21l-4.35-4.35"/>
                 <circle cx="11" cy="11" r="2" fill="currentColor"/>
               </svg>
-              <p>Keine Restaurants gefunden.</p>
+              <p>
+                {{ globalSearchTerm ? 'Keine Restaurants mit passenden Angeboten gefunden.' : 'Keine Restaurants gefunden.' }}
+              </p>
             </div>
 
             <div class="restaurants-grid" *ngIf="!isLoadingRestaurants && restaurants.length > 0">
@@ -285,6 +351,25 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
             <span class="restaurant-name">{{ activeRestaurant?.name }}</span>
             <span class="cuisine-badge" *ngIf="activeRestaurant?.cuisine_type">{{ activeRestaurant?.cuisine_type }}</span>
           </div>
+
+    <!-- Category modal -->
+    <div class="category-modal-backdrop" *ngIf="categoryModalOpen" (click)="closeCategoryModal()"></div>
+    <div class="category-modal" *ngIf="categoryModalOpen" (click)="$event.stopPropagation()">
+      <div class="category-modal-header">
+        <h3>Alle Kategorien</h3>
+        <button class="close-btn" (click)="closeCategoryModal()" type="button"><i class="fa-solid fa-times"></i></button>
+      </div>
+      <div class="category-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" placeholder="Suche in Kategorien" [(ngModel)]="categorySearchTerm" (input)="onCategorySearch(categorySearchTerm)">
+      </div>
+      <div class="category-grid-modal">
+        <button class="category-chip" *ngFor="let c of filteredCategories" (click)="selectCategory(c.name)">
+          <span class="name">{{ c.name }}</span>
+          <span class="count">{{ c.count }}</span>
+        </button>
+      </div>
+    </div>
         </div>
         <button class="close-btn" (click)="closeReviews()" type="button">
           <i class="fa-solid fa-times"></i>
@@ -455,9 +540,11 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
 })
 export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
   private restaurantsService = inject(RestaurantsService);
+  private aiService = inject(AIService);
   private reviewsService = inject(ReviewsService);
   private authService = inject(AuthService);
   private geocodingService = inject(GeocodingService);
+  private customerFilters = inject(CustomerFiltersService);
   private router = inject(Router);
 
   // Address and location properties
@@ -500,9 +587,69 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
 
   // Loading state for skeleton animation
   isLoadingRestaurants = false;
+  // Global search states
+  globalSearchTerm = '';
+  isSearching = false;
+  private lastSearchController: AbortController | null = null;
+  private searchDebounce?: any;
+  // Full list vs filtered list management
+  private allNearbyRestaurants: RestaurantDTO[] = [];
+  // Filters similar to Lieferando
+  filterOpenNow = false;
+  filterFreeDelivery = false;
+  filterMinOrder: 'all' | '10' | '15' = 'all';
+  filterRatingMin: 0 | 3 | 4 | 4.5 = 0;
+  // Categories aggregation
+  categoriesLoading = false;
+  aggregatedCategories: Array<{ name: string; count: number }> = [];
+  categoryModalOpen = false;
+  categorySearchTerm = '';
+  filteredCategories: Array<{ name: string; count: number }> = [];
+  filtersDrawerOpen = false;
+  
+  // Predefined popular categories like Lieferando
+  predefinedCategories = [
+    { name: 'Pizza', icon: '🍕', popular: true },
+    { name: 'Burger', icon: '🍔', popular: true },
+    { name: 'Sushi', icon: '🍣', popular: true },
+    { name: 'Asiatisch', icon: '🥢', popular: true },
+    { name: 'Italienisch', icon: '🍝', popular: true },
+    { name: 'Döner & Kebab', icon: '🥙', popular: true },
+    { name: 'Deutsch', icon: '🥨', popular: true },
+    { name: 'Vegetarisch', icon: '🥗', popular: true },
+    { name: 'Vegan', icon: '🌱', popular: false },
+    { name: 'Fast Food', icon: '🍟', popular: false },
+    { name: 'Desserts', icon: '🍰', popular: false },
+    { name: 'Getränke', icon: '🥤', popular: false },
+    { name: 'Salate', icon: '🥙', popular: false },
+    { name: 'Pasta', icon: '🍝', popular: false },
+    { name: 'Fisch', icon: '🐟', popular: false },
+    { name: 'Fleisch', icon: '🥩', popular: false }
+  ];
+
+  get popularCategories() {
+    return this.predefinedCategories.filter(c => c.popular);
+  }
 
   ngOnInit() {
     console.log('CustomerRestaurantsComponent: Initialized');
+
+    // Load persisted filters
+    const s = this.customerFilters.getState();
+    this.globalSearchTerm = s.searchTerm || '';
+    this.filterOpenNow = s.openNow;
+    this.filterFreeDelivery = s.freeDelivery;
+    this.filterMinOrder = s.minOrder;
+    this.filterRatingMin = s.ratingMin;
+
+    this.customerFilters.state$.subscribe(state => {
+      this.globalSearchTerm = state.searchTerm || '';
+      this.filterOpenNow = state.openNow;
+      this.filterFreeDelivery = state.freeDelivery;
+      this.filterMinOrder = state.minOrder;
+      this.filterRatingMin = state.ratingMin;
+      this.applyAllFilters();
+    });
 
     // Check for saved location in localStorage
     this.checkSavedLocation();
@@ -671,7 +818,7 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
       this.userCoordinates.longitude,
       this.searchRadius // Verwende den konfigurierten Radius
     ).pipe(
-      map(restaurants => this.filterRestaurants(restaurants)),
+      map(restaurants => restaurants),
       catchError(error => {
         console.error('Error loading nearby restaurants:', error);
         return of([]);
@@ -679,9 +826,10 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
     ).subscribe(restaurants => {
       console.log('🏪 Simple search - API returned:', restaurants.length, 'restaurants');
       console.log('🍔 Firats Burgerkreis in API response:', !!restaurants.find(r => r.name?.includes('Burgerkreis')));
-
-      // Bei einfacher Suche: Zeige alle Restaurants ohne zusätzliche Filter
-      this.restaurantsSubject.next(restaurants);
+      this.allNearbyRestaurants = restaurants;
+      this.applyAllFilters();
+      // Aggregate categories in background
+      this.loadCategoriesForRestaurants(restaurants);
       this.isLoadingRestaurants = false;
     });
   }
@@ -718,6 +866,220 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
 
     console.log('✅ All restaurants shown (no additional filtering):', restaurants.length);
     return restaurants;
+  }
+
+  // Apply Lieferando-like search across menu items/categories to filter restaurants
+  private applyGlobalSearchFilter(restaurants: RestaurantDTO[]): RestaurantDTO[] {
+    const term = (this.globalSearchTerm || '').trim();
+    if (!term) {
+      return restaurants;
+    }
+
+    // If we already have latest matching restaurant IDs, filter synchronously
+    if (this.latestMatchingRestaurantIds.size > 0) {
+      return restaurants.filter(r => this.latestMatchingRestaurantIds.has(String(r.id)));
+    }
+
+    // Otherwise trigger background search; initially show unfiltered and refresh on result
+    this.triggerAiSearch(term);
+    return restaurants;
+  }
+
+  private latestMatchingRestaurantIds: Set<string> = new Set<string>();
+
+  onGlobalSearchChanged() {
+    const term = (this.globalSearchTerm || '').trim();
+    this.customerFilters.update({ searchTerm: this.globalSearchTerm });
+    if (!term) {
+      this.latestMatchingRestaurantIds.clear();
+      // Reload nearby to reset results immediately
+      this.loadNearbyRestaurants();
+      return;
+    }
+
+    // debounce search to avoid spamming backend
+    if (this.searchDebounce) {
+      clearTimeout(this.searchDebounce);
+    }
+    this.searchDebounce = setTimeout(() => {
+      this.triggerAiSearch(term);
+    }, 350);
+  }
+
+  clearGlobalSearch() {
+    this.globalSearchTerm = '';
+    this.latestMatchingRestaurantIds.clear();
+    this.isSearching = false;
+    this.applyAllFilters();
+  }
+
+  private triggerAiSearch(term: string) {
+    // Abort previous if any (note: HttpClient does not support AbortController directly; using flag only)
+    this.isSearching = true;
+
+    // We leverage AI chat intents: prefer product_search then menu_details for broader coverage
+    const userMessage = term; // AI will route to product_search/menu_details
+    this.aiService.chat(userMessage).subscribe({
+      next: (resp: ChatResponse) => {
+        const restaurantIds = new Set<string>();
+
+        // From product search
+        if (resp.products && resp.products.length > 0) {
+          resp.products.forEach(p => {
+            if (p.restaurant_id) restaurantIds.add(String(p.restaurant_id));
+          });
+        }
+
+        // From menu details
+        if (resp.menuItems && resp.menuItems.length > 0) {
+          // menuItems include restaurant_id optionally; if not, we cannot map directly
+          resp.menuItems.forEach(item => {
+            if ((item as any).restaurant_id) {
+              restaurantIds.add(String((item as any).restaurant_id));
+            }
+          });
+        }
+
+        this.latestMatchingRestaurantIds = restaurantIds;
+        this.applyAllFilters();
+        this.isSearching = false;
+      },
+      error: err => {
+        console.error('AI search failed:', err);
+        this.isSearching = false;
+      }
+    });
+  }
+
+  // Non-AI filters application
+  onFiltersChanged() {
+    this.customerFilters.update({
+      searchTerm: this.globalSearchTerm,
+      openNow: this.filterOpenNow,
+      freeDelivery: this.filterFreeDelivery,
+      minOrder: this.filterMinOrder,
+      ratingMin: this.filterRatingMin
+    });
+    this.applyAllFilters();
+  }
+
+  private applyAllFilters() {
+    let base = [...this.allNearbyRestaurants];
+
+    // Apply AI search filter if any
+    if (this.globalSearchTerm && this.latestMatchingRestaurantIds.size > 0) {
+      base = base.filter(r => this.latestMatchingRestaurantIds.has(String(r.id)));
+    }
+
+    // Open now filter
+    if (this.filterOpenNow) {
+      base = base.filter(r => this.isRestaurantOpenNow(r));
+    }
+
+    // Free delivery
+    if (this.filterFreeDelivery) {
+      base = base.filter(r => (r.delivery_info?.delivery_fee ?? 0) === 0);
+    }
+
+    // Min order
+    if (this.filterMinOrder === '10') {
+      base = base.filter(r => (r.delivery_info?.minimum_order_amount ?? 0) <= 10);
+    } else if (this.filterMinOrder === '15') {
+      base = base.filter(r => (r.delivery_info?.minimum_order_amount ?? 0) <= 15);
+    }
+
+    // Rating
+    if (this.filterRatingMin > 0) {
+      base = base.filter(r => (r.rating ?? 0) >= this.filterRatingMin);
+    }
+
+    this.restaurantsSubject.next(base);
+  }
+
+  private isRestaurantOpenNow(r: RestaurantDTO): boolean {
+    try {
+      const now = new Date();
+      const dayNames: Array<'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday'> = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+      const day = dayNames[now.getDay()];
+      const hours = (r.opening_hours as any)?.[day];
+      if (!hours || hours.is_closed) return false;
+      const [openH, openM] = (hours.open || '00:00').split(':').map((n: string) => parseInt(n, 10));
+      const [closeH, closeM] = (hours.close || '00:00').split(':').map((n: string) => parseInt(n, 10));
+      const openMinutes = openH * 60 + openM;
+      const closeMinutes = closeH * 60 + closeM;
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      if (closeMinutes >= openMinutes) {
+        return nowMinutes >= openMinutes && nowMinutes <= closeMinutes;
+      }
+      // Overnight window
+      return nowMinutes >= openMinutes || nowMinutes <= closeMinutes;
+    } catch {
+      return false;
+    }
+  }
+
+  // Categories handling
+  openCategoryModal() {
+    this.categoryModalOpen = true;
+    this.filteredCategories = [...this.aggregatedCategories];
+  }
+
+  closeCategoryModal() {
+    this.categoryModalOpen = false;
+    this.categorySearchTerm = '';
+  }
+
+  onCategorySearch(term: string) {
+    this.categorySearchTerm = term;
+    const t = term.trim().toLowerCase();
+    this.filteredCategories = this.aggregatedCategories.filter(c => c.name.toLowerCase().includes(t));
+  }
+
+  selectCategory(name: string) {
+    this.globalSearchTerm = name;
+    this.onGlobalSearchChanged();
+    this.closeCategoryModal();
+  }
+
+  selectPredefinedCategory(categoryName: string) {
+    // Toggle category selection
+    if (this.globalSearchTerm === categoryName) {
+      this.globalSearchTerm = '';
+    } else {
+      this.globalSearchTerm = categoryName;
+    }
+    this.onGlobalSearchChanged();
+  }
+
+  private loadCategoriesForRestaurants(restaurants: RestaurantDTO[]) {
+    const ids = restaurants.map(r => String(r.id));
+    if (ids.length === 0) {
+      this.aggregatedCategories = [];
+      this.filteredCategories = [];
+      return;
+    }
+    this.categoriesLoading = true;
+    const requests = ids.map(id => this.restaurantsService.getMenuCategoriesWithItems(id).pipe(catchError(() => of([]))));
+    forkJoin(requests).subscribe({
+      next: (results) => {
+        const counts = new Map<string, number>();
+        results.forEach(list => {
+          list.forEach((cat: any) => {
+            const name = (cat.name || '').trim();
+            if (!name) return;
+            counts.set(name, (counts.get(name) || 0) + 1);
+          });
+        });
+        const arr = Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
+        arr.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+        this.aggregatedCategories = arr.slice(0, 24);
+        this.filteredCategories = [...this.aggregatedCategories];
+        this.categoriesLoading = false;
+      },
+      error: () => {
+        this.categoriesLoading = false;
+      }
+    });
   }
 
   openReviews(r: RestaurantDTO) {
