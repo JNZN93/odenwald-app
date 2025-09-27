@@ -28,10 +28,16 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
             <i class="fa-solid fa-map-marker-alt location-icon"></i>
             <span class="location-text">{{ formattedAddress || deliveryAddress }}</span>
           </div>
-          <button class="change-address-btn" (click)="clearAddress()" type="button">
-            <i class="fa-solid fa-edit"></i>
-            Adresse ändern
-          </button>
+          <div class="location-actions">
+            <button class="filter-btn" (click)="goToFilters()" type="button" title="Filter & Suche">
+              <i class="fa-solid fa-sliders"></i>
+              <span class="filter-text">Suche & Filter</span>
+            </button>
+            <button class="change-address-btn" (click)="clearAddress()" type="button">
+              <i class="fa-solid fa-edit"></i>
+              Adresse ändern
+            </button>
+          </div>
         </div>
 
         <!-- Full Hero Content (when no coordinates or not compact mode) -->
@@ -129,10 +135,16 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
               <i class="fa-solid fa-map-marker-alt location-icon"></i>
               <span class="location-text">{{ formattedAddress || deliveryAddress }}</span>
             </div>
-            <button class="change-address-btn" (click)="clearAddress()" type="button">
-              <i class="fa-solid fa-edit"></i>
-              <span *ngIf="!isCompactMode">Adresse ändern</span>
-            </button>
+            <div class="location-actions">
+              <button class="filter-btn" (click)="goToFilters()" type="button" title="Filter & Suche">
+                <i class="fa-solid fa-sliders"></i>
+                <span class="filter-text">Suche & Filter</span>
+              </button>
+              <button class="change-address-btn" (click)="clearAddress()" type="button">
+                <i class="fa-solid fa-edit"></i>
+                <span *ngIf="!isCompactMode">Adresse ändern</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -696,6 +708,10 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
 
   goToDashboard() {
     this.router.navigate(['/dashboard']);
+  }
+
+  goToFilters() {
+    this.router.navigate(['/customer/filters']);
   }
 
   onAddressSubmit() {
