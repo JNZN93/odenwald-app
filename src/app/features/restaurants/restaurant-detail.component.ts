@@ -1854,6 +1854,7 @@ export class RestaurantDetailComponent implements OnInit, OnDestroy {
     const viewParam = this.route.snapshot.queryParamMap.get('view');
     this.showDetailsView = viewParam === 'details';
     console.log('🏪 Restaurant detail component initialized with ID:', restaurantId, 'View:', viewParam);
+    console.log('🔍 showDetailsView set to:', this.showDetailsView);
 
     if (!restaurantId) {
       console.log('❌ No restaurant ID found, navigating to customer page');
@@ -1875,6 +1876,9 @@ export class RestaurantDetailComponent implements OnInit, OnDestroy {
           tap(categories => {
             console.log('🍽️ Menu categories with items:', categories);
             console.log('📊 Categories count:', categories?.length || 0);
+            if (!categories || categories.length === 0) {
+              console.warn('⚠️ No menu categories found for restaurant:', restaurantId);
+            }
           }),
           map(categories => {
             console.log('📋 Final menu data:', { categories });
@@ -2263,6 +2267,8 @@ export class RestaurantDetailComponent implements OnInit, OnDestroy {
 
   switchToMenuView() {
     const restaurantId = this.route.snapshot.paramMap.get('id');
+    console.log('🔄 Switching to menu view for restaurant:', restaurantId);
+    this.showDetailsView = false;
     this.router.navigate(['/restaurant', restaurantId]);
   }
 

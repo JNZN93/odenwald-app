@@ -110,7 +110,7 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
         <!-- Favorite Restaurants -->
         <div class="dashboard-section">
           <div class="section-header">
-            <h2>Beliebte Restaurants</h2>
+            <h2>Meine beliebten Restaurants</h2>
             <button class="view-all-btn" (click)="goToRestaurants()">Alle anzeigen</button>
           </div>
 
@@ -1263,8 +1263,7 @@ export class CustomerDashboardComponent implements OnInit {
   }
 
   goToProfile() {
-    // TODO: Implement profile page
-    console.log('Navigate to profile');
+    this.router.navigate(['/account-settings'], { queryParams: { tab: 'personal' } });
   }
 
   viewAllOrders() {
@@ -1379,18 +1378,15 @@ export class CustomerDashboardComponent implements OnInit {
   }
 
   manageAddresses() {
-    // TODO: Implement address management
-    console.log('Manage addresses');
+    this.router.navigate(['/account-settings'], { queryParams: { tab: 'addresses' } });
   }
 
   managePaymentMethods() {
-    // TODO: Implement payment methods management
-    console.log('Manage payment methods');
+    this.router.navigate(['/account-settings'], { queryParams: { tab: 'payment' } });
   }
 
   manageNotifications() {
-    // TODO: Implement notification settings
-    console.log('Manage notifications');
+    this.router.navigate(['/account-settings'], { queryParams: { tab: 'notifications' } });
   }
 
   openPasswordChangeModal() {

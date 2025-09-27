@@ -67,6 +67,7 @@ export const routes: Routes = [
   { path: 'customer', component: CustomerRestaurantsComponent },
   { path: 'customer/filters', loadComponent: () => import('./features/customer/customer-filters.component').then(m => m.CustomerFiltersComponent) },
   { path: 'dashboard', loadComponent: () => import('./features/customer/dashboard/customer-dashboard.component').then(m => m.CustomerDashboardComponent), canActivate: [authGuard, roleGuard(['customer'])] },
+  { path: 'account-settings', loadComponent: () => import('./features/customer/account-settings/account-settings.component').then(m => m.AccountSettingsComponent), canActivate: [authGuard, roleGuard(['customer'])] },
   { path: 'report-issue/:orderId', loadComponent: () => import('./features/customer/report-issue/report-issue.component').then(m => m.ReportIssueComponent), canActivate: [authGuard, roleGuard(['customer'])] },
   { path: 'restaurant/:id', loadComponent: () => import('./features/restaurants/restaurant-detail.component').then(m => m.RestaurantDetailComponent) },
   { path: 'restaurants', component: RestaurantsComponent },
