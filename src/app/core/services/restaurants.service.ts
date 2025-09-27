@@ -461,6 +461,43 @@ export class RestaurantsService {
     );
   }
 
+  // Generate PLZ delivery zones by radius (no persistence)
+  generateDeliveryZones(restaurantId: string, radiusKm: number): Observable<{
+    restaurant_id: string;
+    radius_km: number;
+    center: { latitude: number; longitude: number };
+    postal_codes: Array<{ postal_code: string; city: string; distance_km: number; latitude: number; longitude: number }>;
+  }> {
+    return this.http.post<{
+      restaurant_id: string;
+      radius_km: number;
+      center: { latitude: number; longitude: number };
+      postal_codes: Array<{ postal_code: string; city: string; distance_km: number; latitude: number; longitude: number }>;
+    }>(`${this.baseUrl}/${restaurantId}/generate-delivery-zones`, { radius_km: radiusKm });
+  }
+
+  saveDeliveryZones(restaurantId: string, zones: Array<{
+    postal_code: string;
+    delivery_fee?: number;
+    minimum_order_amount?: number;
+    estimated_delivery_time_minutes?: number;
+    is_active?: boolean;
+  }>): Observable<{ saved: number }> {
+    return this.http.post<{ saved: number }>(`${this.baseUrl}/${restaurantId}/save-delivery-zones`, { zones });
+  }
+
+  getDeliveryZones(restaurantId: string): Observable<Array<{
+    postal_code: string;
+    delivery_fee: number | null;
+    minimum_order_amount: number | null;
+    estimated_delivery_time_minutes: number | null;
+    is_active: boolean;
+  }>> {
+    return this.http.get<{ count: number; zones: any[] }>(`${this.baseUrl}/${restaurantId}/delivery-zones`).pipe(
+      map(resp => resp.zones || [])
+    );
+  }
+
   // Loyalty settings (public endpoint for unauthenticated users)
   getLoyaltySettings(restaurantId: string): Observable<any | null> {
     return this.http.get<{ loyalty_settings: any | null }>(`${this.baseUrl}/${restaurantId}/loyalty-settings/public`).pipe(

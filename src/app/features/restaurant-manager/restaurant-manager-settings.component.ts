@@ -268,68 +268,251 @@ import { Subscription } from 'rxjs';
 
         <!-- Delivery Settings -->
         <div *ngIf="activeTab === 'delivery'" class="settings-section">
-          <h2>Liefer-Einstellungen</h2>
+          <div class="delivery-header">
+            <h2>Liefer-Einstellungen</h2>
+            <p class="section-description">Konfigurieren Sie Ihre Liefergebiete, Gebühren und Auslieferungszeiten</p>
+          </div>
+
           <form (ngSubmit)="saveDeliverySettings()" #deliveryForm="ngForm">
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="minOrder">Mindestbestellwert (€)</label>
-                <input id="minOrder" type="number" step="0.01" [(ngModel)]="deliverySettings.minOrderAmount" name="minOrder" min="0">
+            <!-- Basic Delivery Settings Card -->
+            <div class="delivery-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-truck"></i> Grundlegende Einstellungen</h3>
               </div>
+              <div class="card-content">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="minOrder">
+                      <i class="fa-solid fa-euro-sign"></i>
+                      Mindestbestellwert (€)
+                    </label>
+                    <div class="input-with-icon">
+                      <input id="minOrder" type="number" step="0.01" [(ngModel)]="deliverySettings.minOrderAmount" name="minOrder" min="0" placeholder="15.00">
+                      <span class="input-suffix">€</span>
+                    </div>
+                  </div>
 
-              <div class="form-group">
-                <label for="deliveryFee">Liefergebühr (€)</label>
-                <input id="deliveryFee" type="number" step="0.01" [(ngModel)]="deliverySettings.deliveryFee" name="deliveryFee" min="0">
-              </div>
+                  <div class="form-group">
+                    <label for="deliveryFee">
+                      <i class="fa-solid fa-shipping-fast"></i>
+                      Liefergebühr (€)
+                    </label>
+                    <div class="input-with-icon">
+                      <input id="deliveryFee" type="number" step="0.01" [(ngModel)]="deliverySettings.deliveryFee" name="deliveryFee" min="0" placeholder="2.50">
+                      <span class="input-suffix">€</span>
+                    </div>
+                  </div>
 
-              <div class="form-group">
-                <label for="deliveryRadius">Lieferradius (km)</label>
-                <input id="deliveryRadius" type="number" step="0.1" [(ngModel)]="deliverySettings.deliveryRadius" name="deliveryRadius" min="0">
-              </div>
+                  <div class="form-group">
+                    <label for="deliveryRadius">
+                      <i class="fa-solid fa-map-marked-alt"></i>
+                      Lieferradius (km)
+                    </label>
+                    <div class="input-with-icon">
+                      <input id="deliveryRadius" type="number" step="0.1" [(ngModel)]="deliverySettings.deliveryRadius" name="deliveryRadius" min="0" placeholder="5.0">
+                      <span class="input-suffix">km</span>
+                    </div>
+                  </div>
 
-              <div class="form-group">
-                <label for="estimatedTime">Geschätzte Lieferzeit (Min.)</label>
-                <input id="estimatedTime" type="number" [(ngModel)]="deliverySettings.estimatedDeliveryTime" name="estimatedTime" min="0">
+                  <div class="form-group">
+                    <label for="estimatedTime">
+                      <i class="fa-solid fa-clock"></i>
+                      Geschätzte Lieferzeit (Min.)
+                    </label>
+                    <div class="input-with-icon">
+                      <input id="estimatedTime" type="number" [(ngModel)]="deliverySettings.estimatedDeliveryTime" name="estimatedTime" min="0" placeholder="30">
+                      <span class="input-suffix">Min</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="delivery-status-toggle">
+                  <label class="status-toggle-label">
+                    <input type="checkbox" [(ngModel)]="deliverySettings.isActive" name="isActive">
+                    <span class="status-toggle-slider"></span>
+                    <div class="status-toggle-content">
+                      <i class="fa-solid fa-truck"></i>
+                      <span>Lieferung aktiv</span>
+                    </div>
+                  </label>
+                </div>
               </div>
             </div>
 
-            <!-- Excluded delivery areas (postal code + sub-area) -->
-            <div class="form-group">
-              <label>Ausgeschlossene Bereiche (PLZ + Ortsteil)</label>
-              <div *ngFor="let area of deliverySettings.excludedAreas; let i = index" class="excluded-area-row">
-                <input
-                  type="text"
-                  placeholder="PLZ"
-                  [(ngModel)]="deliverySettings.excludedAreas[i].postal_code"
-                  [name]="'excluded_postal_' + i"
-                >
-                <input
-                  type="text"
-                  placeholder="Ortsteil"
-                  [(ngModel)]="deliverySettings.excludedAreas[i].sub_area"
-                  [name]="'excluded_subarea_' + i"
-                >
-                <button type="button" class="btn-secondary" (click)="removeExcludedArea(i)">Entfernen</button>
+            <!-- PLZ Zone Management Card -->
+            <div class="delivery-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-map-marker-alt"></i> PLZ-Zonen Management</h3>
+                <p class="card-description">Automatische Generierung und Verwaltung von Liefergebieten</p>
               </div>
-              <button type="button" class="btn-primary" (click)="addExcludedArea()">
-                <i class="fa-solid fa-plus"></i>
-                Bereich hinzufügen
-              </button>
-              <p class="upload-info">Beispiel: PLZ 64711, Ortsteil Bullau</p>
+              <div class="card-content">
+                <!-- Action Buttons -->
+                <div class="action-buttons-grid">
+                  <button type="button" class="action-btn action-btn-primary" (click)="onGenerateDeliveryZones()" [disabled]="isLoading || !currentRestaurant">
+                    <div class="btn-icon">
+                      <i class="fa-solid fa-spinner fa-spin" *ngIf="isLoading"></i>
+                      <i class="fa-solid fa-magic" *ngIf="!isLoading"></i>
+                    </div>
+                    <div class="btn-content">
+                      <span class="btn-title">{{ isLoading ? 'Wird generiert...' : 'PLZ-Zonen generieren' }}</span>
+                      <span class="btn-subtitle">Automatisch im Umkreis finden</span>
+                    </div>
+                  </button>
+
+                  <button type="button" class="action-btn action-btn-secondary" (click)="onLoadSavedZones()" [disabled]="isLoading || !currentRestaurant">
+                    <div class="btn-icon">
+                      <i class="fa-solid fa-download"></i>
+                    </div>
+                    <div class="btn-content">
+                      <span class="btn-title">Gespeicherte Zonen</span>
+                      <span class="btn-subtitle">Vorhandene laden</span>
+                    </div>
+                  </button>
+
+                  <button type="button" class="action-btn action-btn-secondary" (click)="onPreparePersistZones()" [disabled]="isLoading || !generatedZones.length">
+                    <div class="btn-icon">
+                      <i class="fa-solid fa-cog"></i>
+                    </div>
+                    <div class="btn-content">
+                      <span class="btn-title">Übernehmen vorbereiten</span>
+                      <span class="btn-subtitle">Zonen konfigurieren</span>
+                    </div>
+                  </button>
+
+                  <button type="button" class="action-btn action-btn-success" (click)="onPersistZones()" [disabled]="isLoading || !persistZones.length || !currentRestaurant">
+                    <div class="btn-icon">
+                      <i class="fa-solid fa-save"></i>
+                    </div>
+                    <div class="btn-content">
+                      <span class="btn-title">Zonen speichern</span>
+                      <span class="btn-subtitle">Konfiguration übernehmen</span>
+                    </div>
+                  </button>
+                </div>
+
+                <!-- Generated Zones Preview -->
+                <div class="zones-preview" *ngIf="generatedZones && generatedZones.length">
+                  <div class="preview-header">
+                    <h4><i class="fa-solid fa-list"></i> Gefundene PLZ im Umkreis ({{ generatedZones.length }})</h4>
+                  </div>
+                  <div class="zones-list">
+                    <div *ngFor="let z of generatedZones; let i = index" class="zone-list-item">
+                      <div class="zone-number">{{ i + 1 }}</div>
+                      <div class="zone-details">
+                        <div class="zone-main-info">
+                          <span class="zone-plz">{{ z.postal_code }}</span>
+                          <span class="zone-city">{{ z.city }}</span>
+                        </div>
+                        <div class="zone-distance">
+                          <i class="fa-solid fa-location-dot"></i>
+                          {{ z.distance_km }} km entfernt
+                        </div>
+                      </div>
+                      <div class="zone-actions">
+                        <button type="button" class="zone-action-btn" title="Details anzeigen">
+                          <i class="fa-solid fa-info-circle"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Persist Zones Configuration -->
+                <div class="zones-config" *ngIf="persistZones.length">
+                  <div class="config-header">
+                    <h4><i class="fa-solid fa-edit"></i> PLZ-Zonen konfigurieren</h4>
+                    <p class="config-description">Passen Sie Gebühren und Einstellungen für jede Zone an</p>
+                  </div>
+                  <div class="zones-config-grid">
+                    <div *ngFor="let z of persistZones; let i = index" class="zone-config-item">
+                      <div class="zone-config-header">
+                        <div class="zone-info">
+                          <span class="zone-plz-badge">{{ z.postal_code }}</span>
+                          <span class="zone-status" [class.active]="z.is_active">
+                            <i class="fa-solid fa-circle"></i>
+                            {{ z.is_active ? 'Aktiv' : 'Inaktiv' }}
+                          </span>
+                        </div>
+                        <label class="zone-toggle">
+                          <input type="checkbox" [(ngModel)]="persistZones[i].is_active" [name]="'active_'+i">
+                          <span class="toggle-slider"></span>
+                        </label>
+                      </div>
+                      <div class="zone-config-fields">
+                        <div class="config-field">
+                          <label>Liefergebühr (€)</label>
+                          <input type="number" step="0.01" placeholder="2.50" [(ngModel)]="persistZones[i].delivery_fee" [name]="'fee_'+i">
+                        </div>
+                        <div class="config-field">
+                          <label>Mindestbestellwert (€)</label>
+                          <input type="number" step="0.01" placeholder="15.00" [(ngModel)]="persistZones[i].minimum_order_amount" [name]="'min_'+i">
+                        </div>
+                        <div class="config-field">
+                          <label>ETA (Min.)</label>
+                          <input type="number" placeholder="30" [(ngModel)]="persistZones[i].estimated_delivery_time_minutes" [name]="'eta_'+i">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div class="form-group">
-              <label class="checkbox-label">
-                <input type="checkbox" [(ngModel)]="deliverySettings.isActive" name="isActive">
-                <span class="checkmark"></span>
-                Lieferung aktiv
-              </label>
+            <!-- Excluded Areas Card -->
+            <div class="delivery-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-ban"></i> Ausgeschlossene Bereiche</h3>
+                <p class="card-description">Bestimmte PLZ oder Ortsteile von der Lieferung ausschließen</p>
+              </div>
+              <div class="card-content">
+                <div class="excluded-areas-list" *ngIf="deliverySettings.excludedAreas.length > 0">
+                  <div *ngFor="let area of deliverySettings.excludedAreas; let i = index" class="excluded-area-item">
+                    <div class="area-inputs">
+                      <div class="input-group">
+                        <label>PLZ</label>
+                        <input
+                          type="text"
+                          placeholder="64711"
+                          [(ngModel)]="deliverySettings.excludedAreas[i].postal_code"
+                          [name]="'excluded_postal_' + i"
+                        >
+                      </div>
+                      <div class="input-group">
+                        <label>Ortsteil</label>
+                        <input
+                          type="text"
+                          placeholder="Bullau"
+                          [(ngModel)]="deliverySettings.excludedAreas[i].sub_area"
+                          [name]="'excluded_subarea_' + i"
+                        >
+                      </div>
+                    </div>
+                    <button type="button" class="remove-area-btn" (click)="removeExcludedArea(i)">
+                      <i class="fa-solid fa-trash"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <button type="button" class="add-area-btn" (click)="addExcludedArea()">
+                  <i class="fa-solid fa-plus"></i>
+                  <span>Bereich hinzufügen</span>
+                </button>
+
+                <div class="help-text">
+                  <i class="fa-solid fa-info-circle"></i>
+                  <span>Beispiel: PLZ 64711, Ortsteil Bullau</span>
+                </div>
+              </div>
             </div>
 
+            <!-- Save Button -->
             <div class="form-actions">
-              <button type="submit" class="btn-primary" [disabled]="isLoading">
-                <i class="fa-solid fa-spinner fa-spin" *ngIf="isLoading"></i>
-                <i class="fa-solid fa-save" *ngIf="!isLoading"></i>
-                {{ isLoading ? 'Wird gespeichert...' : 'Liefer-Einstellungen speichern' }}
+              <button type="submit" class="save-btn" [disabled]="isLoading">
+                <div class="btn-icon">
+                  <i class="fa-solid fa-spinner fa-spin" *ngIf="isLoading"></i>
+                  <i class="fa-solid fa-save" *ngIf="!isLoading"></i>
+                </div>
+                <span>{{ isLoading ? 'Wird gespeichert...' : 'Liefer-Einstellungen speichern' }}</span>
               </button>
             </div>
           </form>
@@ -1384,6 +1567,706 @@ import { Subscription } from 'rxjs';
       transform: translateX(30px);
     }
 
+    /* Delivery Settings Styles */
+    .delivery-header {
+      margin-bottom: var(--space-8);
+      text-align: center;
+    }
+
+    .delivery-header h2 {
+      margin: 0 0 var(--space-2) 0;
+      color: var(--color-text);
+      font-size: var(--text-2xl);
+      font-weight: 700;
+    }
+
+    .delivery-card {
+      background: white;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      margin-bottom: var(--space-6);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      transition: all var(--transition);
+    }
+
+    .delivery-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-1px);
+    }
+
+    .card-header {
+      background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%);
+      padding: var(--space-6);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .card-header h3 {
+      margin: 0 0 var(--space-2) 0;
+      color: var(--color-primary-800);
+      font-size: var(--text-lg);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .card-header h3 i {
+      color: var(--color-primary-600);
+    }
+
+    .card-description {
+      margin: 0;
+      color: var(--color-primary-700);
+      font-size: var(--text-sm);
+      line-height: 1.5;
+    }
+
+    .card-content {
+      padding: var(--space-6);
+    }
+
+    /* Input with Icon Styles */
+    .input-with-icon {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-with-icon input {
+      flex: 1;
+      padding-right: 40px;
+    }
+
+    .input-suffix {
+      position: absolute;
+      right: var(--space-3);
+      color: var(--color-muted);
+      font-weight: 500;
+      font-size: var(--text-sm);
+      pointer-events: none;
+    }
+
+    .form-group label {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: var(--space-2);
+    }
+
+    .form-group label i {
+      color: var(--color-primary-600);
+      font-size: var(--text-sm);
+    }
+
+    /* Delivery Status Toggle */
+    .delivery-status-toggle {
+      margin-top: var(--space-6);
+      padding: var(--space-4);
+      background: var(--color-success-50);
+      border: 1px solid var(--color-success-200);
+      border-radius: var(--radius-lg);
+    }
+
+    .status-toggle-label {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      cursor: pointer;
+      margin: 0;
+    }
+
+    .status-toggle-label input {
+      display: none;
+    }
+
+    .status-toggle-slider {
+      width: 50px;
+      height: 24px;
+      background: #ccc;
+      border-radius: 24px;
+      position: relative;
+      transition: all var(--transition);
+    }
+
+    .status-toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: white;
+      top: 3px;
+      left: 3px;
+      transition: all var(--transition);
+    }
+
+    .status-toggle-label input:checked + .status-toggle-slider {
+      background: var(--color-success-500);
+    }
+
+    .status-toggle-label input:checked + .status-toggle-slider::before {
+      transform: translateX(26px);
+    }
+
+    .status-toggle-content {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-weight: 600;
+      color: var(--color-success-800);
+    }
+
+    .status-toggle-content i {
+      color: var(--color-success-600);
+    }
+
+    /* Action Buttons Grid */
+    .action-buttons-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-4);
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      background: white;
+      cursor: pointer;
+      transition: all var(--transition);
+      text-align: left;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .action-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    .action-btn:hover::before {
+      left: 100%;
+    }
+
+    .action-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .action-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .action-btn-primary {
+      border-color: var(--color-primary-300);
+      background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%);
+    }
+
+    .action-btn-primary:hover:not(:disabled) {
+      border-color: var(--color-primary-500);
+      background: linear-gradient(135deg, var(--color-primary-100) 0%, var(--color-primary-200) 100%);
+    }
+
+    .action-btn-secondary {
+      border-color: var(--color-gray-300);
+      background: linear-gradient(135deg, var(--color-gray-50) 0%, var(--color-gray-100) 100%);
+    }
+
+    .action-btn-secondary:hover:not(:disabled) {
+      border-color: var(--color-gray-500);
+      background: linear-gradient(135deg, var(--color-gray-100) 0%, var(--color-gray-200) 100%);
+    }
+
+    .action-btn-success {
+      border-color: var(--color-success-300);
+      background: linear-gradient(135deg, var(--color-success-50) 0%, var(--color-success-100) 100%);
+    }
+
+    .action-btn-success:hover:not(:disabled) {
+      border-color: var(--color-success-500);
+      background: linear-gradient(135deg, var(--color-success-100) 0%, var(--color-success-200) 100%);
+    }
+
+    .btn-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--text-lg);
+      flex-shrink: 0;
+    }
+
+    .action-btn-primary .btn-icon {
+      background: var(--color-primary-500);
+      color: white;
+    }
+
+    .action-btn-secondary .btn-icon {
+      background: var(--color-gray-500);
+      color: white;
+    }
+
+    .action-btn-success .btn-icon {
+      background: var(--color-success-500);
+      color: white;
+    }
+
+    .btn-content {
+      flex: 1;
+    }
+
+    .btn-title {
+      display: block;
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: var(--space-1);
+    }
+
+    .btn-subtitle {
+      display: block;
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+    }
+
+    /* Zones Preview */
+    .zones-preview {
+      margin-bottom: var(--space-6);
+    }
+
+    .preview-header h4 {
+      margin: 0 0 var(--space-4) 0;
+      color: var(--color-text);
+      font-size: var(--text-base);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .preview-header h4 i {
+      color: var(--color-primary-600);
+    }
+
+    .zones-list {
+      background: white;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .zone-list-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-4);
+      border-bottom: 1px solid var(--color-border);
+      transition: all var(--transition);
+      position: relative;
+    }
+
+    .zone-list-item:last-child {
+      border-bottom: none;
+    }
+
+    .zone-list-item:hover {
+      background: var(--color-primary-50);
+    }
+
+    .zone-number {
+      width: 32px;
+      height: 32px;
+      background: var(--color-primary-500);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: var(--text-sm);
+      flex-shrink: 0;
+    }
+
+    .zone-details {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .zone-main-info {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .zone-plz {
+      font-weight: 700;
+      font-size: var(--text-lg);
+      color: var(--color-primary-800);
+      background: var(--color-primary-100);
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-sm);
+    }
+
+    .zone-city {
+      font-size: var(--text-base);
+      color: var(--color-text);
+      font-weight: 500;
+    }
+
+    .zone-distance {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+    }
+
+    .zone-distance i {
+      color: var(--color-primary-600);
+      font-size: var(--text-xs);
+    }
+
+    .zone-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .zone-action-btn {
+      width: 32px;
+      height: 32px;
+      background: var(--color-gray-100);
+      color: var(--color-gray-600);
+      border: none;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all var(--transition);
+      flex-shrink: 0;
+    }
+
+    .zone-action-btn:hover {
+      background: var(--color-primary-100);
+      color: var(--color-primary-600);
+      transform: scale(1.1);
+    }
+
+    /* Zones Configuration */
+    .zones-config {
+      margin-bottom: var(--space-6);
+    }
+
+    .config-header h4 {
+      margin: 0 0 var(--space-2) 0;
+      color: var(--color-text);
+      font-size: var(--text-base);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .config-header h4 i {
+      color: var(--color-primary-600);
+    }
+
+    .config-description {
+      margin: 0 0 var(--space-4) 0;
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+    }
+
+    .zones-config-grid {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .zone-config-item {
+      background: var(--color-gray-50);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+    }
+
+    .zone-config-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-4);
+    }
+
+    .zone-info {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .zone-plz-badge {
+      background: var(--color-primary-500);
+      color: white;
+      padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      font-size: var(--text-sm);
+    }
+
+    .zone-status {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+    }
+
+    .zone-status.active {
+      color: var(--color-success-600);
+    }
+
+    .zone-status i {
+      font-size: 8px;
+    }
+
+    .zone-toggle {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 20px;
+      cursor: pointer;
+    }
+
+    .zone-toggle input {
+      display: none;
+    }
+
+    .zone-toggle .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #ccc;
+      border-radius: 20px;
+      transition: all var(--transition);
+    }
+
+    .zone-toggle .toggle-slider::before {
+      position: absolute;
+      content: '';
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background: white;
+      border-radius: 50%;
+      transition: all var(--transition);
+    }
+
+    .zone-toggle input:checked + .toggle-slider {
+      background: var(--color-success-500);
+    }
+
+    .zone-toggle input:checked + .toggle-slider::before {
+      transform: translateX(20px);
+    }
+
+    .zone-config-fields {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: var(--space-3);
+    }
+
+    .config-field {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .config-field label {
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--color-text);
+      margin: 0;
+    }
+
+    .config-field input {
+      padding: var(--space-2) var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+    }
+
+    /* Excluded Areas */
+    .excluded-areas-list {
+      margin-bottom: var(--space-4);
+    }
+
+    .excluded-area-item {
+      display: flex;
+      align-items: end;
+      gap: var(--space-3);
+      margin-bottom: var(--space-3);
+      padding: var(--space-3);
+      background: var(--color-warning-50);
+      border: 1px solid var(--color-warning-200);
+      border-radius: var(--radius-lg);
+    }
+
+    .area-inputs {
+      display: flex;
+      gap: var(--space-3);
+      flex: 1;
+    }
+
+    .input-group {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .input-group label {
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--color-text);
+      margin: 0;
+    }
+
+    .input-group input {
+      padding: var(--space-2) var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+    }
+
+    .remove-area-btn {
+      background: var(--color-danger-500);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all var(--transition);
+      flex-shrink: 0;
+    }
+
+    .remove-area-btn:hover {
+      background: var(--color-danger-600);
+      transform: scale(1.05);
+    }
+
+    .add-area-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-4);
+      background: var(--color-primary-500);
+      color: white;
+      border: none;
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      font-weight: 500;
+      transition: all var(--transition);
+      margin-bottom: var(--space-3);
+    }
+
+    .add-area-btn:hover {
+      background: var(--color-primary-600);
+      transform: translateY(-1px);
+    }
+
+    .help-text {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+      font-style: italic;
+    }
+
+    .help-text i {
+      color: var(--color-info-500);
+    }
+
+    /* Save Button */
+    .save-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-4) var(--space-8);
+      background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-600) 100%);
+      color: white;
+      border: none;
+      border-radius: var(--radius-lg);
+      font-weight: 600;
+      font-size: var(--text-base);
+      cursor: pointer;
+      transition: all var(--transition);
+      box-shadow: var(--shadow-md);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .save-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    .save-btn:hover::before {
+      left: 100%;
+    }
+
+    .save-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .save-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .save-btn .btn-icon {
+      width: 20px;
+      height: 20px;
+      background: none;
+      color: white;
+      font-size: var(--text-base);
+    }
+
     /* Excluded areas styles */
     .excluded-area-row {
       display: flex;
@@ -1596,6 +2479,93 @@ import { Subscription } from 'rxjs';
         justify-content: center;
         padding: var(--space-3);
       }
+
+      /* Delivery Settings Mobile */
+      .delivery-header h2 {
+        font-size: var(--text-xl);
+      }
+
+      .card-header {
+        padding: var(--space-4);
+      }
+
+      .card-content {
+        padding: var(--space-4);
+      }
+
+      .action-buttons-grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-3);
+      }
+
+      .action-btn {
+        padding: var(--space-3);
+        gap: var(--space-3);
+      }
+
+      .btn-content {
+        min-width: 0;
+      }
+
+      .btn-title {
+        font-size: var(--text-sm);
+      }
+
+      .btn-subtitle {
+        font-size: var(--text-xs);
+      }
+
+      .zone-list-item {
+        padding: var(--space-3);
+        gap: var(--space-3);
+      }
+
+      .zone-number {
+        width: 28px;
+        height: 28px;
+        font-size: var(--text-xs);
+      }
+
+      .zone-main-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-1);
+      }
+
+      .zone-plz {
+        font-size: var(--text-base);
+      }
+
+      .zone-city {
+        font-size: var(--text-sm);
+      }
+
+      .zone-action-btn {
+        width: 28px;
+        height: 28px;
+      }
+
+      .zone-config-fields {
+        grid-template-columns: 1fr;
+        gap: var(--space-2);
+      }
+
+      .excluded-area-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-2);
+      }
+
+      .area-inputs {
+        flex-direction: column;
+        gap: var(--space-2);
+      }
+
+      .save-btn {
+        width: 100%;
+        justify-content: center;
+        padding: var(--space-4);
+      }
     }
   `]
 })
@@ -1684,6 +2654,9 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
 
   stripeStatusText: string = '–';
 
+  generatedZones: Array<{ postal_code: string; city: string; distance_km: number; latitude: number; longitude: number }> = [];
+  persistZones: Array<{ postal_code: string; delivery_fee?: number; minimum_order_amount?: number; estimated_delivery_time_minutes?: number; is_active?: boolean }> = [];
+
   ngOnInit() {
     this.loadCurrentUser();
     this.loadRestaurantData();
@@ -1735,6 +2708,87 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
         this.isLoading = false;
       }
     });
+    this.subscriptions.push(sub);
+  }
+
+  onGenerateDeliveryZones() {
+    if (!this.currentRestaurant) return;
+    const radius = this.deliverySettings.deliveryRadius || 8;
+    this.isLoading = true;
+    const sub = this.restaurantsService
+      .generateDeliveryZones(this.currentRestaurant.id as any, radius)
+      .subscribe({
+        next: (resp) => {
+          console.log('Generated delivery zones:', resp);
+          this.generatedZones = resp.postal_codes || [];
+          this.toastService.success('Erfolg', `${resp.postal_codes.length} PLZ im Umkreis gefunden`);
+        },
+        error: (err) => {
+          console.error('Failed to generate delivery zones', err);
+          this.toastService.error('Fehler', 'PLZ-Zonen konnten nicht generiert werden');
+        },
+        complete: () => {
+          this.isLoading = false;
+        }
+      });
+    this.subscriptions.push(sub);
+  }
+
+  onPreparePersistZones() {
+    this.persistZones = (this.generatedZones || []).map(z => ({
+      postal_code: z.postal_code,
+      delivery_fee: this.deliverySettings.deliveryFee || 0,
+      minimum_order_amount: this.deliverySettings.minOrderAmount || 0,
+      estimated_delivery_time_minutes: this.deliverySettings.estimatedDeliveryTime || 30,
+      is_active: true
+    }));
+  }
+
+  onPersistZones() {
+    if (!this.currentRestaurant || !this.persistZones.length) return;
+    this.isLoading = true;
+    const sub = this.restaurantsService
+      .saveDeliveryZones(this.currentRestaurant.id as any, this.persistZones)
+      .subscribe({
+        next: (resp) => {
+          this.toastService.success('Gespeichert', `${resp.saved} Zonen gespeichert`);
+        },
+        error: (err) => {
+          console.error('Failed to save zones', err);
+          this.toastService.error('Fehler', 'Zonen konnten nicht gespeichert werden');
+        },
+        complete: () => {
+          this.isLoading = false;
+        }
+      });
+    this.subscriptions.push(sub);
+  }
+
+  onLoadSavedZones() {
+    if (!this.currentRestaurant) return;
+    this.isLoading = true;
+    const sub = this.restaurantsService
+      .getDeliveryZones(this.currentRestaurant.id as any)
+      .subscribe({
+        next: (zones) => {
+          // Show saved zones in persist editor for quick update
+          this.persistZones = zones.map(z => ({
+            postal_code: z.postal_code,
+            delivery_fee: z.delivery_fee ?? undefined,
+            minimum_order_amount: z.minimum_order_amount ?? undefined,
+            estimated_delivery_time_minutes: z.estimated_delivery_time_minutes ?? undefined,
+            is_active: z.is_active
+          }));
+          this.toastService.success('Geladen', `${zones.length} gespeicherte Zonen geladen`);
+        },
+        error: (err) => {
+          console.error('Failed to load saved zones', err);
+          this.toastService.error('Fehler', 'Gespeicherte Zonen konnten nicht geladen werden');
+        },
+        complete: () => {
+          this.isLoading = false;
+        }
+      });
     this.subscriptions.push(sub);
   }
 
