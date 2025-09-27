@@ -28,16 +28,14 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
             <i class="fa-solid fa-map-marker-alt location-icon"></i>
             <span class="location-text">{{ formattedAddress || deliveryAddress }}</span>
           </div>
-          <div class="location-actions">
-            <button class="filter-btn" (click)="goToFilters()" type="button" title="Filter & Suche">
-              <i class="fa-solid fa-sliders"></i>
-              <span class="filter-text">Suche & Filter</span>
-            </button>
-            <button class="change-address-btn" (click)="clearAddress()" type="button">
-              <i class="fa-solid fa-edit"></i>
-              Adresse ändern
-            </button>
-          </div>
+          <button class="filter-btn" (click)="goToFilters()" type="button" title="Filter & Suche">
+            <i class="fa-solid fa-sliders"></i>
+            <span class="filter-text">Suche & Filter</span>
+          </button>
+          <button class="change-address-btn" (click)="clearAddress()" type="button">
+            <i class="fa-solid fa-edit"></i>
+            Adresse ändern
+          </button>
         </div>
 
         <!-- Full Hero Content (when no coordinates or not compact mode) -->
