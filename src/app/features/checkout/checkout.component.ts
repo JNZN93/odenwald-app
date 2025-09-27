@@ -101,7 +101,16 @@ interface MenuItemVariantOption {
         <div class="checkout-main">
           <!-- Cart Items -->
           <div class="cart-section">
-            <h2>Bestellung von {{ cart.restaurant_name }}</h2>
+            <div class="cart-header">
+              <h2>Bestellung von {{ cart.restaurant_name }}</h2>
+              <button 
+                class="clear-cart-btn" 
+                (click)="clearCart()"
+                title="Warenkorb leeren">
+                <i class="fa-solid fa-trash"></i>
+                Warenkorb leeren
+              </button>
+            </div>
 
             <div class="cart-items">
               <div *ngFor="let item of cart.items" class="cart-item">
@@ -564,6 +573,52 @@ interface MenuItemVariantOption {
       border-bottom: 2px solid var(--color-primary);
     }
 
+    .cart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-6);
+      padding-bottom: var(--space-3);
+      border-bottom: 2px solid var(--color-primary);
+    }
+
+    .cart-header h2 {
+      margin: 0;
+      border: none;
+      padding: 0;
+    }
+
+    .clear-cart-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+      border: none;
+      border-radius: var(--radius-lg);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+    }
+
+    .clear-cart-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+    }
+
+    .clear-cart-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+    }
+
+    .clear-cart-btn i {
+      font-size: var(--text-sm);
+    }
+
     .cart-items {
       display: flex;
       flex-direction: column;
@@ -820,6 +875,22 @@ interface MenuItemVariantOption {
 
     /* Responsive Design */
     @media (max-width: 768px) {
+      .cart-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-3);
+      }
+
+      .cart-header h2 {
+        font-size: var(--text-xl);
+      }
+
+      .clear-cart-btn {
+        align-self: flex-end;
+        padding: var(--space-2) var(--space-3);
+        font-size: var(--text-xs);
+      }
+
       .cart-item {
         display: grid;
         grid-template-columns: 1fr auto;
@@ -959,6 +1030,24 @@ interface MenuItemVariantOption {
     }
 
     @media (max-width: 480px) {
+      .cart-header {
+        gap: var(--space-2);
+      }
+
+      .cart-header h2 {
+        font-size: var(--text-lg);
+      }
+
+      .clear-cart-btn {
+        padding: var(--space-1) var(--space-2);
+        font-size: 10px;
+        gap: var(--space-1);
+      }
+
+      .clear-cart-btn i {
+        font-size: 10px;
+      }
+
       .cart-item {
         grid-template-columns: 1fr auto;
         grid-template-areas:
@@ -2084,6 +2173,30 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
 
     if (confirmed) {
       this.cartService.removeFromCart(menuItemId);
+    }
+  }
+
+  async clearCart() {
+    const cart = this.cartService.getCurrentCart();
+    if (!cart || cart.items.length === 0) {
+      return;
+    }
+
+    const confirmed = await this.confirmationService.confirm({
+      title: 'Warenkorb leeren',
+      message: 'Möchten Sie wirklich den gesamten Warenkorb leeren? Alle Artikel werden entfernt.',
+      confirmText: 'Ja, leeren',
+      cancelText: 'Abbrechen',
+      type: 'warning',
+      showCancel: true
+    });
+
+    if (confirmed) {
+      this.cartService.clearCart();
+      // Clear any item notes
+      this.itemNotes = {};
+      this.openNotesItems = {};
+      this.tempNotes = {};
     }
   }
 
