@@ -69,6 +69,33 @@ import { environment } from '../../../environments/environment';
 
           <p class="error-message" *ngIf="error">{{ error }}</p>
         </form>
+
+        <!-- Email Verification Error -->
+        <div class="verification-error" *ngIf="showVerificationError">
+          <div class="verification-error-content">
+            <div class="verification-icon">📧</div>
+            <h3>E-Mail-Verifizierung erforderlich</h3>
+            <p>Bitte bestätigen Sie Ihre E-Mail-Adresse, bevor Sie sich anmelden können.</p>
+            <p class="verification-subtitle">Überprüfen Sie Ihr Postfach auf eine E-Mail von uns.</p>
+            
+            <div class="verification-actions">
+              <button 
+                type="button" 
+                (click)="resendVerificationEmail()" 
+                [disabled]="resendLoading"
+                class="resend-btn">
+                <span *ngIf="!resendLoading">E-Mail erneut senden</span>
+                <span *ngIf="resendLoading">Wird gesendet...</span>
+              </button>
+              <button 
+                type="button" 
+                (click)="hideEmailVerificationError()" 
+                class="cancel-btn">
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        </div>
         
         <div class="login-footer">
           <p class="help-text">Haben Sie noch kein Konto? <a href="/auth/register" class="help-link">Jetzt registrieren</a></p>
@@ -376,6 +403,92 @@ import { environment } from '../../../environments/environment';
       text-decoration: underline;
     }
 
+    /* Email Verification Error Styles */
+    .verification-error {
+      background: var(--color-surface);
+      border: 2px solid #fbbf24;
+      border-radius: var(--radius-lg);
+      margin: var(--space-4);
+      overflow: hidden;
+    }
+
+    .verification-error-content {
+      padding: var(--space-6);
+      text-align: center;
+    }
+
+    .verification-icon {
+      font-size: 3rem;
+      margin-bottom: var(--space-4);
+    }
+
+    .verification-error h3 {
+      color: #92400e;
+      margin: 0 0 var(--space-3) 0;
+      font-size: var(--text-xl);
+      font-weight: 600;
+    }
+
+    .verification-error p {
+      color: #78350f;
+      margin: 0 0 var(--space-3) 0;
+      font-size: var(--text-sm);
+      line-height: 1.5;
+    }
+
+    .verification-subtitle {
+      color: #a16207;
+      font-size: var(--text-xs);
+      margin-bottom: var(--space-4) !important;
+    }
+
+    .verification-actions {
+      display: flex;
+      gap: var(--space-3);
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .resend-btn {
+      padding: var(--space-3) var(--space-4);
+      border: none;
+      border-radius: var(--radius-md);
+      background: #f59e0b;
+      color: white;
+      font-weight: 600;
+      font-size: var(--text-sm);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .resend-btn:hover:not(:disabled) {
+      background: #d97706;
+      transform: translateY(-1px);
+    }
+
+    .resend-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .cancel-btn {
+      padding: var(--space-3) var(--space-4);
+      border: 1px solid #d1d5db;
+      border-radius: var(--radius-md);
+      background: var(--color-surface);
+      color: var(--color-text);
+      font-weight: 500;
+      font-size: var(--text-sm);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .cancel-btn:hover {
+      border-color: #9ca3af;
+      background: #f9fafb;
+    }
+
     /* Responsive adjustments */
     @media (max-width: 480px) {
       .login-container {
@@ -411,6 +524,22 @@ import { environment } from '../../../environments/environment';
       .form-group {
         margin-bottom: var(--space-3);
       }
+
+      .verification-error {
+        margin: var(--space-3);
+      }
+
+      .verification-error-content {
+        padding: var(--space-4);
+      }
+
+      .verification-actions {
+        flex-direction: column;
+      }
+
+      .resend-btn, .cancel-btn {
+        width: 100%;
+      }
     }
   `]
 })
@@ -423,6 +552,8 @@ export class LoginComponent implements OnInit {
   password = '';
   loading = false;
   error = '';
+  showVerificationError = false;
+  resendLoading = false;
 
   ngOnInit() {
     this.checkForGoogleCallback();
@@ -588,7 +719,14 @@ export class LoginComponent implements OnInit {
       error: (err) => {
         this.loading = false;
         console.error('Login error:', err);
-        this.error = err?.error?.error || err?.error?.message || 'Anmeldung fehlgeschlagen';
+        
+        // Check if this is an email verification error
+        const errorMessage = err?.error?.error || err?.error?.message || 'Anmeldung fehlgeschlagen';
+        if (errorMessage.includes('verify your email address')) {
+          this.showEmailVerificationError();
+        } else {
+          this.error = errorMessage;
+        }
       }
     });
   }
@@ -609,6 +747,39 @@ export class LoginComponent implements OnInit {
       console.error('Google Sign In error:', error);
       this.error = 'Google-Anmeldung fehlgeschlagen';
     }
+  }
+
+  showEmailVerificationError() {
+    this.showVerificationError = true;
+    this.error = '';
+  }
+
+  hideEmailVerificationError() {
+    this.showVerificationError = false;
+  }
+
+  resendVerificationEmail() {
+    if (!this.email) {
+      this.error = 'Bitte geben Sie Ihre E-Mail-Adresse ein';
+      return;
+    }
+
+    this.resendLoading = true;
+    this.error = '';
+
+    this.auth.resendVerification(this.email).subscribe({
+      next: () => {
+        this.resendLoading = false;
+        this.error = '';
+        this.showVerificationError = false;
+        // Show success message - you could use a toast service here
+        alert('Verifizierungs-E-Mail wurde erneut gesendet. Bitte überprüfen Sie Ihr Postfach.');
+      },
+      error: (err) => {
+        this.resendLoading = false;
+        this.error = err?.error?.error || err?.error?.message || 'Fehler beim Senden der E-Mail';
+      }
+    });
   }
 }
 

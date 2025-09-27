@@ -59,6 +59,7 @@ export const routes: Routes = [
   { path: '', pathMatch: 'full', component: RootRedirectComponent },
   { path: 'auth/login', component: LoginComponent },
   { path: 'auth/register', component: RegistrationComponent },
+  { path: 'auth/verify-email', loadComponent: () => import('./features/auth/verify-email.component').then(m => m.VerifyEmailComponent) },
   { path: 'auth/callback', component: GoogleCallbackComponent },
   { path: 'auth/register-restaurant', loadComponent: () => import('./features/auth/restaurant-owner-registration.component').then(m => m.RestaurantOwnerRegistrationComponent) },
   { path: 'auth/register-wholesaler', loadComponent: () => import('./features/auth/wholesaler-registration.component').then(m => m.WholesalerRegistrationComponent) },

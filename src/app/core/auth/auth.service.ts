@@ -75,10 +75,9 @@ export class AuthService {
   }
 
   register(request: RegisterRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${environment.apiUrl}/auth/register`, request)
-      .pipe(
-        tap(response => this.handleAuthSuccess(response))
-      );
+    // Registrierung soll KEIN Auto-Login auslösen.
+    // Der Backend-Endpunkt liefert zwar ein Token, wir speichern es hier absichtlich nicht.
+    return this.http.post<AuthResponse>(`${environment.apiUrl}/auth/register`, request);
   }
 
   login(request: LoginRequest): Observable<AuthResponse> {
@@ -118,6 +117,14 @@ export class AuthService {
 
   forgotPassword(email: string): Observable<{ message: string }> {
     return this.http.post<{ message: string }>(`${environment.apiUrl}/auth/forgot-password`, { email });
+  }
+
+  resendVerification(email: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${environment.apiUrl}/auth/resend-verification`, { email });
+  }
+
+  verifyEmail(token: string): Observable<{ message: string }> {
+    return this.http.get<{ message: string }>(`${environment.apiUrl}/auth/verify-email`, { params: { token } });
   }
 
   // Google Sign In methods

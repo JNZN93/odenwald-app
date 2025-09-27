@@ -383,39 +383,9 @@ export class RegistrationComponent {
         this.loading = false;
         console.log('Registration successful:', response);
 
-        // Wait for the auth state to be fully updated
-        setTimeout(() => {
-          // Verify that the token is actually stored
-          const storedToken = localStorage.getItem('auth_token');
-          const storedUser = localStorage.getItem('current_user');
-
-          console.log('Registration verification:', {
-            storedToken: storedToken ? 'Token exists' : 'No token',
-            storedUser: storedUser ? 'User exists' : 'No user',
-            currentUser: this.auth.currentUserSubject.value
-          });
-
-          if (!storedToken || !storedUser) {
-            console.error('Registration failed: Token or user not stored properly');
-            this.error = 'Registrierung fehlgeschlagen: Token konnte nicht gespeichert werden';
-            return;
-          }
-
-          // Navigate based on user role after successful registration
-          const currentUser = this.auth.currentUserSubject.value;
-          console.log('Navigating based on user role after registration:', currentUser?.role);
-          
-          if (currentUser?.role === 'manager') {
-            this.router.navigateByUrl('/restaurant-manager', { replaceUrl: true });
-          } else if (currentUser?.role === 'app_admin' || currentUser?.role === 'admin') {
-            this.router.navigateByUrl('/admin', { replaceUrl: true });
-          } else if (currentUser?.role === 'driver') {
-            this.router.navigateByUrl('/driver-dashboard', { replaceUrl: true });
-          } else {
-            // Default to customer route for regular customers
-            this.router.navigateByUrl('/customer', { replaceUrl: true });
-          }
-        }, 500);
+        // Hinweis anzeigen und zum Login leiten, ohne Auto-Login
+        try { alert('Registrierung erfolgreich. Bitte bestätige deine E-Mail – wir haben dir einen Link gesendet.'); } catch {}
+        this.router.navigateByUrl('/auth/login', { replaceUrl: true });
       },
       error: (err) => {
         this.loading = false;
