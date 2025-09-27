@@ -336,6 +336,17 @@ import { Subscription } from 'rxjs';
                     </div>
                   </label>
                 </div>
+
+                <div class="delivery-status-toggle">
+                  <label class="status-toggle-label">
+                    <input type="checkbox" [(ngModel)]="deliverySettings.autoSaveZones" name="autoSaveZones">
+                    <span class="status-toggle-slider"></span>
+                    <div class="status-toggle-content">
+                      <i class="fa-solid fa-save"></i>
+                      <span>PLZ-Zonen automatisch speichern</span>
+                    </div>
+                  </label>
+                </div>
               </div>
             </div>
 
@@ -355,7 +366,7 @@ import { Subscription } from 'rxjs';
                     </div>
                     <div class="btn-content">
                       <span class="btn-title">{{ isLoading ? 'Wird generiert...' : 'PLZ-Zonen generieren' }}</span>
-                      <span class="btn-subtitle">Automatisch im Umkreis finden</span>
+                      <span class="btn-subtitle">{{ deliverySettings.autoSaveZones ? 'Automatisch im Umkreis finden & speichern' : 'Automatisch im Umkreis finden' }}</span>
                     </div>
                   </button>
 
@@ -2629,6 +2640,7 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
     deliveryRadius: 5.0,
     estimatedDeliveryTime: 30,
     isActive: true,
+    autoSaveZones: true, // Automatisches Speichern von PLZ-Zonen
     excludedAreas: [] as Array<{ postal_code: string; sub_area: string; reason?: string }>
   };
 
@@ -2722,6 +2734,11 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
           console.log('Generated delivery zones:', resp);
           this.generatedZones = resp.postal_codes || [];
           this.toastService.success('Erfolg', `${resp.postal_codes.length} PLZ im Umkreis gefunden`);
+          
+          // Automatisches Speichern wenn aktiviert
+          if (this.deliverySettings.autoSaveZones && this.generatedZones.length > 0) {
+            this.autoSaveGeneratedZones();
+          }
         },
         error: (err) => {
           console.error('Failed to generate delivery zones', err);
@@ -2759,6 +2776,34 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
         },
         complete: () => {
           this.isLoading = false;
+        }
+      });
+    this.subscriptions.push(sub);
+  }
+
+  private autoSaveGeneratedZones() {
+    if (!this.currentRestaurant || !this.generatedZones.length) return;
+    
+    // Bereite Zonen mit Standard-Einstellungen vor
+    const zonesToSave = this.generatedZones.map(z => ({
+      postal_code: z.postal_code,
+      delivery_fee: this.deliverySettings.deliveryFee || 2.50,
+      minimum_order_amount: this.deliverySettings.minOrderAmount || 15.00,
+      estimated_delivery_time_minutes: this.deliverySettings.estimatedDeliveryTime || 30,
+      is_active: true
+    }));
+
+    const sub = this.restaurantsService
+      .saveDeliveryZones(this.currentRestaurant.id as any, zonesToSave)
+      .subscribe({
+        next: (resp) => {
+          this.toastService.success('Auto-Save', `${resp.saved} PLZ-Zonen automatisch gespeichert`);
+          // Aktualisiere persistZones für die UI
+          this.persistZones = zonesToSave;
+        },
+        error: (err) => {
+          console.error('Failed to auto-save zones', err);
+          this.toastService.warning('Auto-Save', 'PLZ-Zonen konnten nicht automatisch gespeichert werden');
         }
       });
     this.subscriptions.push(sub);
@@ -2825,6 +2870,7 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
         deliveryRadius: restaurant.delivery_info.delivery_radius_km || 5.0,
         estimatedDeliveryTime: restaurant.delivery_info.estimated_delivery_time_minutes || 30,
         isActive: true, // This would need to be stored separately
+        autoSaveZones: true, // Standardmäßig aktiviert
         excludedAreas: (restaurant.delivery_info as any).excluded_areas || []
       };
     }
