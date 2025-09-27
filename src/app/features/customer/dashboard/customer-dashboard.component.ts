@@ -1149,28 +1149,37 @@ export class CustomerDashboardComponent implements OnInit {
   orderNotes = '';
   orderSpecialRequests = '';
 
-  // Mock featured restaurants - in real app, this would come from API
+  // Mock featured restaurants - using real restaurant IDs from backend
   featuredRestaurants = [
     {
-      id: '1',
-      name: 'Italienische Pizzeria Roma',
-      images: { banner: 'assets/images/restaurants/italian-pizzeria.jpg', logo: '' },
-      rating: 4.5,
-      delivery_info: { estimated_delivery_time_minutes: 25 }
-    },
-    {
-      id: '2',
-      name: 'Sushi Palace',
-      images: { banner: 'assets/images/restaurants/asian-sushi.jpg', logo: '' },
-      rating: 4.7,
+      id: '451',
+      name: 'Berrys Burger & Pizza',
+      images: { 
+        banner: 'https://odenwald-bucket.s3.eu-central-1.amazonaws.com/restaurant-images/banner-1756930683144-c9d898de81ec.jpg', 
+        logo: 'https://odenwald-bucket.s3.eu-central-1.amazonaws.com/restaurant-images/logo-1756767153052-8ab8158d4171.jpg' 
+      },
+      rating: 4.67,
       delivery_info: { estimated_delivery_time_minutes: 30 }
     },
     {
-      id: '3',
-      name: 'Deutsche Gaststätte',
-      images: { banner: 'assets/images/restaurants/german-schnitzel.jpg', logo: '' },
-      rating: 4.3,
-      delivery_info: { estimated_delivery_time_minutes: 20 }
+      id: '457',
+      name: 'Da Enzo',
+      images: { 
+        banner: 'https://odenwald-bucket.s3.eu-central-1.amazonaws.com/restaurant-images/banner-1757530231768-5239c668541f.jpg', 
+        logo: '' 
+      },
+      rating: 4.0,
+      delivery_info: { estimated_delivery_time_minutes: 30 }
+    },
+    {
+      id: '455',
+      name: 'Dilans Küche',
+      images: { 
+        banner: 'https://odenwald-bucket.s3.eu-central-1.amazonaws.com/restaurant-images/banner-1756936548993-addebe0db396.jpg', 
+        logo: '' 
+      },
+      rating: 4.0,
+      delivery_info: { estimated_delivery_time_minutes: 30 }
     }
   ];
 
