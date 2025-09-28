@@ -95,7 +95,8 @@ export const routes: Routes = [
       { path: 'drivers', component: DriversAdminComponent },
       { path: 'payments', component: PaymentsAdminComponent },
       { path: 'analytics', component: AnalyticsAdminComponent },
-      { path: 'issues', component: IssuesAdminComponent, canActivate: [roleGuard(['app_admin'])] }
+      { path: 'issues', component: IssuesAdminComponent, canActivate: [roleGuard(['app_admin'])] },
+      { path: 'support-tickets', loadComponent: () => import('./features/admin/support-tickets-admin.component').then(m => m.SupportTicketsAdminComponent), canActivate: [roleGuard(['app_admin'])] }
     ]
   },
   {
@@ -118,7 +119,8 @@ export const routes: Routes = [
       { path: 'tables', loadComponent: () => import('./features/restaurant-manager/restaurant-tables.component').then(m => m.RestaurantTablesComponent) },
       { path: 'tables/grid', loadComponent: () => import('./features/restaurant-manager/restaurant-table-grid.component').then(m => m.RestaurantTableGridComponent) },
       { path: 'invoices', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-invoices.component').then(m => m.RestaurantManagerInvoicesComponent) },
-      { path: 'issues', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-issues.component').then(m => m.RestaurantManagerIssuesComponent) }
+      { path: 'issues', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-issues.component').then(m => m.RestaurantManagerIssuesComponent) },
+      { path: 'support', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-support.component').then(m => m.RestaurantManagerSupportComponent) }
     ]
   },
   {

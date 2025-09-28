@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, inject, ViewChild, ElementRef, AfterViewI
 import { CommonModule } from '@angular/common';
 import { RouterModule, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
+import { SupportTicketsService } from '../../core/services/support-tickets.service';
 
 //* eslint-disable @typescript-eslint/no-explicit-any
 //* eslint-disable @typescript-eslint/no-unused-vars
@@ -290,6 +291,7 @@ export interface AdminMenuItem {
 })
 export class AdminDashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   private authService = inject(AuthService);
+  private supportTicketsService = inject(SupportTicketsService);
   private cdr = inject(ChangeDetectorRef);
 
   @ViewChild('navElement') navElement!: ElementRef<HTMLElement>;
@@ -297,9 +299,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy, AfterViewInit
   adminMenuItems: AdminMenuItem[] = [];
   canScrollLeft = false;
   canScrollRight = false;
+  openSupportTicketsCount = 0;
 
   ngOnInit() {
     this.setupAdminMenu();
+    this.loadSupportTicketsCount();
   }
 
   ngAfterViewInit() {
@@ -446,6 +450,15 @@ export class AdminDashboardComponent implements OnInit, OnDestroy, AfterViewInit
         color: '#ef4444'
       },
       {
+        id: 'support-tickets',
+        title: 'Support',
+        description: 'Support-Tickets von Restaurant-Besitzern',
+        icon: 'fa-solid fa-headset',
+        route: '/admin/support-tickets',
+        color: '#3b82f6',
+        badge: this.openSupportTicketsCount > 0 ? this.openSupportTicketsCount.toString() : undefined
+      },
+      {
         id: 'analytics',
         title: 'Analytics',
         description: 'Berichte & Statistiken',
@@ -502,7 +515,20 @@ export class AdminDashboardComponent implements OnInit, OnDestroy, AfterViewInit
       }
     });
 
+  }
 
+  loadSupportTicketsCount() {
+    // Load count of open support tickets for badge display
+    this.supportTicketsService.getTickets({ status: 'open' }).subscribe({
+      next: (tickets) => {
+        this.openSupportTicketsCount = tickets.length;
+        this.setupAdminMenu(); // Refresh menu to update badge
+      },
+      error: (error) => {
+        console.error('Error loading support tickets count:', error);
+        this.openSupportTicketsCount = 0;
+      }
+    });
   }
 
 

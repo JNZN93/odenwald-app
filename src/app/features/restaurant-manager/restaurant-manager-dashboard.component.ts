@@ -48,6 +48,7 @@ export interface ManagerMenuItem {
             <i *ngIf="menuItem.icon === 'customers-icon'" class="fas fa-address-book nav-icon"></i>
             <i *ngIf="menuItem.icon === 'settings-icon'" class="fas fa-cog nav-icon"></i>
             <i *ngIf="menuItem.icon === 'wholesale-icon'" class="fas fa-store nav-icon"></i>
+            <i *ngIf="menuItem.icon === 'support-icon'" class="fas fa-headset nav-icon"></i>
             <span>{{ menuItem.title }}</span>
             <span *ngIf="menuItem.badge" class="badge">{{ menuItem.badge }}</span>
           </a>
@@ -715,6 +716,15 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
         route: '/restaurant-manager/issues',
         queryParams: {},
         color: '#dc2626'
+      },
+      {
+        id: 'support',
+        title: 'Support',
+        description: 'Support-Tickets an Admin-Team',
+        icon: 'support-icon',
+        route: '/restaurant-manager/support',
+        queryParams: {},
+        color: '#3b82f6'
       },
       {
         id: 'tables',
