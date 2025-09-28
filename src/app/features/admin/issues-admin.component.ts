@@ -253,12 +253,14 @@ interface OrderIssueVm {
       margin: 0;
       font-size: var(--text-3xl);
       font-weight: 700;
+      color: white !important;
     }
 
     .header-text p {
       margin: 0;
       opacity: 0.9;
       font-size: var(--text-lg);
+      color: white !important;
     }
 
     .stats-bar {
@@ -281,6 +283,7 @@ interface OrderIssueVm {
       font-size: var(--text-2xl);
       font-weight: 700;
       margin-bottom: var(--space-1);
+      color: white !important;
     }
 
     .stat-label {
@@ -288,6 +291,7 @@ interface OrderIssueVm {
       opacity: 0.9;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      color: white !important;
     }
 
     /* Filters Section */

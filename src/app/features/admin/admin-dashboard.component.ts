@@ -100,6 +100,8 @@ export interface AdminMenuItem {
       flex: 1;
       position: relative;
       padding: 0 var(--space-2);
+      max-width: 100%;
+      overflow: hidden;
     }
 
     .nav-scroll-btn {
@@ -116,7 +118,7 @@ export interface AdminMenuItem {
       transition: all var(--transition);
       z-index: 15;
       flex-shrink: 0;
-      position: relative;
+      position: absolute;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       margin: 0 var(--space-1);
     }
@@ -136,6 +138,14 @@ export interface AdminMenuItem {
       font-size: var(--text-sm);
     }
 
+    .nav-scroll-left {
+      left: 0;
+    }
+
+    .nav-scroll-right {
+      right: 0;
+    }
+
     .nav-brand {
       display: flex;
       align-items: center;
@@ -152,7 +162,8 @@ export interface AdminMenuItem {
       /* Webkit scrollbar styling */
       scrollbar-gutter: stable;
       flex: 1;
-      padding: 0 var(--space-2);
+      padding: 0 var(--space-12);
+      margin: 0 var(--space-2);
     }
 
     .admin-nav::-webkit-scrollbar {

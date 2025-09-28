@@ -412,12 +412,14 @@ import { environment } from '../../../environments/environment';
       margin: 0;
       font-size: var(--text-3xl);
       font-weight: 700;
+      color: white !important;
     }
 
     .header-text p {
       margin: 0;
       opacity: 0.9;
       font-size: var(--text-lg);
+      color: white !important;
     }
 
     .stats-bar {
@@ -440,6 +442,7 @@ import { environment } from '../../../environments/environment';
       font-size: var(--text-2xl);
       font-weight: 700;
       margin-bottom: var(--space-1);
+      color: white !important;
     }
 
     .stat-label {
@@ -447,6 +450,7 @@ import { environment } from '../../../environments/environment';
       opacity: 0.9;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      color: white !important;
     }
 
     /* Filters Section */
