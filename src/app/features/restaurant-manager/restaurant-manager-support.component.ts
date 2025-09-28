@@ -5,6 +5,7 @@ import { SupportTicketsService, SupportTicket, SupportTicketMessage, SupportTick
 import { RestaurantManagerService } from '../../core/services/restaurant-manager.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { ToastService } from '../../core/services/toast.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-restaurant-manager-support',
@@ -285,6 +286,33 @@ import { ToastService } from '../../core/services/toast.service';
               <div class="description-content">{{ selectedTicket.description }}</div>
             </div>
 
+            <!-- Ticket Attachments -->
+            <div class="attachments-section" *ngIf="ticketAttachments.length > 0">
+              <h4>Angehängte Dateien</h4>
+              <div class="attachments-grid">
+                <div *ngFor="let attachment of ticketAttachments" class="attachment-item">
+                  <div *ngIf="isImageFile(attachment.mime_type)" class="image-attachment">
+                    <img [src]="getAttachmentUrl(attachment)" [alt]="attachment.original_filename" (click)="openImageModal(attachment)">
+                    <div class="attachment-info">
+                      <span class="attachment-name">{{ attachment.original_filename }}</span>
+                      <span class="attachment-size">({{ formatFileSize(attachment.file_size) }})</span>
+                    </div>
+                  </div>
+                  <div *ngIf="!isImageFile(attachment.mime_type)" class="file-attachment">
+                    <i class="fa-solid fa-file-pdf" *ngIf="attachment.mime_type === 'application/pdf'"></i>
+                    <i class="fa-solid fa-file" *ngIf="attachment.mime_type !== 'application/pdf'"></i>
+                    <div class="attachment-info">
+                      <span class="attachment-name">{{ attachment.original_filename }}</span>
+                      <span class="attachment-size">({{ formatFileSize(attachment.file_size) }})</span>
+                    </div>
+                    <a [href]="getAttachmentUrl(attachment)" target="_blank" class="download-btn">
+                      <i class="fa-solid fa-download"></i>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="messages-section">
               <h4>Nachrichtenverlauf</h4>
               <div class="messages-list">
@@ -294,6 +322,32 @@ import { ToastService } from '../../core/services/toast.service';
                     <span class="message-time">{{ formatDate(message.created_at) }}</span>
                   </div>
                   <div class="message-content">{{ message.message }}</div>
+                  
+                  <!-- Message Attachments -->
+                  <div class="message-attachments" *ngIf="messageAttachments[message.id]?.length > 0">
+                    <div class="attachments-grid small">
+                      <div *ngFor="let attachment of messageAttachments[message.id]" class="attachment-item small">
+                        <div *ngIf="isImageFile(attachment.mime_type)" class="image-attachment">
+                          <img [src]="getAttachmentUrl(attachment)" [alt]="attachment.original_filename" (click)="openImageModal(attachment)">
+                          <div class="attachment-info">
+                            <span class="attachment-name">{{ attachment.original_filename }}</span>
+                            <span class="attachment-size">({{ formatFileSize(attachment.file_size) }})</span>
+                          </div>
+                        </div>
+                        <div *ngIf="!isImageFile(attachment.mime_type)" class="file-attachment">
+                          <i class="fa-solid fa-file-pdf" *ngIf="attachment.mime_type === 'application/pdf'"></i>
+                          <i class="fa-solid fa-file" *ngIf="attachment.mime_type !== 'application/pdf'"></i>
+                          <div class="attachment-info">
+                            <span class="attachment-name">{{ attachment.original_filename }}</span>
+                            <span class="attachment-size">({{ formatFileSize(attachment.file_size) }})</span>
+                          </div>
+                          <a [href]="getAttachmentUrl(attachment)" target="_blank" class="download-btn">
+                            <i class="fa-solid fa-download"></i>
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -343,6 +397,21 @@ import { ToastService } from '../../core/services/toast.service';
               </form>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div class="modal-overlay" *ngIf="showImageModal" (click)="closeImageModal()">
+      <div class="image-modal-content" (click)="$event.stopPropagation()">
+        <div class="image-modal-header">
+          <h3>{{ selectedImage?.original_filename }}</h3>
+          <button class="modal-close" (click)="closeImageModal()">
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+        <div class="image-modal-body">
+          <img *ngIf="selectedImage" [src]="getAttachmentUrl(selectedImage)" [alt]="selectedImage.original_filename" class="full-size-image">
         </div>
       </div>
     </div>
@@ -920,6 +989,196 @@ import { ToastService } from '../../core/services/toast.service';
       color: var(--color-error);
       background: var(--color-error-50);
     }
+
+    /* Attachment Styles */
+    .attachments-section {
+      margin-bottom: var(--space-6);
+    }
+
+    .attachments-section h4 {
+      font-size: var(--text-lg);
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: var(--space-3);
+    }
+
+    .attachments-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: var(--space-4);
+    }
+
+    .attachments-grid.small {
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: var(--space-3);
+    }
+
+    .attachment-item {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: white;
+      transition: all var(--transition);
+    }
+
+    .attachment-item:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .attachment-item.small {
+      border-radius: var(--radius-md);
+    }
+
+    .image-attachment img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .image-attachment img:hover {
+      transform: scale(1.05);
+    }
+
+    .file-attachment {
+      display: flex;
+      align-items: center;
+      padding: var(--space-4);
+      gap: var(--space-3);
+    }
+
+    .file-attachment i {
+      font-size: var(--text-2xl);
+      color: var(--color-primary-500);
+      flex-shrink: 0;
+    }
+
+    .attachment-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      min-width: 0;
+    }
+
+    .attachment-name {
+      font-weight: 500;
+      color: var(--color-text);
+      font-size: var(--text-sm);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .attachment-size {
+      font-size: var(--text-xs);
+      color: var(--color-muted);
+    }
+
+    .download-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: var(--color-primary-500);
+      color: white;
+      border-radius: var(--radius-md);
+      text-decoration: none;
+      transition: all var(--transition);
+      flex-shrink: 0;
+    }
+
+    .download-btn:hover {
+      background: var(--color-primary-600);
+      transform: scale(1.1);
+    }
+
+    .message-attachments {
+      margin-top: var(--space-3);
+      padding-top: var(--space-3);
+      border-top: 1px solid var(--color-border);
+    }
+
+    /* Image Modal Styles */
+    .image-modal-content {
+      background: white;
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      max-width: 90vw;
+      max-height: 90vh;
+      width: auto;
+      height: auto;
+    }
+
+    .image-modal-header {
+      padding: var(--space-4) var(--space-6);
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .image-modal-header h3 {
+      font-size: var(--text-lg);
+      font-weight: 600;
+      color: var(--color-text);
+      margin: 0;
+      max-width: 400px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .image-modal-body {
+      padding: var(--space-4);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .full-size-image {
+      max-width: 100%;
+      max-height: 80vh;
+      object-fit: contain;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* Responsive adjustments for attachments */
+    @media (max-width: 768px) {
+      .attachments-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: var(--space-3);
+      }
+
+      .attachments-grid.small {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      }
+
+      .image-attachment img {
+        height: 120px;
+      }
+
+      .file-attachment {
+        padding: var(--space-3);
+        flex-direction: column;
+        text-align: center;
+        gap: var(--space-2);
+      }
+
+      .attachment-info {
+        align-items: center;
+      }
+
+      .attachment-name {
+        white-space: normal;
+        text-align: center;
+        font-size: var(--text-xs);
+      }
+    }
   `]
 })
 export class RestaurantManagerSupportComponent implements OnInit {
@@ -936,8 +1195,12 @@ export class RestaurantManagerSupportComponent implements OnInit {
   // Modal states
   showCreateModal = false;
   showDetailsModal = false;
+  showImageModal = false;
   selectedTicket: SupportTicket | null = null;
+  selectedImage: SupportTicketAttachment | null = null;
   ticketMessages: SupportTicketMessage[] = [];
+  ticketAttachments: SupportTicketAttachment[] = [];
+  messageAttachments: { [messageId: string]: SupportTicketAttachment[] } = {};
 
   // Form data
   newTicket: CreateSupportTicketData = {
@@ -1035,11 +1298,29 @@ export class RestaurantManagerSupportComponent implements OnInit {
     this.showDetailsModal = true;
 
     try {
-      const messages = await this.supportTicketsService.getTicketMessages(ticket.id).toPromise();
+      // Load messages and attachments in parallel
+      const [messages, attachments] = await Promise.all([
+        this.supportTicketsService.getTicketMessages(ticket.id).toPromise(),
+        this.supportTicketsService.getTicketAttachments(ticket.id).toPromise()
+      ]);
+      
       this.ticketMessages = messages || [];
+      this.ticketAttachments = attachments || [];
+      
+      // Load attachments for each message
+      this.messageAttachments = {};
+      for (const message of this.ticketMessages) {
+        try {
+          const messageAttachments = await this.supportTicketsService.getMessageAttachments(message.id).toPromise();
+          this.messageAttachments[message.id] = messageAttachments || [];
+        } catch (error) {
+          console.error('Error loading message attachments:', error);
+          this.messageAttachments[message.id] = [];
+        }
+      }
     } catch (error) {
-      console.error('Error loading ticket messages:', error);
-      this.toastService.error('Nachrichten laden', 'Fehler beim Laden der Nachrichten');
+      console.error('Error loading ticket details:', error);
+      this.toastService.error('Ticket Details laden', 'Fehler beim Laden der Ticket-Details');
     }
   }
 
@@ -1100,6 +1381,8 @@ export class RestaurantManagerSupportComponent implements OnInit {
     this.showDetailsModal = false;
     this.selectedTicket = null;
     this.ticketMessages = [];
+    this.ticketAttachments = [];
+    this.messageAttachments = {};
     this.newMessage.message = '';
   }
 
@@ -1229,5 +1512,27 @@ export class RestaurantManagerSupportComponent implements OnInit {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  isImageFile(mimeType: string): boolean {
+    return mimeType.startsWith('image/');
+  }
+
+  getAttachmentUrl(attachment: SupportTicketAttachment): string {
+    // If it's a full URL (S3), return as is, otherwise construct local URL
+    if (attachment.file_path.startsWith('http')) {
+      return attachment.file_path;
+    }
+    return `${environment.apiUrl}${attachment.file_path}`;
+  }
+
+  openImageModal(attachment: SupportTicketAttachment) {
+    this.selectedImage = attachment;
+    this.showImageModal = true;
+  }
+
+  closeImageModal() {
+    this.showImageModal = false;
+    this.selectedImage = null;
   }
 }
