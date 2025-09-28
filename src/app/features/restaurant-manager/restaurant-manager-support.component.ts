@@ -82,6 +82,11 @@ import { environment } from '../../../environments/environment';
         </div>
 
         <div class="tickets-list">
+          <!-- Debug: Show ticket count -->
+          <div style="background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; font-size: 12px;">
+            <strong>Debug:</strong> {{ filteredTickets.length }} tickets loaded
+          </div>
+          
           <div *ngFor="let ticket of filteredTickets" class="ticket-card" [class]="getPriorityClass(ticket.priority)">
             <div class="ticket-header">
               <div class="ticket-info">
@@ -90,10 +95,10 @@ import { environment } from '../../../environments/environment';
                 <div class="ticket-time">{{ formatDate(ticket.created_at) }}</div>
               </div>
               <div class="ticket-badges">
-                <span class="priority-badge" [style.background-color]="getPriorityColor(ticket.priority)">
+                <span class="priority-badge" [class]="'priority-badge priority-' + ticket.priority">
                   {{ getPriorityLabel(ticket.priority) }}
                 </span>
-                <span class="status-badge" [style.background-color]="getStatusColor(ticket.status)">
+                <span class="status-badge" [class]="'status-badge status-' + ticket.status">
                   {{ getStatusLabel(ticket.status) }}
                 </span>
               </div>
@@ -263,13 +268,13 @@ import { environment } from '../../../environments/environment';
               </div>
               <div class="meta-item">
                 <strong>Status:</strong> 
-                <span class="status-badge" [style.background-color]="getStatusColor(selectedTicket.status)">
+                <span class="status-badge" [class]="'status-badge status-' + selectedTicket.status">
                   {{ getStatusLabel(selectedTicket.status) }}
                 </span>
               </div>
               <div class="meta-item">
                 <strong>Priorität:</strong> 
-                <span class="priority-badge" [style.background-color]="getPriorityColor(selectedTicket.priority)">
+                <span class="priority-badge" [class]="'priority-badge priority-' + selectedTicket.priority">
                   {{ getPriorityLabel(selectedTicket.priority) }}
                 </span>
               </div>
@@ -286,13 +291,31 @@ import { environment } from '../../../environments/environment';
               <div class="description-content">{{ selectedTicket.description }}</div>
             </div>
 
+            <!-- Debug Info -->
+            <div class="debug-info" style="background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; font-size: 12px;">
+              <strong>Debug Info:</strong><br>
+              Ticket Attachments: {{ ticketAttachments.length }}<br>
+              Message Attachments: {{ Object.keys(messageAttachments).length }}<br>
+              <div *ngIf="ticketAttachments.length > 0">
+                <strong>Ticket Attachments:</strong>
+                <ul>
+                  <li *ngFor="let att of ticketAttachments">{{ att.original_filename }} ({{ att.mime_type }})</li>
+                </ul>
+              </div>
+            </div>
+
             <!-- Ticket Attachments -->
             <div class="attachments-section" *ngIf="ticketAttachments.length > 0">
-              <h4>Angehängte Dateien</h4>
+              <h4>Angehängte Dateien ({{ ticketAttachments.length }})</h4>
               <div class="attachments-grid">
                 <div *ngFor="let attachment of ticketAttachments" class="attachment-item">
+                  <!-- Debug: Show all attachment data -->
+                  <div style="background: #e0e0e0; padding: 5px; margin: 5px 0; font-size: 11px;">
+                    Debug: {{ attachment.original_filename }} | {{ attachment.mime_type }} | {{ attachment.file_path }}
+                  </div>
+                  
                   <div *ngIf="isImageFile(attachment.mime_type)" class="image-attachment">
-                    <img [src]="getAttachmentUrl(attachment)" [alt]="attachment.original_filename" (click)="openImageModal(attachment)">
+                    <img [src]="getAttachmentUrl(attachment)" [alt]="attachment.original_filename" (click)="openImageModal(attachment)" style="border: 2px solid red;">
                     <div class="attachment-info">
                       <span class="attachment-name">{{ attachment.original_filename }}</span>
                       <span class="attachment-size">({{ formatFileSize(attachment.file_size) }})</span>
@@ -323,6 +346,11 @@ import { environment } from '../../../environments/environment';
                   </div>
                   <div class="message-content">{{ message.message }}</div>
                   
+                  <!-- Debug Message Attachments -->
+                  <div class="debug-message-info" style="background: #e0e0e0; padding: 5px; margin: 5px 0; border-radius: 3px; font-size: 11px;" *ngIf="messageAttachments[message.id]?.length > 0">
+                    Message {{ message.id }} has {{ messageAttachments[message.id]?.length }} attachments
+                  </div>
+
                   <!-- Message Attachments -->
                   <div class="message-attachments" *ngIf="messageAttachments[message.id]?.length > 0">
                     <div class="attachments-grid small">
@@ -586,13 +614,105 @@ import { environment } from '../../../environments/environment';
     }
 
     .priority-badge, .status-badge {
-      padding: var(--space-1) var(--space-3);
-      border-radius: var(--radius-full);
-      font-size: var(--text-xs);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 11px;
       font-weight: 600;
       color: white;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      border: none;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: all 0.2s ease;
+      display: inline-block;
+    }
+
+    .priority-badge:hover, .status-badge:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Priority Badge Styles */
+    .priority-badge.priority-urgent {
+      background: linear-gradient(135deg, #dc2626, #ef4444);
+      box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+    }
+
+    .priority-badge.priority-urgent:hover {
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+    }
+
+    .priority-badge.priority-high {
+      background: linear-gradient(135deg, #f97316, #fb923c);
+      box-shadow: 0 2px 8px rgba(249, 115, 22, 0.3);
+    }
+
+    .priority-badge.priority-high:hover {
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+    }
+
+    .priority-badge.priority-normal {
+      background: linear-gradient(135deg, #eab308, #facc15);
+      box-shadow: 0 2px 8px rgba(234, 179, 8, 0.3);
+    }
+
+    .priority-badge.priority-normal:hover {
+      box-shadow: 0 4px 12px rgba(234, 179, 8, 0.4);
+    }
+
+    .priority-badge.priority-low {
+      background: linear-gradient(135deg, #22c55e, #4ade80);
+      box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+    }
+
+    .priority-badge.priority-low:hover {
+      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+    }
+
+    /* Status Badge Styles */
+    .status-badge.status-open {
+      background: linear-gradient(135deg, #ef4444, #f87171);
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+    }
+
+    .status-badge.status-open:hover {
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    }
+
+    .status-badge.status-in_progress {
+      background: linear-gradient(135deg, #f59e0b, #fbbf24);
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+    }
+
+    .status-badge.status-in_progress:hover {
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+    }
+
+    .status-badge.status-waiting_for_response {
+      background: linear-gradient(135deg, #3b82f6, #60a5fa);
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+    }
+
+    .status-badge.status-waiting_for_response:hover {
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+
+    .status-badge.status-resolved {
+      background: linear-gradient(135deg, #10b981, #34d399);
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    }
+
+    .status-badge.status-resolved:hover {
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    }
+
+    .status-badge.status-closed {
+      background: linear-gradient(135deg, #6b7280, #9ca3af);
+      box-shadow: 0 2px 8px rgba(107, 114, 128, 0.3);
+    }
+
+    .status-badge.status-closed:hover {
+      box-shadow: 0 4px 12px rgba(107, 114, 128, 0.4);
     }
 
     .ticket-content {
@@ -1239,6 +1359,7 @@ export class RestaurantManagerSupportComponent implements OnInit {
         this.newTicket.restaurant_id = restaurantId;
         
         const tickets = await this.supportTicketsService.getTicketsByRestaurant(restaurantId).toPromise();
+        console.log('Loaded tickets:', tickets);
         this.tickets = tickets || [];
         this.applyFilters();
       }
@@ -1270,11 +1391,14 @@ export class RestaurantManagerSupportComponent implements OnInit {
 
     try {
       const ticket = await this.supportTicketsService.createTicket(this.newTicket).toPromise();
+      console.log('Ticket created:', ticket);
       
       // Upload attachments if any
       if (this.selectedFiles.length > 0) {
+        console.log('Uploading attachments:', this.selectedFiles);
         try {
-          await this.supportTicketsService.uploadAttachments(ticket!.id, this.selectedFiles).toPromise();
+          const uploadResult = await this.supportTicketsService.uploadAttachments(ticket!.id, this.selectedFiles).toPromise();
+          console.log('Upload result:', uploadResult);
         } catch (uploadError) {
           console.error('Error uploading attachments:', uploadError);
           this.toastService.warning('Ticket erstellt', 'Ticket wurde erstellt, aber Dateien konnten nicht hochgeladen werden');
@@ -1298,11 +1422,16 @@ export class RestaurantManagerSupportComponent implements OnInit {
     this.showDetailsModal = true;
 
     try {
+      console.log('Loading ticket details for:', ticket.id);
+      
       // Load messages and attachments in parallel
       const [messages, attachments] = await Promise.all([
         this.supportTicketsService.getTicketMessages(ticket.id).toPromise(),
         this.supportTicketsService.getTicketAttachments(ticket.id).toPromise()
       ]);
+      
+      console.log('Loaded messages:', messages);
+      console.log('Loaded attachments:', attachments);
       
       this.ticketMessages = messages || [];
       this.ticketAttachments = attachments || [];
@@ -1312,12 +1441,16 @@ export class RestaurantManagerSupportComponent implements OnInit {
       for (const message of this.ticketMessages) {
         try {
           const messageAttachments = await this.supportTicketsService.getMessageAttachments(message.id).toPromise();
+          console.log(`Message ${message.id} attachments:`, messageAttachments);
           this.messageAttachments[message.id] = messageAttachments || [];
         } catch (error) {
           console.error('Error loading message attachments:', error);
           this.messageAttachments[message.id] = [];
         }
       }
+      
+      console.log('Final ticket attachments:', this.ticketAttachments);
+      console.log('Final message attachments:', this.messageAttachments);
     } catch (error) {
       console.error('Error loading ticket details:', error);
       this.toastService.error('Ticket Details laden', 'Fehler beim Laden der Ticket-Details');
@@ -1335,11 +1468,14 @@ export class RestaurantManagerSupportComponent implements OnInit {
       const message = await this.supportTicketsService.addMessage(this.selectedTicket.id, {
         message: this.newMessage.message
       }).toPromise();
+      console.log('Message sent:', message);
 
       // Upload attachments if any
       if (this.messageFiles.length > 0) {
+        console.log('Uploading message attachments:', this.messageFiles);
         try {
-          await this.supportTicketsService.uploadMessageAttachments(this.selectedTicket.id, message!.id, this.messageFiles).toPromise();
+          const uploadResult = await this.supportTicketsService.uploadMessageAttachments(this.selectedTicket.id, message!.id, this.messageFiles).toPromise();
+          console.log('Message upload result:', uploadResult);
         } catch (uploadError) {
           console.error('Error uploading message attachments:', uploadError);
           this.toastService.warning('Nachricht gesendet', 'Nachricht wurde gesendet, aber Dateien konnten nicht hochgeladen werden');
@@ -1515,15 +1651,21 @@ export class RestaurantManagerSupportComponent implements OnInit {
   }
 
   isImageFile(mimeType: string): boolean {
-    return mimeType.startsWith('image/');
+    const isImage = mimeType.startsWith('image/');
+    console.log(`Checking if ${mimeType} is image:`, isImage);
+    return isImage;
   }
 
   getAttachmentUrl(attachment: SupportTicketAttachment): string {
     // If it's a full URL (S3), return as is, otherwise construct local URL
+    console.log('Getting attachment URL for:', attachment);
     if (attachment.file_path.startsWith('http')) {
+      console.log('Using S3 URL:', attachment.file_path);
       return attachment.file_path;
     }
-    return `${environment.apiUrl}${attachment.file_path}`;
+    const constructedUrl = `${environment.apiUrl}${attachment.file_path}`;
+    console.log('Constructed URL:', constructedUrl);
+    return constructedUrl;
   }
 
   openImageModal(attachment: SupportTicketAttachment) {

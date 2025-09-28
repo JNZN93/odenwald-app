@@ -1,9 +1,10 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SupportTicketsService, SupportTicket, SupportTicketMessage, SupportTicketStats } from '../../core/services/support-tickets.service';
+import { SupportTicketsService, SupportTicket, SupportTicketMessage, SupportTicketAttachment, SupportTicketStats } from '../../core/services/support-tickets.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { ToastService } from '../../core/services/toast.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-support-tickets-admin',
@@ -234,13 +235,13 @@ import { ToastService } from '../../core/services/toast.service';
               </div>
               <div class="meta-item">
                 <strong>Status:</strong> 
-                <span class="status-badge" [style.background-color]="getStatusColor(selectedTicket.status)">
+                <span class="ticket-status-badge" [class]="'ticket-status-badge status-' + selectedTicket.status">
                   {{ getStatusLabel(selectedTicket.status) }}
                 </span>
               </div>
               <div class="meta-item">
                 <strong>Priorität:</strong> 
-                <span class="priority-badge" [style.background-color]="getPriorityColor(selectedTicket.priority)">
+                <span class="ticket-priority-badge" [class]="'ticket-priority-badge priority-' + selectedTicket.priority">
                   {{ getPriorityLabel(selectedTicket.priority) }}
                 </span>
               </div>
@@ -257,6 +258,33 @@ import { ToastService } from '../../core/services/toast.service';
               <div class="description-content">{{ selectedTicket.description }}</div>
             </div>
 
+            <!-- Ticket Attachments -->
+            <div class="attachments-section" *ngIf="ticketAttachments.length > 0">
+              <h4>Angehängte Dateien ({{ ticketAttachments.length }})</h4>
+              <div class="attachments-grid">
+                <div *ngFor="let attachment of ticketAttachments" class="attachment-item">
+                  <div *ngIf="isImageFile(attachment.mime_type)" class="image-attachment">
+                    <img [src]="getAttachmentUrl(attachment)" [alt]="attachment.original_filename" (click)="openImageModal(attachment)">
+                    <div class="attachment-info">
+                      <span class="attachment-name">{{ attachment.original_filename }}</span>
+                      <span class="attachment-size">({{ formatFileSize(attachment.file_size) }})</span>
+                    </div>
+                  </div>
+                  <div *ngIf="!isImageFile(attachment.mime_type)" class="file-attachment">
+                    <i class="fa-solid fa-file-pdf" *ngIf="attachment.mime_type === 'application/pdf'"></i>
+                    <i class="fa-solid fa-file" *ngIf="attachment.mime_type !== 'application/pdf'"></i>
+                    <div class="attachment-info">
+                      <span class="attachment-name">{{ attachment.original_filename }}</span>
+                      <span class="attachment-size">({{ formatFileSize(attachment.file_size) }})</span>
+                    </div>
+                    <a [href]="getAttachmentUrl(attachment)" target="_blank" class="download-btn">
+                      <i class="fa-solid fa-download"></i>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="messages-section">
               <h4>Nachrichtenverlauf</h4>
               <div class="messages-list">
@@ -266,6 +294,32 @@ import { ToastService } from '../../core/services/toast.service';
                     <span class="message-time">{{ formatDate(message.created_at) }}</span>
                   </div>
                   <div class="message-content">{{ message.message }}</div>
+                  
+                  <!-- Message Attachments -->
+                  <div class="message-attachments" *ngIf="messageAttachments[message.id]?.length > 0">
+                    <div class="attachments-grid small">
+                      <div *ngFor="let attachment of messageAttachments[message.id]" class="attachment-item small">
+                        <div *ngIf="isImageFile(attachment.mime_type)" class="image-attachment">
+                          <img [src]="getAttachmentUrl(attachment)" [alt]="attachment.original_filename" (click)="openImageModal(attachment)">
+                          <div class="attachment-info">
+                            <span class="attachment-name">{{ attachment.original_filename }}</span>
+                            <span class="attachment-size">({{ formatFileSize(attachment.file_size) }})</span>
+                          </div>
+                        </div>
+                        <div *ngIf="!isImageFile(attachment.mime_type)" class="file-attachment">
+                          <i class="fa-solid fa-file-pdf" *ngIf="attachment.mime_type === 'application/pdf'"></i>
+                          <i class="fa-solid fa-file" *ngIf="attachment.mime_type !== 'application/pdf'"></i>
+                          <div class="attachment-info">
+                            <span class="attachment-name">{{ attachment.original_filename }}</span>
+                            <span class="attachment-size">({{ formatFileSize(attachment.file_size) }})</span>
+                          </div>
+                          <a [href]="getAttachmentUrl(attachment)" target="_blank" class="download-btn">
+                            <i class="fa-solid fa-download"></i>
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -297,6 +351,21 @@ import { ToastService } from '../../core/services/toast.service';
               </form>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div class="modal-overlay" *ngIf="showImageModal" (click)="closeImageModal()">
+      <div class="image-modal-content" (click)="$event.stopPropagation()">
+        <div class="image-modal-header">
+          <h3>{{ selectedImage?.original_filename }}</h3>
+          <button class="modal-close" (click)="closeImageModal()">
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+        <div class="image-modal-body">
+          <img *ngIf="selectedImage" [src]="getAttachmentUrl(selectedImage)" [alt]="selectedImage.original_filename" class="full-size-image">
         </div>
       </div>
     </div>
@@ -532,37 +601,59 @@ import { ToastService } from '../../core/services/toast.service';
     }
 
     .ticket-priority-badge {
-      padding: var(--space-1) var(--space-3);
-      border-radius: var(--radius-full);
-      font-size: var(--text-xs);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      border: 1px solid var(--color-border);
+      border: none;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: all 0.2s ease;
     }
 
     .ticket-priority-badge.priority-urgent {
-      background: color-mix(in oklab, #dc2626 12%, white);
-      color: var(--color-heading);
-      border-color: transparent;
+      background: linear-gradient(135deg, #dc2626, #ef4444);
+      color: white;
+      box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+    }
+
+    .ticket-priority-badge.priority-urgent:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
     }
 
     .ticket-priority-badge.priority-high {
-      background: color-mix(in oklab, #ef4444 12%, white);
-      color: var(--color-heading);
-      border-color: transparent;
+      background: linear-gradient(135deg, #f97316, #fb923c);
+      color: white;
+      box-shadow: 0 2px 8px rgba(249, 115, 22, 0.3);
+    }
+
+    .ticket-priority-badge.priority-high:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
     }
 
     .ticket-priority-badge.priority-normal {
-      background: color-mix(in oklab, #f59e0b 12%, white);
-      color: var(--color-heading);
-      border-color: transparent;
+      background: linear-gradient(135deg, #eab308, #facc15);
+      color: white;
+      box-shadow: 0 2px 8px rgba(234, 179, 8, 0.3);
+    }
+
+    .ticket-priority-badge.priority-normal:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(234, 179, 8, 0.4);
     }
 
     .ticket-priority-badge.priority-low {
-      background: color-mix(in oklab, #10b981 12%, white);
-      color: var(--color-heading);
-      border-color: transparent;
+      background: linear-gradient(135deg, #22c55e, #4ade80);
+      color: white;
+      box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+    }
+
+    .ticket-priority-badge.priority-low:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
     }
 
     .ticket-status-section {
@@ -571,39 +662,70 @@ import { ToastService } from '../../core/services/toast.service';
     }
 
     .ticket-status-badge {
-      padding: var(--space-1) var(--space-4);
-      border-radius: var(--radius-full);
-      font-size: var(--text-xs);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      border: 1px solid var(--color-border);
+      border: none;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: all 0.2s ease;
     }
 
     .ticket-status-badge.status-open {
-      background: color-mix(in oklab, #ef4444 12%, white);
-      color: var(--color-heading);
+      background: linear-gradient(135deg, #ef4444, #f87171);
+      color: white;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+    }
+
+    .ticket-status-badge.status-open:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
     }
 
     .ticket-status-badge.status-in_progress {
-      background: color-mix(in oklab, #f59e0b 12%, white);
-      color: var(--color-heading);
+      background: linear-gradient(135deg, #f59e0b, #fbbf24);
+      color: white;
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+    }
+
+    .ticket-status-badge.status-in_progress:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
     }
 
     .ticket-status-badge.status-waiting_for_response {
-      background: color-mix(in oklab, #3b82f6 12%, white);
-      color: var(--color-heading);
+      background: linear-gradient(135deg, #3b82f6, #60a5fa);
+      color: white;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+    }
+
+    .ticket-status-badge.status-waiting_for_response:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
     }
 
     .ticket-status-badge.status-resolved {
-      background: color-mix(in oklab, #10b981 12%, white);
-      color: var(--color-heading);
+      background: linear-gradient(135deg, #10b981, #34d399);
+      color: white;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    }
+
+    .ticket-status-badge.status-resolved:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
     }
 
     .ticket-status-badge.status-closed {
-      background: var(--color-surface-2);
-      color: var(--color-muted);
-      border-color: var(--color-border);
+      background: linear-gradient(135deg, #6b7280, #9ca3af);
+      color: white;
+      box-shadow: 0 2px 8px rgba(107, 114, 128, 0.3);
+    }
+
+    .ticket-status-badge.status-closed:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(107, 114, 128, 0.4);
     }
 
     /* Ticket Content */
@@ -1085,6 +1207,196 @@ import { ToastService } from '../../core/services/toast.service';
     .hidden {
       display: none !important;
     }
+
+    /* Attachment Styles */
+    .attachments-section {
+      margin-bottom: var(--space-6);
+    }
+
+    .attachments-section h4 {
+      font-size: var(--text-lg);
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: var(--space-3);
+    }
+
+    .attachments-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: var(--space-4);
+    }
+
+    .attachments-grid.small {
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: var(--space-3);
+    }
+
+    .attachment-item {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: white;
+      transition: all var(--transition);
+    }
+
+    .attachment-item:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .attachment-item.small {
+      border-radius: var(--radius-md);
+    }
+
+    .image-attachment img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .image-attachment img:hover {
+      transform: scale(1.05);
+    }
+
+    .file-attachment {
+      display: flex;
+      align-items: center;
+      padding: var(--space-4);
+      gap: var(--space-3);
+    }
+
+    .file-attachment i {
+      font-size: var(--text-2xl);
+      color: var(--color-primary-500);
+      flex-shrink: 0;
+    }
+
+    .attachment-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      min-width: 0;
+    }
+
+    .attachment-name {
+      font-weight: 500;
+      color: var(--color-text);
+      font-size: var(--text-sm);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .attachment-size {
+      font-size: var(--text-xs);
+      color: var(--color-muted);
+    }
+
+    .download-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: var(--color-primary-500);
+      color: white;
+      border-radius: var(--radius-md);
+      text-decoration: none;
+      transition: all var(--transition);
+      flex-shrink: 0;
+    }
+
+    .download-btn:hover {
+      background: var(--color-primary-600);
+      transform: scale(1.1);
+    }
+
+    .message-attachments {
+      margin-top: var(--space-3);
+      padding-top: var(--space-3);
+      border-top: 1px solid var(--color-border);
+    }
+
+    /* Image Modal Styles */
+    .image-modal-content {
+      background: white;
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      max-width: 90vw;
+      max-height: 90vh;
+      width: auto;
+      height: auto;
+    }
+
+    .image-modal-header {
+      padding: var(--space-4) var(--space-6);
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .image-modal-header h3 {
+      font-size: var(--text-lg);
+      font-weight: 600;
+      color: var(--color-text);
+      margin: 0;
+      max-width: 400px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .image-modal-body {
+      padding: var(--space-4);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .full-size-image {
+      max-width: 100%;
+      max-height: 80vh;
+      object-fit: contain;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* Responsive adjustments for attachments */
+    @media (max-width: 768px) {
+      .attachments-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: var(--space-3);
+      }
+
+      .attachments-grid.small {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      }
+
+      .image-attachment img {
+        height: 120px;
+      }
+
+      .file-attachment {
+        padding: var(--space-3);
+        flex-direction: column;
+        text-align: center;
+        gap: var(--space-2);
+      }
+
+      .attachment-info {
+        align-items: center;
+      }
+
+      .attachment-name {
+        white-space: normal;
+        text-align: center;
+        font-size: var(--text-xs);
+      }
+    }
   `]
 })
 export class SupportTicketsAdminComponent implements OnInit {
@@ -1105,8 +1417,12 @@ export class SupportTicketsAdminComponent implements OnInit {
 
   // Modal states
   showDetailsModal = false;
+  showImageModal = false;
   selectedTicket: SupportTicket | null = null;
+  selectedImage: SupportTicketAttachment | null = null;
   ticketMessages: SupportTicketMessage[] = [];
+  ticketAttachments: SupportTicketAttachment[] = [];
+  messageAttachments: { [messageId: string]: SupportTicketAttachment[] } = {};
 
   // Form data
   newMessage = {
@@ -1297,11 +1613,29 @@ export class SupportTicketsAdminComponent implements OnInit {
     this.showDetailsModal = true;
 
     try {
-      const messages = await this.supportTicketsService.getTicketMessages(ticket.id).toPromise();
+      // Load messages and attachments in parallel
+      const [messages, attachments] = await Promise.all([
+        this.supportTicketsService.getTicketMessages(ticket.id).toPromise(),
+        this.supportTicketsService.getTicketAttachments(ticket.id).toPromise()
+      ]);
+      
       this.ticketMessages = messages || [];
+      this.ticketAttachments = attachments || [];
+      
+      // Load attachments for each message
+      this.messageAttachments = {};
+      for (const message of this.ticketMessages) {
+        try {
+          const messageAttachments = await this.supportTicketsService.getMessageAttachments(message.id).toPromise();
+          this.messageAttachments[message.id] = messageAttachments || [];
+        } catch (error) {
+          console.error('Error loading message attachments:', error);
+          this.messageAttachments[message.id] = [];
+        }
+      }
     } catch (error) {
-      console.error('Error loading ticket messages:', error);
-      this.toastService.error('Nachrichten laden', 'Fehler beim Laden der Nachrichten');
+      console.error('Error loading ticket details:', error);
+      this.toastService.error('Ticket Details laden', 'Fehler beim Laden der Ticket-Details');
     }
   }
 
@@ -1334,6 +1668,8 @@ export class SupportTicketsAdminComponent implements OnInit {
     this.showDetailsModal = false;
     this.selectedTicket = null;
     this.ticketMessages = [];
+    this.ticketAttachments = [];
+    this.messageAttachments = {};
     this.newMessage.message = '';
     this.newMessage.is_internal_note = false;
   }
@@ -1351,5 +1687,35 @@ export class SupportTicketsAdminComponent implements OnInit {
       hour: '2-digit',
       minute: '2-digit'
     });
+  }
+
+  isImageFile(mimeType: string): boolean {
+    return mimeType.startsWith('image/');
+  }
+
+  getAttachmentUrl(attachment: SupportTicketAttachment): string {
+    // If it's a full URL (S3), return as is, otherwise construct local URL
+    if (attachment.file_path.startsWith('http')) {
+      return attachment.file_path;
+    }
+    return `${environment.apiUrl}${attachment.file_path}`;
+  }
+
+  openImageModal(attachment: SupportTicketAttachment) {
+    this.selectedImage = attachment;
+    this.showImageModal = true;
+  }
+
+  closeImageModal() {
+    this.showImageModal = false;
+    this.selectedImage = null;
+  }
+
+  formatFileSize(bytes: number): string {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 }
