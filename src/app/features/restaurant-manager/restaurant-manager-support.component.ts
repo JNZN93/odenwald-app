@@ -295,7 +295,7 @@ import { environment } from '../../../environments/environment';
             <div class="debug-info" style="background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; font-size: 12px;">
               <strong>Debug Info:</strong><br>
               Ticket Attachments: {{ ticketAttachments.length }}<br>
-              Message Attachments: {{ Object.keys(messageAttachments).length }}<br>
+              Message Attachments: {{ getMessageAttachmentsCount() }}<br>
               <div *ngIf="ticketAttachments.length > 0">
                 <strong>Ticket Attachments:</strong>
                 <ul>
@@ -347,14 +347,14 @@ import { environment } from '../../../environments/environment';
                   <div class="message-content">{{ message.message }}</div>
                   
                   <!-- Debug Message Attachments -->
-                  <div class="debug-message-info" style="background: #e0e0e0; padding: 5px; margin: 5px 0; border-radius: 3px; font-size: 11px;" *ngIf="messageAttachments[message.id]?.length > 0">
-                    Message {{ message.id }} has {{ messageAttachments[message.id]?.length }} attachments
+                  <div class="debug-message-info" style="background: #e0e0e0; padding: 5px; margin: 5px 0; border-radius: 3px; font-size: 11px;" *ngIf="getMessageAttachments(message.id).length > 0">
+                    Message {{ message.id }} has {{ getMessageAttachments(message.id).length }} attachments
                   </div>
 
                   <!-- Message Attachments -->
-                  <div class="message-attachments" *ngIf="messageAttachments[message.id]?.length > 0">
+                  <div class="message-attachments" *ngIf="getMessageAttachments(message.id).length > 0">
                     <div class="attachments-grid small">
-                      <div *ngFor="let attachment of messageAttachments[message.id]" class="attachment-item small">
+                      <div *ngFor="let attachment of getMessageAttachments(message.id)" class="attachment-item small">
                         <div *ngIf="isImageFile(attachment.mime_type)" class="image-attachment">
                           <img [src]="getAttachmentUrl(attachment)" [alt]="attachment.original_filename" (click)="openImageModal(attachment)">
                           <div class="attachment-info">
@@ -1676,5 +1676,13 @@ export class RestaurantManagerSupportComponent implements OnInit {
   closeImageModal() {
     this.showImageModal = false;
     this.selectedImage = null;
+  }
+
+  getMessageAttachments(messageId: string | number): SupportTicketAttachment[] {
+    return this.messageAttachments[messageId] || [];
+  }
+
+  getMessageAttachmentsCount(): number {
+    return Object.keys(this.messageAttachments).length;
   }
 }

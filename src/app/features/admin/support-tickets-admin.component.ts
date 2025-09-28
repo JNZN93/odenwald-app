@@ -296,9 +296,9 @@ import { environment } from '../../../environments/environment';
                   <div class="message-content">{{ message.message }}</div>
                   
                   <!-- Message Attachments -->
-                  <div class="message-attachments" *ngIf="messageAttachments[message.id]?.length > 0">
+                  <div class="message-attachments" *ngIf="getMessageAttachments(message.id).length > 0">
                     <div class="attachments-grid small">
-                      <div *ngFor="let attachment of messageAttachments[message.id]" class="attachment-item small">
+                      <div *ngFor="let attachment of getMessageAttachments(message.id)" class="attachment-item small">
                         <div *ngIf="isImageFile(attachment.mime_type)" class="image-attachment">
                           <img [src]="getAttachmentUrl(attachment)" [alt]="attachment.original_filename" (click)="openImageModal(attachment)">
                           <div class="attachment-info">
@@ -1721,5 +1721,9 @@ export class SupportTicketsAdminComponent implements OnInit {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  getMessageAttachments(messageId: string | number): SupportTicketAttachment[] {
+    return this.messageAttachments[messageId] || [];
   }
 }
