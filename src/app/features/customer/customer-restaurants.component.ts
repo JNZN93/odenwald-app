@@ -151,92 +151,143 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
       <!-- Results Section -->
       <div class="results-section" *ngIf="userCoordinates">
         <div class="container">
-          <!-- Title removed: no heading above results on desktop -->
+          <!-- Desktop Sidebar -->
+          <div class="desktop-sidebar">
+            <!-- Popular Categories in Sidebar -->
+            <div class="sidebar-section sidebar-categories">
+              <h3>Kategorien</h3>
+              <div class="category-chips">
+                <button 
+                  *ngFor="let category of popularCategories" 
+                  class="category-chip" 
+                  (click)="selectPredefinedCategory(category.name)"
+                  [class.active]="globalSearchTerm === category.name"
+                >
+                  <span class="category-icon">{{ category.icon }}</span>
+                  <span class="category-name">{{ category.name }}</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Filters in Sidebar -->
+            <div class="sidebar-section sidebar-filters">
+              <h3>Filter</h3>
+              <div class="filters-row">
+                <label class="toggle">
+                  <input type="checkbox" [(ngModel)]="filterOpenNow" (change)="onFiltersChanged()">
+                  <span>Jetzt geöffnet</span>
+                </label>
+                <label class="toggle">
+                  <input type="checkbox" [(ngModel)]="filterFreeDelivery" (change)="onFiltersChanged()">
+                  <span>Kostenlose Lieferung</span>
+                </label>
+                <label class="select">
+                  <span>Mind.-bestellwert</span>
+                  <select [(ngModel)]="filterMinOrder" (change)="onFiltersChanged()">
+                    <option value="all">Alle</option>
+                    <option value="10">10,00 € oder weniger</option>
+                    <option value="15">15,00 € oder weniger</option>
+                  </select>
+                </label>
+                <label class="select">
+                  <span>Bewertung</span>
+                  <select [(ngModel)]="filterRatingMin" (change)="onFiltersChanged()">
+                    <option [ngValue]="0">Alle</option>
+                    <option [ngValue]="3">ab 3★</option>
+                    <option [ngValue]="4">ab 4★</option>
+                    <option [ngValue]="4.5">ab 4.5★</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Content Area -->
+          <div class="main-content">
+            <!-- Search bar like Lieferando: search items/categories and filter restaurants offering them -->
+            <div class="search-bar" *ngIf="!isMobileOrTablet()">
+              <div class="search-input-wrapper">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input
+                  type="text"
+                  class="search-input"
+                  placeholder="Suche nach Gerichten, Kategorien oder Zutaten (z.B. Pizza, Sushi, vegan)"
+                  [(ngModel)]="globalSearchTerm"
+                  (input)="onGlobalSearchChanged()"
+                >
+                <button class="clear-search-btn" *ngIf="globalSearchTerm" (click)="clearGlobalSearch()" type="button">
+                  <i class="fa-solid fa-times"></i>
+                </button>
+              </div>
+              <div class="search-status" *ngIf="isSearching">
+                <i class="fa-solid fa-spinner fa-spin"></i> Suche passende Angebote...
+              </div>
+            </div>
+
+            <!-- Popular Categories like Lieferando (hidden on desktop) -->
+            <div class="popular-categories" *ngIf="!isMobileOrTablet()">
+              <div class="category-chips">
+                <button 
+                  *ngFor="let category of popularCategories" 
+                  class="category-chip" 
+                  (click)="selectPredefinedCategory(category.name)"
+                  [class.active]="globalSearchTerm === category.name"
+                >
+                  <span class="category-icon">{{ category.icon }}</span>
+                  <span class="category-name">{{ category.name }}</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Filters row: open-now, free delivery, min order, rating (hidden on desktop) -->
+            <div class="filters-row" *ngIf="!isMobileOrTablet()">
+              <label class="toggle">
+                <input type="checkbox" [(ngModel)]="filterOpenNow" (change)="onFiltersChanged()">
+                <span>Jetzt geöffnet</span>
+              </label>
+              <label class="toggle">
+                <input type="checkbox" [(ngModel)]="filterFreeDelivery" (change)="onFiltersChanged()">
+                <span>Kostenlose Lieferung</span>
+              </label>
+              <label class="select">
+                <span>Mind.-bestellwert</span>
+                <select [(ngModel)]="filterMinOrder" (change)="onFiltersChanged()">
+                  <option value="all">Alle</option>
+                  <option value="10">10,00 € oder weniger</option>
+                  <option value="15">15,00 € oder weniger</option>
+                </select>
+              </label>
+              <label class="select">
+                <span>Bewertung</span>
+                <select [(ngModel)]="filterRatingMin" (change)="onFiltersChanged()">
+                  <option [ngValue]="0">Alle</option>
+                  <option [ngValue]="3">ab 3★</option>
+                  <option [ngValue]="4">ab 4★</option>
+                  <option [ngValue]="4.5">ab 4.5★</option>
+                </select>
+              </label>
+            </div>
           
-          <!-- Search bar like Lieferando: search items/categories and filter restaurants offering them -->
-          <div class="search-bar" *ngIf="!isMobileOrTablet()">
-            <div class="search-input-wrapper">
-              <i class="fa-solid fa-magnifying-glass"></i>
-              <input
-                type="text"
-                class="search-input"
-                placeholder="Suche nach Gerichten, Kategorien oder Zutaten (z.B. Pizza, Sushi, vegan)"
-                [(ngModel)]="globalSearchTerm"
-                (input)="onGlobalSearchChanged()"
-              >
-              <button class="clear-search-btn" *ngIf="globalSearchTerm" (click)="clearGlobalSearch()" type="button">
-                <i class="fa-solid fa-times"></i>
-              </button>
-            </div>
-            <div class="search-status" *ngIf="isSearching">
-              <i class="fa-solid fa-spinner fa-spin"></i> Suche passende Angebote...
-            </div>
-          </div>
-
-          <!-- Popular Categories like Lieferando -->
-          <div class="popular-categories" *ngIf="!isMobileOrTablet()">
-            <div class="category-chips">
-              <button 
-                *ngFor="let category of popularCategories" 
-                class="category-chip" 
-                (click)="selectPredefinedCategory(category.name)"
-                [class.active]="globalSearchTerm === category.name"
-              >
-                <span class="category-icon">{{ category.icon }}</span>
-                <span class="category-name">{{ category.name }}</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Filters row: open-now, free delivery, min order, rating -->
-          <div class="filters-row" *ngIf="!isMobileOrTablet()">
-            <label class="toggle">
-              <input type="checkbox" [(ngModel)]="filterOpenNow" (change)="onFiltersChanged()">
-              <span>Jetzt geöffnet</span>
-            </label>
-            <label class="toggle">
-              <input type="checkbox" [(ngModel)]="filterFreeDelivery" (change)="onFiltersChanged()">
-              <span>Kostenlose Lieferung</span>
-            </label>
-            <label class="select">
-              <span>Mind.-bestellwert</span>
-              <select [(ngModel)]="filterMinOrder" (change)="onFiltersChanged()">
-                <option value="all">Alle</option>
-                <option value="10">10,00 € oder weniger</option>
-                <option value="15">15,00 € oder weniger</option>
-              </select>
-            </label>
-            <label class="select">
-              <span>Bewertung</span>
-              <select [(ngModel)]="filterRatingMin" (change)="onFiltersChanged()">
-                <option [ngValue]="0">Alle</option>
-                <option [ngValue]="3">ab 3★</option>
-                <option [ngValue]="4">ab 4★</option>
-                <option [ngValue]="4.5">ab 4.5★</option>
-              </select>
-            </label>
-          </div>
-          
-          <!-- Show skeleton cards while loading -->
-          <div class="restaurants-grid" *ngIf="isLoadingRestaurants">
-            <app-restaurant-skeleton *ngFor="let i of [0,1,2,3,4,5]" [index]="i" [animate]="true"></app-restaurant-skeleton>
-          </div>
-
-          <!-- Show actual restaurants when loaded -->
-          <ng-container *ngIf="restaurants$ | async as restaurants">
-            <div class="no-results" *ngIf="!isLoadingRestaurants && restaurants.length === 0">
-              <svg class="no-results-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <!-- Such-Icon für keine Ergebnisse -->
-                <circle cx="11" cy="11" r="8"/>
-                <path d="M21 21l-4.35-4.35"/>
-                <circle cx="11" cy="11" r="2" fill="currentColor"/>
-              </svg>
-              <p>
-                {{ globalSearchTerm ? 'Keine Restaurants mit passenden Angeboten gefunden.' : 'Keine Restaurants gefunden.' }}
-              </p>
+            <!-- Show skeleton cards while loading -->
+            <div class="restaurants-grid" *ngIf="isLoadingRestaurants">
+              <app-restaurant-skeleton *ngFor="let i of [0,1,2,3,4,5]" [index]="i" [animate]="true"></app-restaurant-skeleton>
             </div>
 
-            <div class="restaurants-grid" *ngIf="!isLoadingRestaurants && restaurants.length > 0">
+            <!-- Show actual restaurants when loaded -->
+            <ng-container *ngIf="restaurants$ | async as restaurants">
+              <div class="no-results" *ngIf="!isLoadingRestaurants && restaurants.length === 0">
+                <svg class="no-results-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <!-- Such-Icon für keine Ergebnisse -->
+                  <circle cx="11" cy="11" r="8"/>
+                  <path d="M21 21l-4.35-4.35"/>
+                  <circle cx="11" cy="11" r="2" fill="currentColor"/>
+                </svg>
+                <p>
+                  {{ globalSearchTerm ? 'Keine Restaurants mit passenden Angeboten gefunden.' : 'Keine Restaurants gefunden.' }}
+                </p>
+              </div>
+
+              <div class="restaurants-grid" *ngIf="!isLoadingRestaurants && restaurants.length > 0">
               <div *ngFor="let r of restaurants" class="restaurant-card">
                 <div class="card-image-container">
                   <img
@@ -347,6 +398,7 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
               </div>
             </div>
           </ng-container>
+          </div>
         </div>
       </div>
     </section>
