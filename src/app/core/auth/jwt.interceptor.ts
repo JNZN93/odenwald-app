@@ -50,22 +50,22 @@ export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
       if (error.status === 401) {
-        // Don't trigger logout for logout requests to prevent infinite loops
-        if (!req.url.includes('/auth/logout')) {
-          console.log('JWT Interceptor: 401 error received for:', req.url);
-          console.log('JWT Interceptor: Current user state:', authService.currentUserSubject?.value);
-          
-          // Check if this is a login-related request or if we have a valid user
-          const currentUser = authService.currentUserSubject?.value;
-          const isLoginRequest = req.url.includes('/auth/login') || req.url.includes('/auth/register');
-          
-          if (!isLoginRequest && (!currentUser || !currentUser.is_active)) {
-            console.log('JWT Interceptor: clearing auth due to 401 and no valid user');
-            authService.clearAuth();
-            router.navigate(['/auth/login'], { replaceUrl: true });
-          } else {
-            console.log('JWT Interceptor: 401 error but not clearing auth (login request or valid user)');
-          }
+        console.log('JWT Interceptor: 401 error received for:', req.url);
+        console.log('JWT Interceptor: Current user state:', authService.currentUserSubject?.value);
+        
+        // Check if this is an auth-related request (login, register, logout)
+        const isAuthRequest = req.url.includes('/auth/login') || 
+                             req.url.includes('/auth/register') || 
+                             req.url.includes('/auth/logout');
+        
+        // For all non-auth requests with 401, clear auth and redirect to login
+        // This handles expired tokens, invalid tokens, and missing auth
+        if (!isAuthRequest) {
+          console.log('JWT Interceptor: Token invalid/expired - clearing auth and redirecting to login');
+          authService.clearAuth();
+          router.navigate(['/auth/login'], { replaceUrl: true });
+        } else {
+          console.log('JWT Interceptor: 401 on auth endpoint - user will see error message');
         }
       }
       return throwError(() => error);
