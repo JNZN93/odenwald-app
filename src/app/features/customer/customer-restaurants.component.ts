@@ -790,6 +790,13 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
           // Save location to localStorage when manually entered
           this.saveLocationToStorage(result);
           this.showAddressInput = false; // Hide address input after successful manual entry
+          
+          // Activate compact mode immediately after location selection
+          this.isCompactMode = true;
+          
+          // Format address to show only city and postal code for compact display
+          this.formattedAddress = this.formatCompactAddress(this.formattedAddress);
+          this.deliveryAddress = this.formattedAddress;
 
           this.loadNearbyRestaurants();
         } else {
@@ -1234,7 +1241,7 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
     const postalCodeMatch = fullAddress.match(/\b\d{5}\b/);
     const postalCode = postalCodeMatch ? postalCodeMatch[0] : '';
 
-    // Try to find city name
+    // Try to find city name - prioritize the first meaningful part
     let city = '';
 
     // First, try to find a part that contains both postal code and city
@@ -1245,12 +1252,18 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
       }
     }
 
-    // If not found, look for city in other parts
+    // If not found, look for city in other parts (prefer earlier parts for city name)
     if (!city) {
-      for (let i = parts.length - 1; i >= 0; i--) {
+      for (let i = 0; i < parts.length; i++) {
         const part = parts[i];
-        // Skip parts that are just postal codes or too short
-        if (part !== postalCode && part.length > 2 && !/^\d+$/.test(part)) {
+        // Skip parts that are just postal codes, too short, or are administrative divisions
+        if (part !== postalCode && 
+            part.length > 2 && 
+            !/^\d+$/.test(part) &&
+            !part.toLowerCase().includes('kreis') &&
+            !part.toLowerCase().includes('landkreis') &&
+            !part.toLowerCase().includes('hessen') &&
+            !part.toLowerCase().includes('deutschland')) {
           city = part;
           break;
         }
@@ -1263,8 +1276,9 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
       city = city.replace(/\s+(stadt|kreis|landkreis)$/i, '');
     }
 
+    // Return formatted address
     if (city && postalCode) {
-      return `${postalCode} ${city}`;
+      return `${city}, ${postalCode}`;
     } else if (city) {
       return city;
     } else if (postalCode) {
