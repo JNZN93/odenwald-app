@@ -151,8 +151,8 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
       <!-- Results Section -->
       <div class="results-section" *ngIf="userCoordinates">
         <div class="container">
-          <!-- Desktop Sidebar -->
-          <div class="desktop-sidebar">
+          <!-- Desktop Sidebar (Hidden on Mobile) -->
+          <div class="desktop-sidebar" *ngIf="!isMobileOrTablet()">
             <!-- Popular Categories in Sidebar -->
             <div class="sidebar-section sidebar-categories">
               <h3>Kategorien</h3>
