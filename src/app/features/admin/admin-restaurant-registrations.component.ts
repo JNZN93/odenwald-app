@@ -8,7 +8,7 @@ interface RestaurantRegistration {
   id: string | number;
   user_id: string | number;
   restaurant_id?: string | number;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'awaiting_final_approval' | 'rejected';
   owner_name: string;
   owner_email: string;
   restaurant_name: string;
@@ -20,6 +20,14 @@ interface RestaurantRegistration {
   submitted_at: string;
   approved_at?: string;
   approval_notes?: string;
+}
+
+interface RegistrationStats {
+  total: number;
+  pending: number;
+  awaiting_final_approval: number;
+  approved: number;
+  rejected: number;
 }
 
 @Component({
@@ -41,17 +49,61 @@ interface RestaurantRegistration {
         </div>
       </div>
 
-
+      <!-- Stats Cards -->
+      <div class="stats-grid" *ngIf="stats">
+        <div class="stat-card">
+          <div class="stat-icon pending-icon">
+            <i class="fa-solid fa-paper-plane"></i>
+          </div>
+          <div class="stat-content">
+            <h3>Neu</h3>
+            <div class="stat-value">{{ stats.pending }}</div>
+            <div class="stat-change warning">Onboarding-Link senden</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon awaiting-icon">
+            <i class="fa-solid fa-hourglass-half"></i>
+          </div>
+          <div class="stat-content">
+            <h3>Wartet auf Freigabe</h3>
+            <div class="stat-value">{{ stats.awaiting_final_approval }}</div>
+            <div class="stat-change info">Dokumente prüfen</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon approved-icon">
+            <i class="fa-solid fa-check-circle"></i>
+          </div>
+          <div class="stat-content">
+            <h3>Aktiv</h3>
+            <div class="stat-value">{{ stats.approved }}</div>
+            <div class="stat-change success">In Betrieb</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon rejected-icon">
+            <i class="fa-solid fa-times-circle"></i>
+          </div>
+          <div class="stat-content">
+            <h3>Abgelehnt</h3>
+            <div class="stat-value">{{ stats.rejected }}</div>
+            <div class="stat-change danger">Nicht akzeptiert</div>
+          </div>
+        </div>
+      </div>
 
       <!-- Filters -->
       <div class="filters-section">
         <div class="filters-grid">
           <div class="filter-group">
             <label for="status-filter">Status:</label>
-            <select id="status-filter" [(ngModel)]="selectedStatus" (change)="applyFilters()">
-              <option value="pending">Ausstehend</option>
-              <option value="approved">Genehmigt</option>
-              <option value="rejected">Abgelehnt</option>
+            <select id="status-filter" [(ngModel)]="selectedStatus" (change)="loadRegistrations()">
+              <option value="open">📂 Offene Registrierungen</option>
+              <option value="pending">🆕 Neu (Onboarding-Link senden)</option>
+              <option value="awaiting_final_approval">⏳ Warte auf finale Freigabe</option>
+              <option value="approved">✅ Genehmigt & Aktiv</option>
+              <option value="rejected">❌ Abgelehnt</option>
               <option value="all">Alle</option>
             </select>
           </div>
@@ -133,12 +185,22 @@ interface RestaurantRegistration {
                 (click)="approveRegistration(registration)"
                 [disabled]="loading"
               >
-                <i class="fa-solid fa-check"></i>
-                Genehmigen
+                <i class="fa-solid fa-paper-plane"></i>
+                Onboarding-Link senden
               </button>
 
               <button
-                *ngIf="registration.status === 'pending'"
+                *ngIf="registration.status === 'awaiting_final_approval'"
+                class="btn-approve final"
+                (click)="approveRegistration(registration)"
+                [disabled]="loading"
+              >
+                <i class="fa-solid fa-check-circle"></i>
+                Final freigeben
+              </button>
+
+              <button
+                *ngIf="registration.status === 'pending' || registration.status === 'awaiting_final_approval'"
                 class="btn-reject"
                 (click)="rejectRegistration(registration)"
                 [disabled]="loading"
@@ -226,11 +288,16 @@ interface RestaurantRegistration {
                   </span>
                   <ng-template #noDoc><span class="no-doc">Nicht hochgeladen</span></ng-template>
                 </div>
-                <div class="document-item">
+                <div class="document-item" *ngIf="selectedRegistration.documents?.tax_number">
                   <strong>Steuernummer:</strong>
+                  <span>{{ selectedRegistration.documents.tax_number }}</span>
+                </div>
+                <div class="document-item">
+                  <strong>Steuerbescheinigung:</strong>
                   <span *ngIf="selectedRegistration.documents?.tax_certificate; else noDoc">
-                    <a [href]="buildPublicUrl(selectedRegistration.documents.tax_certificate) || selectedRegistration.documents.tax_certificate" target="_blank">{{ getFileLabel(selectedRegistration.documents.tax_certificate, 'Steuernummer anzeigen') }}</a>
+                    <a [href]="buildPublicUrl(selectedRegistration.documents.tax_certificate) || selectedRegistration.documents.tax_certificate" target="_blank">{{ getFileLabel(selectedRegistration.documents.tax_certificate, 'Steuerbescheinigung anzeigen') }}</a>
                   </span>
+                  <ng-template #noDocTax><span class="no-doc">Nicht hochgeladen</span></ng-template>
                 </div>
                 <div class="document-item">
                   <strong>Ausweis:</strong>
@@ -281,7 +348,23 @@ interface RestaurantRegistration {
           <div class="modal-actions" *ngIf="selectedRegistration?.status === 'pending'">
             <button class="btn-cancel" (click)="closeModal()">Schließen</button>
             <button class="btn-reject" (click)="rejectRegistration(selectedRegistration)">Ablehnen</button>
-            <button class="btn-approve" (click)="confirmApprove(selectedRegistration)">Genehmigen</button>
+            <button class="btn-approve" (click)="confirmApprove(selectedRegistration)">
+              <i class="fa-solid fa-paper-plane"></i>
+              Onboarding-Link senden
+            </button>
+          </div>
+          
+          <!-- Modal Actions for Final Approval -->
+          <div class="modal-actions" *ngIf="selectedRegistration?.status === 'awaiting_final_approval'">
+            <button class="btn-cancel" (click)="closeModal()">Schließen</button>
+            <button class="btn-reject" (click)="rejectRegistration(selectedRegistration)">
+              <i class="fa-solid fa-times"></i>
+              Ablehnen
+            </button>
+            <button class="btn-approve final" (click)="confirmApprove(selectedRegistration)">
+              <i class="fa-solid fa-check-circle"></i>
+              Final freigeben & aktivieren
+            </button>
           </div>
         </div>
       </div>
@@ -290,14 +373,48 @@ interface RestaurantRegistration {
       <div *ngIf="confirmationModal.show" class="modal-overlay" (click)="closeConfirmation()">
         <div class="confirmation-modal" (click)="$event.stopPropagation()">
           <div class="confirmation-header">
-            <h3>{{ confirmationModal.action === 'approve' ? 'Genehmigen' : 'Ablehnen' }} bestätigen</h3>
+            <h3>{{ getConfirmationTitle() }}</h3>
           </div>
 
           <div class="confirmation-body">
-            <p>
-              Möchten Sie die Restaurant-Registrierung für <strong>{{ confirmationModal.registration?.restaurant_name }}</strong>
-              wirklich {{ confirmationModal.action === 'approve' ? 'genehmigen' : 'ablehnen' }}?
-            </p>
+            <p [innerHTML]="getConfirmationMessage()"></p>
+
+            <div class="notes-section" *ngIf="confirmationModal.action === 'approve' && confirmationModal.registration?.status === 'pending'">
+              <div class="info-box">
+                <i class="fa-solid fa-info-circle"></i>
+                <div>
+                  <strong>Was passiert als nächstes?</strong>
+                  <ul>
+                    <li>📧 Onboarding-Link wird an <strong>{{ confirmationModal.registration?.owner_email }}</strong> gesendet</li>
+                    <li>⏳ Restaurant-Besitzer macht Onboarding (Dokumente hochladen, Stripe, etc.)</li>
+                    <li>📋 Sie prüfen dann die Dokumente in einem zweiten Schritt</li>
+                    <li>⚠️ Restaurant wird <strong>noch NICHT aktiviert</strong></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div class="notes-section" *ngIf="confirmationModal.action === 'approve' && confirmationModal.registration?.status === 'awaiting_final_approval'">
+              <div class="info-box success">
+                <i class="fa-solid fa-check-circle"></i>
+                <div>
+                  <strong>Finale Genehmigung</strong>
+                  <ul>
+                    <li>✅ Onboarding wurde abgeschlossen</li>
+                    <li>📄 Alle Dokumente wurden hochgeladen</li>
+                    <li>🚀 Restaurant wird <strong>SOFORT aktiviert</strong></li>
+                    <li>✉️ Besitzer kann direkt loslegen</li>
+                  </ul>
+                </div>
+              </div>
+              <label for="approval-notes">Notizen (optional):</label>
+              <textarea
+                id="approval-notes"
+                [(ngModel)]="approvalNotes"
+                placeholder="Optionale Notizen zur Genehmigung..."
+                rows="2"
+              ></textarea>
+            </div>
 
             <div class="notes-section" *ngIf="confirmationModal.action === 'reject'">
               <label for="rejection-notes">Ablehnungsgrund:</label>
@@ -318,7 +435,7 @@ interface RestaurantRegistration {
               (click)="executeAction()"
               [disabled]="loading"
             >
-              {{ confirmationModal.action === 'approve' ? 'Genehmigen' : 'Ablehnen' }}
+              {{ getConfirmationButtonText() }}
             </button>
           </div>
         </div>
@@ -382,7 +499,98 @@ interface RestaurantRegistration {
       to { transform: rotate(360deg); }
     }
 
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
 
+    .stat-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .stat-icon {
+      font-size: var(--text-2xl);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 50px;
+      height: 50px;
+      border-radius: var(--radius-md);
+    }
+
+    .stat-icon.pending-icon {
+      background: #fef3c7;
+      color: #f59e0b;
+    }
+
+    .stat-icon.awaiting-icon {
+      background: #dbeafe;
+      color: #3b82f6;
+    }
+
+    .stat-icon.approved-icon {
+      background: #d1fae5;
+      color: #10b981;
+    }
+
+    .stat-icon.rejected-icon {
+      background: #fee2e2;
+      color: #ef4444;
+    }
+
+    .stat-icon.total-icon {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+
+    .stat-content {
+      flex: 1;
+    }
+
+    .stat-content h3 {
+      margin: 0 0 var(--space-1) 0;
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .stat-value {
+      font-size: var(--text-2xl);
+      font-weight: bold;
+      color: var(--color-heading);
+      margin-bottom: var(--space-1);
+    }
+
+    .stat-change {
+      font-size: var(--text-xs);
+      font-weight: 600;
+    }
+
+    .stat-change.success {
+      color: var(--color-success);
+    }
+
+    .stat-change.warning {
+      color: #f59e0b;
+    }
+
+    .stat-change.info {
+      color: #3b82f6;
+    }
+
+    .stat-change.danger {
+      color: var(--color-danger);
+    }
 
     .filters-section {
       background: var(--bg-light);
@@ -490,6 +698,12 @@ interface RestaurantRegistration {
     .status-badge.pending {
       background: var(--color-warning-light);
       color: var(--color-warning-dark);
+    }
+
+    .status-badge.awaiting-final {
+      background: #dbeafe;
+      color: #1e40af;
+      font-weight: 600;
     }
 
     .status-badge.approved {
@@ -845,6 +1059,47 @@ interface RestaurantRegistration {
       resize: vertical;
     }
 
+    .info-box {
+      background: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: var(--space-4);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-4);
+      display: flex;
+      gap: var(--space-3);
+    }
+
+    .info-box.success {
+      background: #f0fdf4;
+      border-left-color: #10b981;
+    }
+
+    .info-box i {
+      color: #3b82f6;
+      font-size: var(--text-lg);
+      margin-top: 2px;
+    }
+
+    .info-box.success i {
+      color: #10b981;
+    }
+
+    .info-box ul {
+      margin: var(--space-2) 0 0 0;
+      padding-left: var(--space-4);
+      list-style: none;
+    }
+
+    .info-box li {
+      margin-bottom: var(--space-2);
+      color: var(--color-text);
+      font-size: var(--text-sm);
+    }
+
+    .info-box strong {
+      color: var(--color-heading);
+    }
+
     .confirmation-actions {
       display: flex;
       justify-content: flex-end;
@@ -928,12 +1183,13 @@ export class AdminRestaurantRegistrationsComponent implements OnInit {
 
   registrations: RestaurantRegistration[] = [];
   filteredRegistrations: RestaurantRegistration[] = [];
+  stats: RegistrationStats | null = null;
 
   selectedRegistration: RestaurantRegistration | null = null;
   loading = false;
 
   // Filters
-  selectedStatus = 'pending';
+  selectedStatus = 'open'; // Show all open registrations by default
   searchTerm = '';
   sortBy = 'newest';
 
@@ -944,9 +1200,20 @@ export class AdminRestaurantRegistrationsComponent implements OnInit {
     registration: null as RestaurantRegistration | null
   };
   rejectionNotes = '';
+  approvalNotes = '';
 
   ngOnInit() {
     this.loadRegistrations();
+  }
+
+  calculateStats() {
+    this.stats = {
+      total: this.registrations.length,
+      pending: this.registrations.filter(r => r.status === 'pending').length,
+      awaiting_final_approval: this.registrations.filter(r => r.status === 'awaiting_final_approval').length,
+      approved: this.registrations.filter(r => r.status === 'approved').length,
+      rejected: this.registrations.filter(r => r.status === 'rejected').length
+    };
   }
 
   loadRegistrations() {
@@ -959,7 +1226,23 @@ export class AdminRestaurantRegistrationsComponent implements OnInit {
         this.registrations = (response.registrations || []).map((r: any) => {
           const owner_info = typeof r.owner_info === 'string' ? safeParse(r.owner_info) : (r.owner_info || {});
           const restaurant_info = typeof r.restaurant_info === 'string' ? safeParse(r.restaurant_info) : (r.restaurant_info || {});
-          const documents = typeof r.documents === 'string' ? safeParse(r.documents) : (r.documents || {});
+          let documents = typeof r.documents === 'string' ? safeParse(r.documents) : (r.documents || {});
+          
+          // Parse restaurant_photos if it's a JSON string
+          if (documents.restaurant_photos && typeof documents.restaurant_photos === 'string') {
+            try {
+              documents.restaurant_photos = JSON.parse(documents.restaurant_photos);
+              console.log('[Admin] Parsed restaurant_photos for registration', r.id, ':', documents.restaurant_photos);
+            } catch (e) {
+              console.warn('Failed to parse restaurant_photos:', e);
+              documents.restaurant_photos = [];
+            }
+          } else if (documents.restaurant_photos && Array.isArray(documents.restaurant_photos)) {
+            console.log('[Admin] Restaurant_photos already an array for registration', r.id, ':', documents.restaurant_photos);
+          } else {
+            console.log('[Admin] No restaurant_photos for registration', r.id, ', documents:', documents);
+          }
+          
           return {
             ...r,
             owner_name: r.owner_name || owner_info?.name || 'Unbekannt',
@@ -971,6 +1254,7 @@ export class AdminRestaurantRegistrationsComponent implements OnInit {
             documents
           } as RestaurantRegistration;
         });
+        this.calculateStats();
         this.applyFilters();
         this.loading = false;
       },
@@ -987,7 +1271,15 @@ export class AdminRestaurantRegistrationsComponent implements OnInit {
     let filtered = [...this.registrations];
 
     // Status filter
-    if (this.selectedStatus !== 'all') {
+    if (this.selectedStatus === 'open') {
+      // Show all open registrations (pending, awaiting_final_approval)
+      // Note: 'approved' status comes from backend already filtered by is_active = false
+      filtered = filtered.filter(reg => 
+        reg.status === 'pending' || 
+        reg.status === 'awaiting_final_approval' ||
+        reg.status === 'approved'
+      );
+    } else if (this.selectedStatus !== 'all') {
       filtered = filtered.filter(reg => reg.status === this.selectedStatus);
     }
 
@@ -1024,6 +1316,7 @@ export class AdminRestaurantRegistrationsComponent implements OnInit {
     switch (status) {
       case 'pending': return 'pending';
       case 'approved': return 'approved';
+      case 'awaiting_final_approval': return 'awaiting-final';
       case 'rejected': return 'rejected';
       default: return 'pending';
     }
@@ -1031,8 +1324,9 @@ export class AdminRestaurantRegistrationsComponent implements OnInit {
 
   getStatusText(status: string): string {
     switch (status) {
-      case 'pending': return 'Ausstehend';
-      case 'approved': return 'Genehmigt';
+      case 'pending': return 'Neu (Onboarding ausstehend)';
+      case 'approved': return 'Onboarding-Link versendet';
+      case 'awaiting_final_approval': return 'Wartet auf finale Freigabe';
       case 'rejected': return 'Abgelehnt';
       default: return 'Unbekannt';
     }
@@ -1105,9 +1399,56 @@ export class AdminRestaurantRegistrationsComponent implements OnInit {
     };
   }
 
+  getConfirmationTitle(): string {
+    if (!this.confirmationModal.registration) return '';
+    
+    if (this.confirmationModal.action === 'approve') {
+      if (this.confirmationModal.registration.status === 'pending') {
+        return '📧 Onboarding-Link senden';
+      } else if (this.confirmationModal.registration.status === 'awaiting_final_approval') {
+        return '✅ Restaurant final freigeben';
+      }
+      return 'Genehmigen bestätigen';
+    } else {
+      return '❌ Registrierung ablehnen';
+    }
+  }
+
+  getConfirmationMessage(): string {
+    if (!this.confirmationModal.registration) return '';
+    const restaurantName = this.confirmationModal.registration.restaurant_name;
+    
+    if (this.confirmationModal.action === 'approve') {
+      if (this.confirmationModal.registration.status === 'pending') {
+        return `Möchten Sie den <strong>Onboarding-Link</strong> für <strong>${restaurantName}</strong> verschicken?<br><br>` +
+               `<small>ℹ️ Das Restaurant wird noch <strong>NICHT aktiviert</strong>. Es muss erst das Onboarding abschließen und die Dokumente werden dann von Ihnen geprüft.</small>`;
+      } else if (this.confirmationModal.registration.status === 'awaiting_final_approval') {
+        return `Möchten Sie <strong>${restaurantName}</strong> jetzt <strong>final freigeben und aktivieren</strong>?<br><br>` +
+               `<small>✅ Das Restaurant kann danach sofort Bestellungen annehmen!</small>`;
+      }
+      return `Möchten Sie die Registrierung für <strong>${restaurantName}</strong> wirklich genehmigen?`;
+    } else {
+      return `Möchten Sie die Registrierung für <strong>${restaurantName}</strong> wirklich ablehnen?`;
+    }
+  }
+
+  getConfirmationButtonText(): string {
+    if (this.confirmationModal.action === 'approve') {
+      if (this.confirmationModal.registration?.status === 'pending') {
+        return '📧 Onboarding-Link senden';
+      } else if (this.confirmationModal.registration?.status === 'awaiting_final_approval') {
+        return '✅ Final freigeben';
+      }
+      return 'Genehmigen';
+    } else {
+      return 'Ablehnen';
+    }
+  }
+
   closeConfirmation() {
     this.confirmationModal = { show: false, action: 'approve', registration: null };
     this.rejectionNotes = '';
+    this.approvalNotes = '';
   }
 
   executeAction() {
@@ -1115,15 +1456,23 @@ export class AdminRestaurantRegistrationsComponent implements OnInit {
 
     const registration = this.confirmationModal.registration;
     const action = this.confirmationModal.action;
-    const notes = action === 'reject' ? this.rejectionNotes : '';
+    const notes = action === 'reject' ? this.rejectionNotes : this.approvalNotes;
 
     this.loading = true;
     this.closeConfirmation();
 
-    this.http.post(
-      `${environment.apiUrl}/admin/restaurant-registrations/${registration.id}/review`,
-      { action, notes }
-    ).subscribe({
+    // Determine which endpoint to use based on registration status
+    let endpoint = '';
+    
+    if (registration.status === 'awaiting_final_approval') {
+      // Final review after onboarding is complete
+      endpoint = `${environment.apiUrl}/admin/restaurant-registrations/${registration.id}/final-review`;
+    } else {
+      // Initial review to send onboarding link
+      endpoint = `${environment.apiUrl}/admin/restaurant-registrations/${registration.id}/review`;
+    }
+
+    this.http.post(endpoint, { action, notes }).subscribe({
       next: (response) => {
         this.loading = false;
         // Reload data

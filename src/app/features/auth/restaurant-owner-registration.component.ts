@@ -2,19 +2,14 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
 interface RestaurantOwnerRegistrationData {
-  // Owner info
   name: string;
   email: string;
-  password: string;
-  confirmPassword: string;
   phone: string;
-  address: string;
-
-  // Restaurant info
+  address?: string;
   restaurant_info: {
     name: string;
     description: string;
@@ -27,20 +22,10 @@ interface RestaurantOwnerRegistrationData {
     };
     contact_info: {
       phone: string;
-      email: string;
+      email?: string;
     };
   };
-
-  // Documents
-  documents: {
-    business_license?: string;
-    tax_certificate?: string;
-    owner_id?: string;
-    restaurant_photos?: string[];
-  };
-
-  // Notes
-  notes: string;
+  notes?: string;
 }
 
 @Component({
@@ -87,11 +72,20 @@ interface RestaurantOwnerRegistrationData {
         </div>
 
         <form (ngSubmit)="onSubmit()" #f="ngForm" class="registration-form">
-          <!-- Step 1: Owner Information -->
-          <div class="form-step" [class.active]="currentStep === 1">
+          <!-- Owner & Restaurant Information Combined -->
+          <div class="form-step active">
             <div class="step-header">
-              <h3>1. Persönliche Informationen</h3>
-              <p>Bitte geben Sie Ihre Kontaktdaten für die Registrierung ein</p>
+              <h3>Restaurant-Registrierung</h3>
+              <p>Bitte geben Sie Ihre Kontaktdaten und Restaurant-Informationen ein</p>
+            </div>
+
+            <!-- Owner Information -->
+            <div class="section-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="section-icon">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+              <span>Ihre Kontaktdaten</span>
             </div>
 
             <div class="form-grid">
@@ -146,41 +140,15 @@ interface RestaurantOwnerRegistrationData {
                   class="form-input"
                 />
               </div>
-
-              <div class="form-group">
-                <label for="password">Passwort *</label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  [(ngModel)]="registrationData.password"
-                  required
-                  minlength="8"
-                  placeholder="Mindestens 8 Zeichen"
-                  class="form-input"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="confirmPassword">Passwort bestätigen *</label>
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  [(ngModel)]="registrationData.confirmPassword"
-                  required
-                  placeholder="Passwort wiederholen"
-                  class="form-input"
-                />
-              </div>
             </div>
-          </div>
 
-          <!-- Step 2: Restaurant Information -->
-          <div class="form-step" [class.active]="currentStep === 2">
-            <div class="step-header">
-              <h3>2. Restaurant-Informationen</h3>
-              <p>Bitte geben Sie die Details zu Ihrem Restaurant ein</p>
+            <!-- Restaurant Information -->
+            <div class="section-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="section-icon">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+              <span>Restaurant-Informationen</span>
             </div>
 
             <div class="form-grid">
@@ -239,208 +207,84 @@ interface RestaurantOwnerRegistrationData {
                   [(ngModel)]="registrationData.restaurant_info.description"
                   required
                   placeholder="Beschreiben Sie Ihr Restaurant, Ihre Spezialitäten und was Sie besonders macht..."
-                  rows="4"
+                  rows="3"
                   class="form-input"
                 ></textarea>
               </div>
-
-              <!-- Restaurant Address -->
-              <div class="address-section">
-                <h4>Restaurant-Adresse</h4>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="street">Straße & Hausnummer *</label>
-                    <input
-                      id="street"
-                      name="street"
-                      type="text"
-                      [(ngModel)]="registrationData.restaurant_info.address.street"
-                      required
-                      placeholder="Hauptstraße 123"
-                      class="form-input"
-                    />
-                  </div>
-
-                  <div class="form-group">
-                    <label for="postalCode">PLZ *</label>
-                    <input
-                      id="postalCode"
-                      name="postalCode"
-                      type="text"
-                      [(ngModel)]="registrationData.restaurant_info.address.postal_code"
-                      required
-                      placeholder="12345"
-                      class="form-input"
-                    />
-                  </div>
-
-                  <div class="form-group">
-                    <label for="city">Stadt *</label>
-                    <input
-                      id="city"
-                      name="city"
-                      type="text"
-                      [(ngModel)]="registrationData.restaurant_info.address.city"
-                      required
-                      placeholder="Berlin"
-                      class="form-input"
-                    />
-                  </div>
-
-                  <div class="form-group">
-                    <label for="country">Land *</label>
-                    <input
-                      id="country"
-                      name="country"
-                      type="text"
-                      [(ngModel)]="registrationData.restaurant_info.address.country"
-                      required
-                      placeholder="Deutschland"
-                      class="form-input"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Step 3: Documents & Final -->
-          <div class="form-step" [class.active]="currentStep === 3">
-            <div class="step-header">
-              <h3>3. Dokumente & Verifizierung</h3>
-              <p>Bitte laden Sie die erforderlichen Dokumente für die Verifizierung hoch</p>
             </div>
 
-            <!-- Documents -->
-            <div class="documents-section">
-              <div class="document-item">
-                <div class="document-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14,2 14,8 20,8"/>
-                    <line x1="16" y1="13" x2="8" y2="13"/>
-                    <line x1="16" y1="17" x2="8" y2="17"/>
-                    <polyline points="10,9 9,9 8,9"/>
-                  </svg>
-                </div>
-                <div class="document-info">
-                  <strong>Gewerbeschein</strong>
-                  <small>Nachweis der Gewerbeanmeldung</small>
-                </div>
-                <div class="file-input-container">
-                  <input
-                    type="file"
-                    name="businessLicense"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    (change)="onFileSelect($event, 'business_license')"
-                    #businessLicenseInput
-                    class="file-input"
-                  />
-                  <div class="file-input-display" (click)="businessLicenseInput.click()">
-                    <span *ngIf="!businessLicenseFile" class="file-placeholder">📎 Datei auswählen...</span>
-                    <span *ngIf="businessLicenseFile" class="file-selected">{{ businessLicenseFile.name }}</span>
-                    <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                      <polyline points="14,2 14,8 20,8"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
+            <!-- Restaurant Address -->
+            <div class="section-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="section-icon">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+              <span>Restaurant-Adresse</span>
+            </div>
 
-              <div class="document-item">
-                <div class="document-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-                    <line x1="8" y1="21" x2="16" y2="21"/>
-                    <line x1="12" y1="17" x2="12" y2="21"/>
-                  </svg>
-                </div>
-                <div class="document-info">
-                  <strong>Steuernummer</strong>
-                  <small>Steuerliche Registrierung</small>
-                </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="street">Straße & Hausnummer *</label>
                 <input
+                  id="street"
+                  name="street"
                   type="text"
-                  name="taxNumber"
-                  [(ngModel)]="registrationData.documents.tax_certificate"
-                  placeholder="z.B. 123/456/78901"
-                  class="document-input"
+                  [(ngModel)]="registrationData.restaurant_info.address.street"
+                  required
+                  placeholder="Hauptstraße 123"
+                  class="form-input"
                 />
               </div>
 
-              <div class="document-item">
-                <div class="document-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                    <circle cx="9" cy="9" r="2"/>
-                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
-                  </svg>
-                </div>
-                <div class="document-info">
-                  <strong>Ausweis</strong>
-                  <small>Personalausweis des Inhabers</small>
-                </div>
-                <div class="file-input-container">
-                  <input
-                    type="file"
-                    name="ownerId"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    (change)="onFileSelect($event, 'owner_id')"
-                    #ownerIdInput
-                    class="file-input"
-                  />
-                  <div class="file-input-display" (click)="ownerIdInput.click()">
-                    <span *ngIf="!ownerIdFile" class="file-placeholder">📎 Datei auswählen...</span>
-                    <span *ngIf="ownerIdFile" class="file-selected">{{ ownerIdFile.name }}</span>
-                    <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                      <polyline points="14,2 14,8 20,8"/>
-                    </svg>
-                  </div>
-                </div>
+              <div class="form-group">
+                <label for="postalCode">PLZ *</label>
+                <input
+                  id="postalCode"
+                  name="postalCode"
+                  type="text"
+                  [(ngModel)]="registrationData.restaurant_info.address.postal_code"
+                  required
+                  placeholder="12345"
+                  class="form-input"
+                />
               </div>
 
-              <div class="document-item">
-                <div class="document-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                    <circle cx="9" cy="9" r="2"/>
-                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
-                    <circle cx="16" cy="8" r="1" fill="currentColor"/>
-                  </svg>
-                </div>
-                <div class="document-info">
-                  <strong>Restaurant-Fotos</strong>
-                  <small>Mindestens 3 Fotos Ihres Restaurants</small>
-                </div>
-                <div class="file-input-container">
-                  <input
-                    type="file"
-                    name="restaurantPhotos"
-                    accept="image/*"
-                    multiple
-                    (change)="onMultipleFileSelect($event, 'restaurant_photos')"
-                    #restaurantPhotosInput
-                    class="file-input"
-                  />
-                  <div class="file-input-display" (click)="restaurantPhotosInput.click()">
-                    <span *ngIf="restaurantPhotoFiles.length === 0" class="file-placeholder">📎 Mehrere Dateien auswählen...</span>
-                    <span *ngIf="restaurantPhotoFiles.length > 0" class="file-selected">
-                      {{ restaurantPhotoFiles.length }} Datei{{ restaurantPhotoFiles.length !== 1 ? 'en' : '' }} ausgewählt
-                    </span>
-                    <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                      <circle cx="9" cy="9" r="2"/>
-                      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
-                    </svg>
-                  </div>
-                  <div *ngIf="restaurantPhotoFiles.length > 0" class="selected-files">
-                    <div *ngFor="let file of restaurantPhotoFiles; let i = index" class="file-item">
-                      <span class="file-name">{{ file.name }}</span>
-                      <button type="button" class="remove-file" (click)="removeRestaurantPhoto(i)">×</button>
-                    </div>
-                  </div>
-                </div>
+              <div class="form-group">
+                <label for="city">Stadt *</label>
+                <input
+                  id="city"
+                  name="city"
+                  type="text"
+                  [(ngModel)]="registrationData.restaurant_info.address.city"
+                  required
+                  placeholder="Berlin"
+                  class="form-input"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="country">Land *</label>
+                <input
+                  id="country"
+                  name="country"
+                  type="text"
+                  [(ngModel)]="registrationData.restaurant_info.address.country"
+                  required
+                  placeholder="Deutschland"
+                  class="form-input"
+                />
+              </div>
+
+              <div class="form-group full-width">
+                <label for="restaurantEmail">Restaurant-E-Mail (optional)</label>
+                <input
+                  id="restaurantEmail"
+                  name="restaurantEmail"
+                  type="email"
+                  [(ngModel)]="registrationData.restaurant_info.contact_info.email"
+                  placeholder="info@restaurant.de"
+                  class="form-input"
+                />
               </div>
             </div>
 
@@ -456,48 +300,12 @@ interface RestaurantOwnerRegistrationData {
                 class="form-input"
               ></textarea>
             </div>
-
-            <!-- Terms & Privacy -->
-            <div class="terms-section">
-              <div class="checkbox-group">
-                <input type="checkbox" id="terms" name="terms" [(ngModel)]="acceptTerms" required>
-                <label for="terms">
-                  Ich akzeptiere die <a href="#" class="link">Allgemeinen Geschäftsbedingungen</a> und die <a href="#" class="link">Datenschutzerklärung</a>
-                </label>
-              </div>
-            </div>
           </div>
 
-          <!-- Navigation -->
+          <!-- Submit Button -->
           <div class="form-navigation">
             <button
-              type="button"
-              *ngIf="currentStep > 1"
-              (click)="previousStep()"
-              class="btn-secondary"
-            >
-              Zurück
-            </button>
-
-            <div class="step-indicator">
-              <span [class.active]="currentStep >= 1">1</span>
-              <span [class.active]="currentStep >= 2">2</span>
-              <span [class.active]="currentStep >= 3">3</span>
-            </div>
-
-            <button
-              type="button"
-              *ngIf="currentStep < 3"
-              (click)="nextStep()"
-              [disabled]="!isStepValid(currentStep)"
-              class="btn-primary"
-            >
-              Weiter
-            </button>
-
-            <button
               type="submit"
-              *ngIf="currentStep === 3"
               [disabled]="loading || !isFormValid()"
               class="btn-primary submit-btn"
             >
@@ -517,9 +325,9 @@ interface RestaurantOwnerRegistrationData {
           <ul>
             <li>Ihre Bewerbung wird von unserem Administrationsteam geprüft</li>
             <li>Sie erhalten eine E-Mail mit dem Status Ihrer Bewerbung</li>
-            <li>Bei Rückfragen werden wir uns mit Ihnen in Verbindung setzen</li>
+            <li>Nach Genehmigung erhalten Sie einen Link zum Onboarding</li>
+            <li>Im Onboarding vervollständigen Sie Ihr Profil und laden Dokumente hoch</li>
             <li>Die Bearbeitungszeit beträgt in der Regel 1-3 Werktage</li>
-            <li>Nach Genehmigung können Sie Ihr Restaurant in unserem System verwalten</li>
           </ul>
         </div>
       </div>
@@ -641,7 +449,7 @@ interface RestaurantOwnerRegistrationData {
     .step-header h3 {
       margin: 0 0 var(--space-2) 0;
       color: var(--color-heading);
-      font-size: var(--text-xl);
+      font-size: var(--text-2xl);
       font-weight: 600;
     }
 
@@ -649,6 +457,23 @@ interface RestaurantOwnerRegistrationData {
       margin: 0;
       color: var(--color-muted);
       font-size: var(--text-sm);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin: var(--space-8) 0 var(--space-4) 0;
+      padding-bottom: var(--space-3);
+      border-bottom: 2px solid var(--color-border);
+      color: var(--color-primary-600);
+      font-weight: 600;
+      font-size: var(--text-lg);
+    }
+
+    .section-icon {
+      width: 24px;
+      height: 24px;
     }
 
     .form-grid {
@@ -698,309 +523,46 @@ interface RestaurantOwnerRegistrationData {
       opacity: 0.7;
     }
 
-    .form-input textarea {
+    textarea.form-input {
       resize: vertical;
       font-family: inherit;
     }
 
-    .address-section {
-      grid-column: 1 / -1;
-      padding: var(--space-4);
-      background: var(--bg-light);
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--color-border);
-    }
-
-    .address-section h4 {
-      margin: 0 0 var(--space-4) 0;
-      color: var(--color-heading);
-      font-size: var(--text-lg);
-      font-weight: 600;
-    }
-
-    .documents-section {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-4);
-      margin-bottom: var(--space-6);
-    }
-
-    .document-item {
-      display: flex;
-      align-items: flex-start;
-      gap: var(--space-4);
-      padding: var(--space-4);
-      background: var(--bg-light);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-    }
-
-    .document-icon {
-      width: 24px;
-      height: 24px;
-      color: var(--color-primary-600);
-      flex-shrink: 0;
-    }
-
-    .document-icon svg {
-      width: 100%;
-      height: 100%;
-    }
-
-    .document-info {
-      flex: 1;
-    }
-
-    .document-info strong {
-      display: block;
-      color: var(--color-heading);
-      font-size: var(--text-sm);
-      margin-bottom: var(--space-1);
-    }
-
-    .document-info small {
-      color: var(--color-muted);
-      font-size: var(--text-xs);
-    }
-
-    .file-input-container {
-      flex: 2;
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-2);
-    }
-
-    .file-input {
-      display: none;
-    }
-
-    .file-input-display {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: var(--space-3) var(--space-4);
-      border: 2px solid var(--color-border);
-      border-radius: var(--radius-lg);
-      background: var(--color-surface);
-      cursor: pointer;
-      transition: all var(--transition);
-      min-height: 48px;
-      width: 100%;
-      box-sizing: border-box;
-    }
-
-    .file-input-display:hover {
-      border-color: var(--color-primary-500);
-      background: var(--bg-light-green);
-    }
-
-    .file-placeholder,
-    .file-selected {
-      font-size: var(--text-sm);
-      color: var(--color-muted);
-      flex: 1;
-    }
-
-    .file-selected {
-      color: var(--color-primary-600);
-      font-weight: 500;
-    }
-
-    .upload-icon {
-      width: 20px;
-      height: 20px;
-      color: var(--color-primary-600);
-      flex-shrink: 0;
-    }
-
-    .document-input {
-      flex: 2;
-      padding: var(--space-3) var(--space-4);
-      border: 2px solid var(--color-border);
-      border-radius: var(--radius-lg);
-      font-size: var(--text-sm);
-      background: var(--color-surface);
-      color: var(--color-text);
-      transition: all var(--transition);
-      box-sizing: border-box;
-      min-height: 48px;
-      width: 100%;
-      display: inline-flex;
-      align-items: center;
-    }
-
-    .document-input:focus {
-      outline: none;
-      border-color: var(--color-primary-500);
-      box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-primary-500) 15%, transparent);
-      background: var(--bg-light-green);
-    }
-
-    .document-input::placeholder {
-      color: var(--color-muted);
-      opacity: 0.7;
-    }
-
-    .selected-files {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-1);
-      margin-top: var(--space-2);
-    }
-
-    .file-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: var(--space-2) var(--space-3);
-      background: var(--bg-light);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-      font-size: var(--text-sm);
-    }
-
-    .file-name {
-      color: var(--color-text);
-      flex: 1;
-      word-break: break-all;
-    }
-
-    .remove-file {
-      background: none;
-      border: none;
-      color: var(--color-danger);
-      cursor: pointer;
-      font-size: var(--text-lg);
-      font-weight: bold;
-      padding: 0 var(--space-1);
-      margin-left: var(--space-2);
-      border-radius: var(--radius-sm);
-      transition: all var(--transition);
-      width: 24px;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .remove-file:hover {
-      background: var(--color-danger);
-      color: white;
-    }
-
-    .terms-section {
-      margin-bottom: var(--space-6);
-      padding: var(--space-4);
-      background: color-mix(in oklab, var(--color-primary) 5%, white);
-      border: 1px solid color-mix(in oklab, var(--color-primary) 20%, white);
-      border-radius: var(--radius-md);
-    }
-
-    .checkbox-group {
-      display: flex;
-      align-items: flex-start;
-      gap: var(--space-3);
-    }
-
-    .checkbox-group input[type="checkbox"] {
-      margin-top: var(--space-1);
-      flex-shrink: 0;
-    }
-
-    .checkbox-group label {
-      margin: 0;
-      font-size: var(--text-sm);
-      color: var(--color-heading);
-      line-height: 1.5;
-    }
-
-    .link {
-      color: var(--color-primary);
-      text-decoration: none;
-      font-weight: 500;
-    }
-
-    .link:hover {
-      text-decoration: underline;
-    }
-
     .form-navigation {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      justify-content: center;
       margin-top: var(--space-8);
       padding-top: var(--space-6);
       border-top: 1px solid var(--color-border);
     }
 
-    .step-indicator {
-      display: flex;
-      gap: var(--space-2);
-    }
-
-    .step-indicator span {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: var(--color-border);
-      color: var(--color-muted);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: var(--text-sm);
-      font-weight: 600;
-      transition: all var(--transition);
-    }
-
-    .step-indicator span.active {
-      background: var(--gradient-primary);
-      color: white;
-    }
-
-    .btn-secondary,
     .btn-primary {
-      padding: var(--space-3) var(--space-5);
+      padding: var(--space-4) var(--space-6);
       border: none;
       border-radius: var(--radius-lg);
-      font-size: var(--text-sm);
+      font-size: var(--text-lg);
       font-weight: 600;
       cursor: pointer;
       transition: all var(--transition);
-      box-shadow: 0 2px 8px color-mix(in oklab, var(--color-primary-600) 20%, transparent);
-    }
-
-    .btn-secondary {
-      background: var(--bg-light);
-      color: var(--color-text);
-      border: 1px solid var(--color-border);
-    }
-
-    .btn-secondary:hover:not(:disabled) {
-      background: var(--bg-light-hover);
-      transform: translateY(-1px);
-    }
-
-    .btn-primary {
       background: var(--gradient-primary);
       color: white;
+      box-shadow: 0 4px 12px color-mix(in oklab, var(--color-primary-600) 25%, transparent);
+      min-width: 250px;
     }
 
     .btn-primary:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px color-mix(in oklab, var(--color-primary-600) 30%, transparent);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px color-mix(in oklab, var(--color-primary-600) 35%, transparent);
     }
 
-    .btn-primary:disabled,
-    .btn-secondary:disabled {
+    .btn-primary:disabled {
       opacity: 0.6;
       cursor: not-allowed;
       transform: none;
     }
 
     .submit-btn {
-      min-width: 200px;
-      padding: var(--space-4) var(--space-6);
-      font-size: var(--text-lg);
+      min-width: 300px;
     }
 
     .loading-text {
@@ -1032,7 +594,6 @@ interface RestaurantOwnerRegistrationData {
       border-radius: var(--radius-md);
       font-size: var(--text-sm);
       text-align: center;
-      grid-column: 1 / -1;
     }
 
     .success-message {
@@ -1044,7 +605,6 @@ interface RestaurantOwnerRegistrationData {
       border-radius: var(--radius-md);
       font-size: var(--text-sm);
       text-align: center;
-      grid-column: 1 / -1;
     }
 
     .info-box {
@@ -1090,20 +650,6 @@ interface RestaurantOwnerRegistrationData {
         grid-template-columns: 1fr;
       }
 
-      .form-navigation {
-        flex-direction: column;
-        gap: var(--space-4);
-      }
-
-      .step-indicator {
-        order: -1;
-      }
-
-      .document-item {
-        flex-direction: column;
-        gap: var(--space-2);
-      }
-
       .registration-form {
         padding: var(--space-4);
       }
@@ -1119,14 +665,9 @@ export class RestaurantOwnerRegistrationComponent {
   private http = inject(HttpClient);
   private router = inject(Router);
 
-  currentStep = 1;
-  acceptTerms = false;
-
   registrationData: RestaurantOwnerRegistrationData = {
     name: '',
     email: '',
-    password: '',
-    confirmPassword: '',
     phone: '',
     address: '',
     restaurant_info: {
@@ -1144,94 +685,26 @@ export class RestaurantOwnerRegistrationComponent {
         email: ''
       }
     },
-    documents: {},
     notes: ''
   };
-
-  // File properties
-  businessLicenseFile: File | null = null;
-  ownerIdFile: File | null = null;
-  restaurantPhotoFiles: File[] = [];
 
   loading = false;
   error = '';
   success = '';
 
-  nextStep() {
-    if (this.currentStep < 3 && this.isStepValid(this.currentStep)) {
-      this.currentStep++;
-    }
-  }
-
-  previousStep() {
-    if (this.currentStep > 1) {
-      this.currentStep--;
-    }
-  }
-
-  isStepValid(step: number): boolean {
-    switch (step) {
-      case 1:
-        return !!(
-          this.registrationData.name &&
-          this.registrationData.email &&
-          this.registrationData.phone &&
-          this.registrationData.password &&
-          this.registrationData.confirmPassword &&
-          this.registrationData.password === this.registrationData.confirmPassword &&
-          this.registrationData.password.length >= 8
-        );
-      case 2:
-        return !!(
-          this.registrationData.restaurant_info.name &&
-          this.registrationData.restaurant_info.description &&
-          this.registrationData.restaurant_info.cuisine_type &&
-          this.registrationData.restaurant_info.address.street &&
-          this.registrationData.restaurant_info.address.city &&
-          this.registrationData.restaurant_info.address.postal_code &&
-          this.registrationData.restaurant_info.contact_info.phone
-        );
-      case 3:
-        return this.acceptTerms;
-      default:
-        return false;
-    }
-  }
-
   isFormValid(): boolean {
-    return this.isStepValid(1) && this.isStepValid(2) && this.isStepValid(3);
-  }
-
-  // File handling methods
-  onFileSelect(event: any, field: string) {
-    const file = event.target.files[0];
-    if (file) {
-      switch (field) {
-        case 'business_license':
-          this.businessLicenseFile = file;
-          this.registrationData.documents.business_license = file.name;
-          break;
-        case 'owner_id':
-          this.ownerIdFile = file;
-          this.registrationData.documents.owner_id = file.name;
-          break;
-      }
-    }
-  }
-
-  onMultipleFileSelect(event: any, field: string) {
-    const files = Array.from(event.target.files) as File[];
-    if (files.length > 0) {
-      if (field === 'restaurant_photos') {
-        this.restaurantPhotoFiles = files;
-        this.registrationData.documents.restaurant_photos = files.map(f => f.name);
-      }
-    }
-  }
-
-  removeRestaurantPhoto(index: number) {
-    this.restaurantPhotoFiles.splice(index, 1);
-    this.registrationData.documents.restaurant_photos = this.restaurantPhotoFiles.map(f => f.name);
+    return !!(
+      this.registrationData.name &&
+      this.registrationData.email &&
+      this.registrationData.phone &&
+      this.registrationData.restaurant_info.name &&
+      this.registrationData.restaurant_info.description &&
+      this.registrationData.restaurant_info.cuisine_type &&
+      this.registrationData.restaurant_info.address.street &&
+      this.registrationData.restaurant_info.address.city &&
+      this.registrationData.restaurant_info.address.postal_code &&
+      this.registrationData.restaurant_info.contact_info.phone
+    );
   }
 
   onSubmit() {
@@ -1241,56 +714,54 @@ export class RestaurantOwnerRegistrationComponent {
     this.error = '';
     this.success = '';
 
-    // Erstelle FormData für Datei-Upload
-    const formData = new FormData();
+    // Prepare data in the format backend expects
+    const payload = {
+      owner_info: {
+        name: this.registrationData.name,
+        email: this.registrationData.email,
+        phone: this.registrationData.phone,
+        address: this.registrationData.address
+      },
+      restaurant_info: this.registrationData.restaurant_info,
+      notes: this.registrationData.notes
+    };
 
-    // Text-Daten hinzufügen
-    formData.append('name', this.registrationData.name);
-    formData.append('email', this.registrationData.email);
-    formData.append('password', this.registrationData.password);
-    formData.append('phone', this.registrationData.phone);
-    formData.append('address', this.registrationData.address || '');
-    formData.append('restaurant_name', this.registrationData.restaurant_info.name);
-    formData.append('restaurant_description', this.registrationData.restaurant_info.description || '');
-    formData.append('cuisine_type', this.registrationData.restaurant_info.cuisine_type);
-    formData.append('restaurant_address_street', this.registrationData.restaurant_info.address.street);
-    formData.append('restaurant_address_city', this.registrationData.restaurant_info.address.city);
-    formData.append('restaurant_address_postal_code', this.registrationData.restaurant_info.address.postal_code);
-    formData.append('restaurant_address_country', this.registrationData.restaurant_info.address.country);
-    formData.append('restaurant_phone', this.registrationData.restaurant_info.contact_info.phone || '');
-    formData.append('restaurant_email', this.registrationData.restaurant_info.contact_info.email || '');
-    formData.append('notes', this.registrationData.notes || '');
-
-    // Dateien hinzufügen
-    if (this.businessLicenseFile) {
-      formData.append('business_license', this.businessLicenseFile);
-    }
-
-    if (this.ownerIdFile) {
-      formData.append('owner_id', this.ownerIdFile);
-    }
-
-    // Mehrere Restaurant-Fotos hinzufügen
-    this.restaurantPhotoFiles.forEach((file, index) => {
-      formData.append('restaurant_photos', file);
-    });
-
-    // Headers für FormData (Content-Type wird automatisch gesetzt)
-    const headers = new HttpHeaders();
-    // Entferne Content-Type, damit Browser ihn automatisch setzt
-    headers.delete('Content-Type');
-
-    this.http.post(`${environment.apiUrl}/auth/register-restaurant-owner`, formData, { headers })
+    this.http.post(`${environment.apiUrl}/restaurant-registration`, payload)
       .subscribe({
         next: (response: any) => {
           this.loading = false;
-          this.success = 'Restaurant-Registrierung erfolgreich eingereicht! Sie erhalten in Kürze eine E-Mail mit dem Status.';
+          this.success = 'Registrierung erfolgreich eingereicht! Sie erhalten in Kürze eine E-Mail mit dem Status.';
 
-          // Redirect to login after success
+          // Reset form after successful submission
           setTimeout(() => {
-            this.router.navigate(['/auth/login'], {
+            this.registrationData = {
+              name: '',
+              email: '',
+              phone: '',
+              address: '',
+              restaurant_info: {
+                name: '',
+                description: '',
+                cuisine_type: '',
+                address: {
+                  street: '',
+                  city: '',
+                  postal_code: '',
+                  country: 'Deutschland'
+                },
+                contact_info: {
+                  phone: '',
+                  email: ''
+                }
+              },
+              notes: ''
+            };
+            this.success = '';
+            
+            // Redirect to login or home
+            this.router.navigate(['/'], {
               queryParams: {
-                message: 'Registrierung erfolgreich! Bitte loggen Sie sich ein, sobald Ihr Account freigeschaltet wurde.'
+                message: 'Registrierung erfolgreich! Sie erhalten eine E-Mail nach der Prüfung.'
               }
             });
           }, 3000);
@@ -1298,13 +769,7 @@ export class RestaurantOwnerRegistrationComponent {
         error: (err) => {
           this.loading = false;
           console.error('Registration error:', err);
-
-          // Spezifische Fehlerbehandlung für Datei-Uploads
-          if (err?.error?.details && Array.isArray(err.error.details)) {
-            this.error = 'Upload-Fehler: ' + err.error.details.join(', ');
-          } else {
-            this.error = err?.error?.error || err?.error?.message || 'Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.';
-          }
+          this.error = err?.error?.error || err?.error?.message || 'Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.';
         }
       });
   }

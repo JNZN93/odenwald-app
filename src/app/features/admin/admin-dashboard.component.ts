@@ -1,8 +1,10 @@
 import { Component, OnInit, OnDestroy, inject, ViewChild, ElementRef, AfterViewInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, RouterOutlet } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../core/auth/auth.service';
 import { SupportTicketsService } from '../../core/services/support-tickets.service';
+import { environment } from '../../../environments/environment';
 
 //* eslint-disable @typescript-eslint/no-explicit-any
 //* eslint-disable @typescript-eslint/no-unused-vars
@@ -303,6 +305,7 @@ export interface AdminMenuItem {
 export class AdminDashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   private authService = inject(AuthService);
   private supportTicketsService = inject(SupportTicketsService);
+  private http = inject(HttpClient);
   private cdr = inject(ChangeDetectorRef);
 
   @ViewChild('navElement') navElement!: ElementRef<HTMLElement>;
@@ -311,10 +314,16 @@ export class AdminDashboardComponent implements OnInit, OnDestroy, AfterViewInit
   canScrollLeft = false;
   canScrollRight = false;
   openSupportTicketsCount = 0;
+  pendingRestaurantRegistrationsCount = 0;
+  pendingWholesalerRegistrationsCount = 0;
+  openIssuesCount = 0;
 
   ngOnInit() {
     this.setupAdminMenu();
     this.loadSupportTicketsCount();
+    this.loadPendingRegistrationsCount();
+    this.loadPendingWholesalerRegistrationsCount();
+    this.loadOpenIssuesCount();
   }
 
   ngAfterViewInit() {
@@ -418,7 +427,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy, AfterViewInit
         description: 'Neue Restaurant-Anmeldungen',
         icon: 'fa-solid fa-clipboard-check',
         route: '/admin/restaurant-registrations',
-        color: '#f97316'
+        color: '#f97316',
+        badge: this.pendingRestaurantRegistrationsCount > 0 ? this.pendingRestaurantRegistrationsCount.toString() : undefined
       },
       {
         id: 'wholesaler-registrations',
@@ -426,7 +436,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy, AfterViewInit
         description: 'Großhändler-Registrierungen',
         icon: 'fa-solid fa-warehouse',
         route: '/admin/wholesaler-registrations',
-        color: '#f59e0b'
+        color: '#f59e0b',
+        badge: this.pendingWholesalerRegistrationsCount > 0 ? this.pendingWholesalerRegistrationsCount.toString() : undefined
       },
       {
         id: 'orders',
@@ -458,7 +469,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy, AfterViewInit
         description: 'Gemeldete Bestell-Probleme',
         icon: 'fa-solid fa-triangle-exclamation',
         route: '/admin/issues',
-        color: '#ef4444'
+        color: '#ef4444',
+        badge: this.openIssuesCount > 0 ? this.openIssuesCount.toString() : undefined
       },
       {
         id: 'support-tickets',
@@ -538,6 +550,54 @@ export class AdminDashboardComponent implements OnInit, OnDestroy, AfterViewInit
       error: (error) => {
         console.error('Error loading support tickets count:', error);
         this.openSupportTicketsCount = 0;
+      }
+    });
+  }
+
+  loadPendingRegistrationsCount() {
+    // Load count of open restaurant registrations (pending, approved, awaiting final approval)
+    this.http.get<{ registrations: any[]; total: number }>(
+      `${environment.apiUrl}/admin/restaurant-registrations?status=open&limit=100`
+    ).subscribe({
+      next: (response) => {
+        this.pendingRestaurantRegistrationsCount = response.registrations?.length || 0;
+        this.setupAdminMenu(); // Refresh menu to update badge
+      },
+      error: (error) => {
+        console.error('Error loading restaurant registrations count:', error);
+        this.pendingRestaurantRegistrationsCount = 0;
+      }
+    });
+  }
+
+  loadPendingWholesalerRegistrationsCount() {
+    // Load count of pending wholesaler registrations for badge display
+    this.http.get<{ registrations: any[]; total: number }>(
+      `${environment.apiUrl}/admin/wholesaler-registrations?status=pending&limit=100`
+    ).subscribe({
+      next: (response) => {
+        this.pendingWholesalerRegistrationsCount = response.registrations?.length || 0;
+        this.setupAdminMenu(); // Refresh menu to update badge
+      },
+      error: (error) => {
+        console.error('Error loading wholesaler registrations count:', error);
+        this.pendingWholesalerRegistrationsCount = 0;
+      }
+    });
+  }
+
+  loadOpenIssuesCount() {
+    // Load count of open issues for badge display
+    this.http.get<any[]>(
+      `${environment.apiUrl}/order-issues?status=open`
+    ).subscribe({
+      next: (issues) => {
+        this.openIssuesCount = Array.isArray(issues) ? issues.length : 0;
+        this.setupAdminMenu(); // Refresh menu to update badge
+      },
+      error: (error) => {
+        console.error('Error loading issues count:', error);
+        this.openIssuesCount = 0;
       }
     });
   }

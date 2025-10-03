@@ -72,7 +72,10 @@ export const routes: Routes = [
   { path: 'restaurant/:id', loadComponent: () => import('./features/restaurants/restaurant-detail.component').then(m => m.RestaurantDetailComponent) },
   { path: 'restaurants', component: RestaurantsComponent },
   { path: 'checkout', loadComponent: () => import('./features/checkout/checkout.component').then(m => m.CheckoutComponent) },
-  // Stripe Connect onboarding redirects
+  // Restaurant Onboarding
+  { path: 'onboarding', loadComponent: () => import('./features/onboarding/onboarding.component').then(m => m.OnboardingComponent) },
+  { path: 'onboarding/continue', loadComponent: () => import('./features/onboarding/onboarding.component').then(m => m.OnboardingComponent) },
+  // Stripe Connect onboarding redirects (legacy, kept for compatibility)
   { path: 'onboarding/refresh', loadComponent: () => import('./features/restaurant-manager/stripe-onboarding-redirect.component').then(m => m.StripeOnboardingRedirectComponent) },
   { path: 'onboarding/complete', loadComponent: () => import('./features/restaurant-manager/stripe-onboarding-redirect.component').then(m => m.StripeOnboardingRedirectComponent) },
   { path: 'order-confirmation/:id', loadComponent: () => import('./features/order-confirmation/order-confirmation.component').then(m => m.OrderConfirmationComponent) },
