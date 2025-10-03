@@ -295,7 +295,7 @@
 /* Hero Header */
 .hero-header {
   background: var(--gradient-primary);
-  padding: var(--space-8) var(--space-6);
+  padding: 0;
   text-align: center;
   color: white;
   position: relative;
@@ -531,8 +531,30 @@
   /* Sidebar Categories */
   .sidebar-categories .category-chips {
     flex-direction: column;
-    overflow: visible;
+    overflow-y: auto;
+    overflow-x: hidden;
     gap: var(--space-2);
+    max-height: 35vh;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-primary-300) var(--color-surface);
+  }
+
+  .sidebar-categories .category-chips::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .sidebar-categories .category-chips::-webkit-scrollbar-track {
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+  }
+
+  .sidebar-categories .category-chips::-webkit-scrollbar-thumb {
+    background: var(--color-primary-300);
+    border-radius: var(--radius-md);
+    
+    &:hover {
+      background: var(--color-primary-400);
+    }
   }
 
   .sidebar-categories .category-chip {
@@ -1307,7 +1329,7 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .hero-header {
-    padding: var(--space-6) var(--space-4);
+    padding: 0;
     margin: var(--space-3) auto var(--space-4);
   }
 
@@ -1412,7 +1434,7 @@
 
 @media (max-width: 480px) {
   .hero-header {
-    padding: var(--space-4) var(--space-3);
+    padding: 0;
     margin: var(--space-2) auto var(--space-3);
     border-radius: var(--radius-lg);
   }
@@ -2122,7 +2144,7 @@
 /* Desktop compact view: reduce vertical chrome to show more cards */
 @media (min-width: 1024px) {
   .hero-header {
-    padding: var(--space-3) var(--space-4);
+    padding: 0;
     margin: var(--space-2) auto;
   }
 
