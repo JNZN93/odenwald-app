@@ -20,6 +20,8 @@ interface WholesalerRegistration {
   approved_at?: string;
   approval_notes?: string;
   onboarding_link?: string;
+  wholesaler_is_active?: boolean;
+  wholesaler_is_verified?: boolean;
 }
 
 @Component({
@@ -38,6 +40,50 @@ interface WholesalerRegistration {
             <i class="fa-solid fa-rotate-right" [class.spin]="loading"></i>
             Aktualisieren
           </button>
+        </div>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="stats-grid" *ngIf="stats">
+        <div class="stat-card">
+          <div class="stat-icon pending-icon">
+            <i class="fa-solid fa-paper-plane"></i>
+          </div>
+          <div class="stat-content">
+            <h3>Neu</h3>
+            <div class="stat-value">{{ stats.pending }}</div>
+            <div class="stat-change warning">Onboarding-Link senden</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon awaiting-icon">
+            <i class="fa-solid fa-hourglass-half"></i>
+          </div>
+          <div class="stat-content">
+            <h3>Wartet auf Freigabe</h3>
+            <div class="stat-value">{{ stats.awaiting_final_approval }}</div>
+            <div class="stat-change info">Dokumente prüfen</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon onboarding-icon">
+            <i class="fa-solid fa-envelope"></i>
+          </div>
+          <div class="stat-content">
+            <h3>Onboarding läuft</h3>
+            <div class="stat-value">{{ stats.approved }}</div>
+            <div class="stat-change info">Link versendet</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon rejected-icon">
+            <i class="fa-solid fa-times-circle"></i>
+          </div>
+          <div class="stat-content">
+            <h3>Abgelehnt</h3>
+            <div class="stat-value">{{ stats.rejected }}</div>
+            <div class="stat-change danger">Nicht akzeptiert</div>
+          </div>
         </div>
       </div>
 
@@ -323,6 +369,109 @@ interface WholesalerRegistration {
       padding: var(--space-6);
       max-width: 1400px;
       margin: 0 auto;
+    }
+
+    /* Stats Cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+
+    .stat-card {
+      background: var(--color-surface);
+      border-radius: var(--radius-xl);
+      padding: var(--space-6);
+      border: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      transition: all var(--transition);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .stat-card:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px);
+    }
+
+    .stat-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--text-2xl);
+      flex-shrink: 0;
+    }
+
+    .pending-icon {
+      background: rgba(251, 191, 36, 0.1);
+      color: #f59e0b;
+    }
+
+    .awaiting-icon {
+      background: rgba(59, 130, 246, 0.1);
+      color: #3b82f6;
+    }
+
+    .approved-icon {
+      background: rgba(34, 197, 94, 0.1);
+      color: #22c55e;
+    }
+
+    .onboarding-icon {
+      background: rgba(139, 92, 246, 0.1);
+      color: #8b5cf6;
+    }
+
+    .rejected-icon {
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+    }
+
+    .stat-content {
+      flex: 1;
+    }
+
+    .stat-content h3 {
+      margin: 0 0 var(--space-1) 0;
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .stat-value {
+      font-size: var(--text-3xl);
+      font-weight: 700;
+      color: var(--color-heading);
+      line-height: 1;
+      margin-bottom: var(--space-1);
+    }
+
+    .stat-change {
+      font-size: var(--text-xs);
+      font-weight: 500;
+    }
+
+    .stat-change.warning {
+      color: #f59e0b;
+    }
+
+    .stat-change.info {
+      color: #3b82f6;
+    }
+
+    .stat-change.success {
+      color: #22c55e;
+    }
+
+    .stat-change.danger {
+      color: #ef4444;
     }
 
     .header {
@@ -848,6 +997,14 @@ export class AdminWholesalerRegistrationsComponent implements OnInit {
   statusFilter = '';
   searchFilter = '';
   loading = false;
+  
+  stats = {
+    total: 0,
+    pending: 0,
+    awaiting_final_approval: 0,
+    approved: 0,
+    rejected: 0
+  };
 
   ngOnInit() {
     this.loadRegistrations();
@@ -855,9 +1012,11 @@ export class AdminWholesalerRegistrationsComponent implements OnInit {
 
   loadRegistrations() {
     this.loading = true;
-    this.http.get(`${environment.apiUrl}/admin/wholesaler-registrations`).subscribe({
+    // Lade ALLE Registrierungen (status='all')
+    this.http.get(`${environment.apiUrl}/admin/wholesaler-registrations?status=all`).subscribe({
       next: (response: any) => {
         this.registrations = response.registrations || [];
+        this.calculateStats();
         this.applyFilters();
         this.loading = false;
       },
@@ -866,6 +1025,18 @@ export class AdminWholesalerRegistrationsComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  calculateStats() {
+    // Berechne Stats basierend auf tatsächlichem Großhändler-Status
+    this.stats = {
+      total: this.registrations.length,
+      pending: this.registrations.filter(r => r.status === 'pending').length,
+      awaiting_final_approval: this.registrations.filter(r => r.status === 'awaiting_final_approval').length,
+      // "Onboarding läuft" = approved aber Großhändler noch nicht aktiv
+      approved: this.registrations.filter(r => r.status === 'approved' && !r.wholesaler_is_active).length,
+      rejected: this.registrations.filter(r => r.status === 'rejected').length
+    };
   }
 
   applyFilters() {
