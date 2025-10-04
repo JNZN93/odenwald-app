@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { environment } from '../../../environments/environment';
 
 interface WholesalerRegistration {
@@ -268,20 +269,23 @@ interface WholesalerRegistration {
             <div class="detail-section">
               <h3>Dokumente</h3>
               <div class="documents-grid">
-                <div class="document-item" *ngIf="selectedRegistration.documents?.business_license">
+                <div class="document-item clickable" *ngIf="selectedRegistration.documents?.business_license" (click)="viewDocument('business_license')">
                   <i class="fa-solid fa-file-contract"></i>
                   <span>Gewerbeschein</span>
                   <small>Hochgeladen</small>
+                  <i class="fa-solid fa-eye view-icon"></i>
                 </div>
-                <div class="document-item" *ngIf="selectedRegistration.documents?.owner_id">
+                <div class="document-item clickable" *ngIf="selectedRegistration.documents?.owner_id" (click)="viewDocument('owner_id')">
                   <i class="fa-solid fa-id-card"></i>
                   <span>Inhaber-Ausweis</span>
                   <small>Hochgeladen</small>
+                  <i class="fa-solid fa-eye view-icon"></i>
                 </div>
-                <div class="document-item" *ngIf="selectedRegistration.documents?.wholesaler_photos">
+                <div class="document-item clickable" *ngIf="selectedRegistration.documents?.wholesaler_photos" (click)="viewDocument('wholesaler_photos')">
                   <i class="fa-solid fa-images"></i>
                   <span>Fotos</span>
                   <small>{{ selectedRegistration.documents.wholesaler_photos.length }} Dateien</small>
+                  <i class="fa-solid fa-eye view-icon"></i>
                 </div>
               </div>
             </div>
@@ -359,6 +363,78 @@ interface WholesalerRegistration {
               <i class="fa-solid fa-times"></i>
               Ablehnen bestätigen
             </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Document Viewer Modal -->
+      <div class="modal-overlay" *ngIf="showDocumentModal" (click)="closeDocumentModal()">
+        <div class="modal-content document-modal" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h2>{{ getDocumentTitle(currentDocumentType || '') }}</h2>
+            <button class="close-btn" (click)="closeDocumentModal()">
+              <i class="fa-solid fa-times"></i>
+            </button>
+          </div>
+
+          <div class="modal-body">
+            <div class="document-viewer" *ngIf="currentDocumentUrl">
+              <!-- PDF Viewer -->
+              <iframe 
+                *ngIf="isPdfDocument(currentDocumentUrl)" 
+                [src]="currentDocumentSafeUrl" 
+                class="document-iframe"
+                frameborder="0">
+              </iframe>
+              
+              <!-- Image Viewer -->
+              <img 
+                *ngIf="isImageDocument(currentDocumentUrl)" 
+                [src]="currentDocumentUrl" 
+                class="document-image"
+                alt="Document" />
+              
+              <!-- Download Link for other file types -->
+              <div class="document-download" *ngIf="!isPdfDocument(currentDocumentUrl) && !isImageDocument(currentDocumentUrl)">
+                <i class="fa-solid fa-download"></i>
+                <p>Datei herunterladen</p>
+                <a [href]="currentDocumentUrl" target="_blank" class="download-btn">
+                  <i class="fa-solid fa-download"></i>
+                  Herunterladen
+                </a>
+              </div>
+            </div>
+
+            <!-- Photo Gallery -->
+            <div class="photo-gallery" *ngIf="currentDocumentType === 'wholesaler_photos' && currentDocumentPhotos.length > 0">
+              <div class="gallery-grid">
+                <div 
+                  class="gallery-item" 
+                  *ngFor="let photo of currentDocumentPhotos; let i = index"
+                  (click)="selectPhoto(i)">
+                  <img [src]="photo.url" [alt]="'Foto ' + (i + 1)" />
+                  <div class="photo-overlay">
+                    <i class="fa-solid fa-expand"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Loading State -->
+            <div class="document-loading" *ngIf="loadingDocument">
+              <i class="fa-solid fa-spinner fa-spin"></i>
+              <p>Dokument wird geladen...</p>
+            </div>
+
+            <!-- Error State -->
+            <div class="document-error" *ngIf="documentError">
+              <i class="fa-solid fa-exclamation-triangle"></i>
+              <p>{{ documentError }}</p>
+              <button class="btn btn-primary" (click)="retryLoadDocument()">
+                <i class="fa-solid fa-retry"></i>
+                Erneut versuchen
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -843,6 +919,33 @@ interface WholesalerRegistration {
       border-radius: var(--radius-lg);
     }
 
+    .document-item.clickable {
+      cursor: pointer;
+      transition: all var(--transition);
+      position: relative;
+    }
+
+    .document-item.clickable:hover {
+      background: var(--color-primary);
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .document-item.clickable:hover i:not(.view-icon) {
+      color: white;
+    }
+
+    .view-icon {
+      margin-left: auto;
+      opacity: 0.7;
+      font-size: var(--text-sm);
+    }
+
+    .document-item.clickable:hover .view-icon {
+      opacity: 1;
+    }
+
     .document-item i {
       color: var(--color-primary);
       font-size: var(--text-lg);
@@ -982,10 +1085,154 @@ interface WholesalerRegistration {
         flex-direction: column;
       }
     }
+
+    /* Document Modal Styles */
+    .document-modal {
+      max-width: 1000px;
+      max-height: 90vh;
+    }
+
+    .document-viewer {
+      min-height: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .document-iframe {
+      width: 100%;
+      height: 70vh;
+      border: none;
+      border-radius: var(--radius-lg);
+    }
+
+    .document-image {
+      max-width: 100%;
+      max-height: 70vh;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .document-download {
+      text-align: center;
+      padding: var(--space-8);
+    }
+
+    .document-download i {
+      font-size: var(--text-4xl);
+      color: var(--color-muted);
+      margin-bottom: var(--space-4);
+    }
+
+    .document-download p {
+      margin: var(--space-2) 0 var(--space-4) 0;
+      color: var(--color-text);
+    }
+
+    .download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-4);
+      background: var(--color-primary);
+      color: white;
+      text-decoration: none;
+      border-radius: var(--radius-lg);
+      font-weight: 600;
+      transition: all var(--transition);
+    }
+
+    .download-btn:hover {
+      background: var(--color-primary-dark);
+      transform: translateY(-2px);
+    }
+
+    .photo-gallery {
+      padding: var(--space-4);
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--space-4);
+    }
+
+    .gallery-item {
+      position: relative;
+      cursor: pointer;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      transition: all var(--transition);
+    }
+
+    .gallery-item:hover {
+      transform: scale(1.05);
+    }
+
+    .gallery-item img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+    }
+
+    .photo-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: all var(--transition);
+    }
+
+    .gallery-item:hover .photo-overlay {
+      opacity: 1;
+    }
+
+    .photo-overlay i {
+      color: white;
+      font-size: var(--text-2xl);
+    }
+
+    .document-loading {
+      text-align: center;
+      padding: var(--space-8);
+    }
+
+    .document-loading i {
+      font-size: var(--text-3xl);
+      color: var(--color-primary);
+      margin-bottom: var(--space-4);
+    }
+
+    .document-loading p {
+      color: var(--color-text);
+    }
+
+    .document-error {
+      text-align: center;
+      padding: var(--space-8);
+    }
+
+    .document-error i {
+      font-size: var(--text-3xl);
+      color: var(--color-danger);
+      margin-bottom: var(--space-4);
+    }
+
+    .document-error p {
+      color: var(--color-text);
+      margin-bottom: var(--space-4);
+    }
   `]
 })
 export class AdminWholesalerRegistrationsComponent implements OnInit {
   private http = inject(HttpClient);
+  private sanitizer = inject(DomSanitizer);
 
   registrations: WholesalerRegistration[] = [];
   filteredRegistrations: WholesalerRegistration[] = [];
@@ -993,6 +1240,15 @@ export class AdminWholesalerRegistrationsComponent implements OnInit {
   showRejectModal = false;
   rejectTarget: WholesalerRegistration | null = null;
   rejectNotes = '';
+  
+  // Document viewing properties
+  showDocumentModal = false;
+  currentDocumentType: string | null = null;
+  currentDocumentUrl: string | null = null;
+  currentDocumentSafeUrl: SafeResourceUrl | null = null;
+  currentDocumentPhotos: any[] = [];
+  loadingDocument = false;
+  documentError: string | null = null;
 
   statusFilter = '';
   searchFilter = '';
@@ -1180,5 +1436,92 @@ export class AdminWholesalerRegistrationsComponent implements OnInit {
       hour: '2-digit',
       minute: '2-digit'
     });
+  }
+
+  // Document viewing methods
+  async viewDocument(documentType: string) {
+    if (!this.selectedRegistration) return;
+
+    this.currentDocumentType = documentType;
+    this.loadingDocument = true;
+    this.documentError = null;
+    this.showDocumentModal = true;
+
+    console.log('🔍 Attempting to view document:', {
+      documentType,
+      registrationId: this.selectedRegistration.id,
+      url: `${environment.apiUrl}/admin/wholesaler-registrations/${this.selectedRegistration.id}/documents`
+    });
+
+    try {
+      const response = await this.http.get<any>(`${environment.apiUrl}/admin/wholesaler-registrations/${this.selectedRegistration.id}/documents`).toPromise();
+      
+      console.log('✅ Document response received:', response);
+      
+      if (documentType === 'wholesaler_photos') {
+        this.currentDocumentPhotos = response.documents.wholesaler_photos || [];
+        this.currentDocumentUrl = null;
+      } else {
+        const document = response.documents[documentType];
+        if (document && document.url) {
+          this.currentDocumentUrl = document.url;
+          this.currentDocumentSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(document.url);
+          this.currentDocumentPhotos = [];
+        } else {
+          this.documentError = 'Dokument nicht verfügbar';
+        }
+      }
+    } catch (error: any) {
+      console.error('❌ Error loading document:', error);
+      console.error('❌ Error details:', {
+        status: error.status,
+        statusText: error.statusText,
+        message: error.message,
+        url: error.url
+      });
+      this.documentError = 'Fehler beim Laden des Dokuments';
+    } finally {
+      this.loadingDocument = false;
+    }
+  }
+
+  closeDocumentModal() {
+    this.showDocumentModal = false;
+    this.currentDocumentType = null;
+    this.currentDocumentUrl = null;
+    this.currentDocumentSafeUrl = null;
+    this.currentDocumentPhotos = [];
+    this.documentError = null;
+  }
+
+  getDocumentTitle(documentType: string): string {
+    switch (documentType) {
+      case 'business_license': return 'Gewerbeschein';
+      case 'owner_id': return 'Inhaber-Ausweis';
+      case 'wholesaler_photos': return 'Fotos';
+      default: return 'Dokument';
+    }
+  }
+
+  isPdfDocument(url: string): boolean {
+    return url.toLowerCase().includes('.pdf');
+  }
+
+  isImageDocument(url: string): boolean {
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    return imageExtensions.some(ext => url.toLowerCase().includes(ext));
+  }
+
+  selectPhoto(index: number) {
+    if (this.currentDocumentPhotos[index]) {
+      this.currentDocumentUrl = this.currentDocumentPhotos[index].url;
+      this.currentDocumentSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.currentDocumentPhotos[index].url);
+    }
+  }
+
+  retryLoadDocument() {
+    if (this.currentDocumentType) {
+      this.viewDocument(this.currentDocumentType);
+    }
   }
 }
