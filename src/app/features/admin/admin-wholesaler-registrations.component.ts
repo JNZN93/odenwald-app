@@ -171,7 +171,7 @@ interface WholesalerRegistration {
                   <button
                     class="btn btn-success btn-sm"
                     (click)="finalApproval(reg)"
-                    *ngIf="reg.status === 'awaiting_final_approval'"
+                    *ngIf="reg.status === 'awaiting_final_approval' || (reg.status === 'approved' && !reg.wholesaler_is_active)"
                     [disabled]="loading"
                   >
                     <i class="fa-solid fa-check-double"></i>
@@ -180,11 +180,20 @@ interface WholesalerRegistration {
                   <button
                     class="btn btn-danger btn-sm"
                     (click)="openRejectModal(reg)"
-                    *ngIf="reg.status === 'pending' || reg.status === 'awaiting_final_approval'"
+                    *ngIf="reg.status === 'pending' || reg.status === 'awaiting_final_approval' || (reg.status === 'approved' && !reg.wholesaler_is_active)"
                     [disabled]="loading"
                   >
                     <i class="fa-solid fa-times"></i>
                     Ablehnen
+                  </button>
+                  <button
+                    class="btn btn-warning btn-sm"
+                    (click)="verifyWholesalerUser(reg)"
+                    *ngIf="reg.status === 'approved' && reg.wholesaler_is_active"
+                    [disabled]="loading"
+                  >
+                    <i class="fa-solid fa-envelope-open"></i>
+                    Benutzer verifizieren
                   </button>
                 </div>
               </td>
@@ -320,15 +329,17 @@ interface WholesalerRegistration {
           </div>
 
           <!-- Modal Actions -->
-          <div class="modal-actions" *ngIf="selectedRegistration && selectedRegistration.status === 'pending'">
+          <div class="modal-actions" *ngIf="selectedRegistration && (selectedRegistration.status === 'pending' || selectedRegistration.status === 'awaiting_final_approval' || (selectedRegistration.status === 'approved' && !selectedRegistration.wholesaler_is_active))">
             <button class="btn btn-secondary" (click)="closeDetails()">Schließen</button>
             <button class="btn btn-danger" (click)="openRejectModal(selectedRegistration)">
               <i class="fa-solid fa-times"></i>
               Ablehnen
             </button>
-            <button class="btn btn-success" (click)="approveRegistration(selectedRegistration)">
-              <i class="fa-solid fa-check"></i>
-              Genehmigen
+            <button 
+              class="btn btn-success" 
+              (click)="getActionForRegistration(selectedRegistration)">
+              <i class="fa-solid fa-check" [class.fa-check-double]="shouldShowFinalApproval(selectedRegistration)"></i>
+              {{ getActionTextForRegistration(selectedRegistration) }}
             </button>
           </div>
         </div>
@@ -1387,7 +1398,9 @@ export class AdminWholesalerRegistrationsComponent implements OnInit {
     if (!this.rejectTarget) return;
 
     this.loading = true;
-    const endpoint = this.rejectTarget.status === 'awaiting_final_approval' 
+    // Determine endpoint based on status
+    const endpoint = this.rejectTarget.status === 'awaiting_final_approval' || 
+                     (this.rejectTarget.status === 'approved' && !this.rejectTarget.wholesaler_is_active)
       ? 'final-review' 
       : 'review';
     
@@ -1522,6 +1535,47 @@ export class AdminWholesalerRegistrationsComponent implements OnInit {
   retryLoadDocument() {
     if (this.currentDocumentType) {
       this.viewDocument(this.currentDocumentType);
+    }
+  }
+
+  // Helper methods for registration actions
+  shouldShowFinalApproval(registration: WholesalerRegistration): boolean {
+    return registration.status === 'awaiting_final_approval' || 
+           (registration.status === 'approved' && !registration.wholesaler_is_active);
+  }
+
+  getActionTextForRegistration(registration: WholesalerRegistration): string {
+    if (registration.status === 'pending') {
+      return 'Genehmigen';
+    } else if (this.shouldShowFinalApproval(registration)) {
+      return 'Final freigeben';
+    }
+    return 'Aktion';
+  }
+
+  getActionForRegistration(registration: WholesalerRegistration): void {
+    if (registration.status === 'pending') {
+      this.approveRegistration(registration);
+    } else if (this.shouldShowFinalApproval(registration)) {
+      this.finalApproval(registration);
+    }
+  }
+
+  verifyWholesalerUser(registration: WholesalerRegistration) {
+    if (confirm(`Sind Sie sicher, dass Sie den Benutzer für "${registration.wholesaler_name}" verifizieren möchten?\n\nDies ermöglicht dem Großhändler die Anmeldung ohne E-Mail-Verifizierung.`)) {
+      this.loading = true;
+      this.http.post(`${environment.apiUrl}/admin/verify-wholesaler-user/${registration.id}`, {}).subscribe({
+        next: (response: any) => {
+          alert('✅ Großhändler-Benutzer wurde verifiziert! Der Großhändler kann sich jetzt anmelden.');
+          this.loadRegistrations();
+          this.loading = false;
+        },
+        error: (error) => {
+          console.error('Error verifying wholesaler user:', error);
+          alert('❌ Fehler beim Verifizieren: ' + (error.error?.error || error.message));
+          this.loading = false;
+        }
+      });
     }
   }
 }
