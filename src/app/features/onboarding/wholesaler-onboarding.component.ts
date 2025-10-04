@@ -49,12 +49,6 @@ import { PartnerContractModalComponent } from '../../shared/legal/partner-contra
           
           <div class="progress-step" [class.active]="currentStep >= 4" [class.completed]="currentStep > 4">
             <div class="step-number">4</div>
-            <span class="step-label">Zahlung</span>
-          </div>
-          <div class="progress-line" [class.completed]="currentStep > 4"></div>
-          
-          <div class="progress-step" [class.active]="currentStep >= 5" [class.completed]="currentStep > 5">
-            <div class="step-number">5</div>
             <span class="step-label">Vertrag</span>
           </div>
         </div>
@@ -128,27 +122,10 @@ import { PartnerContractModalComponent } from '../../shared/legal/partner-contra
               <small>{{ step2Data.photos.length }} Foto(s) ausgewählt</small>
             </div>
 
-            <div class="form-row">
-              <div class="form-group">
-                <label for="deliveryRadius">Lieferradius (km)</label>
-                <input 
-                  id="deliveryRadius" 
-                  type="number" 
-                  [(ngModel)]="step2Data.delivery_radius" 
-                  placeholder="50"
-                  class="form-input">
-              </div>
-
-              <div class="form-group">
-                <label for="minimumOrder">Mindestbestellwert (€)</label>
-                <input 
-                  id="minimumOrder" 
-                  type="number" 
-                  [(ngModel)]="step2Data.minimum_order" 
-                  placeholder="100"
-                  class="form-input">
-              </div>
-            </div>
+            <p class="info-message">
+              <i class="fa-solid fa-info-circle"></i>
+              Mindestbestellwerte können Sie später pro Produkt festlegen.
+            </p>
 
             <p class="error-message" *ngIf="error">{{ error }}</p>
 
@@ -213,35 +190,9 @@ import { PartnerContractModalComponent } from '../../shared/legal/partner-contra
             </div>
           </div>
 
-          <!-- Step 4: Stripe -->
+          <!-- Step 4: Terms & Complete -->
           <div *ngIf="currentStep === 4" class="step">
-            <h2>Schritt 4: Zahlungsinformationen</h2>
-            <p class="step-description">
-              Um Auszahlungen zu erhalten, müssen Sie Ihre Bankdaten bei unserem Partner Stripe hinterlegen.
-            </p>
-
-            <div class="info-box">
-              <h4>🔒 Sicher und verschlüsselt</h4>
-              <p>Stripe ist ein weltweit führender Zahlungsdienstleister. Ihre Bankdaten werden sicher verschlüsselt übertragen.</p>
-              <p>Sie werden zu Stripe weitergeleitet und kommen automatisch zurück.</p>
-            </div>
-
-            <p class="error-message" *ngIf="error">{{ error }}</p>
-
-            <div class="button-group">
-              <button (click)="previousStep()" class="btn-secondary">Zurück</button>
-              <button 
-                (click)="submitStep4()" 
-                [disabled]="submitting"
-                class="btn-primary">
-                {{ submitting ? 'Wird vorbereitet...' : 'Zu Stripe weiterleiten' }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Step 5: Terms & Complete -->
-          <div *ngIf="currentStep === 5" class="step">
-            <h2>Schritt 5: Vertrag & Geschäftsbedingungen</h2>
+            <h2>Schritt 4: Vertrag & Geschäftsbedingungen</h2>
             <p class="step-description">Fast geschafft! Bitte akzeptieren Sie folgende Dokumente:</p>
 
             <div class="contract-summary">
@@ -250,7 +201,7 @@ import { PartnerContractModalComponent } from '../../shared/legal/partner-contra
                 <p><strong>Wichtige Eckdaten:</strong></p>
                 <ul>
                   <li>📊 Provision: 10% pro Bestellung</li>
-                  <li>💰 Auszahlungszyklus: wöchentlich</li>
+                  <li>💰 Zahlungsziel: 14 Tage (Rechnung)</li>
                   <li>📅 Mindestlaufzeit: keine</li>
                   <li>🔔 Kündigungsfrist: 30 Tage</li>
                 </ul>
@@ -262,14 +213,14 @@ import { PartnerContractModalComponent } from '../../shared/legal/partner-contra
 
             <div class="checkbox-group">
               <label>
-                <input type="checkbox" [(ngModel)]="step5Data.acceptedContract">
+                <input type="checkbox" [(ngModel)]="step4Data.acceptedContract">
                 <span>Ich habe den vollständigen Partner-Vertrag gelesen und akzeptiere ihn</span>
               </label>
             </div>
 
             <div class="checkbox-group">
               <label>
-                <input type="checkbox" [(ngModel)]="step5Data.acceptedTerms">
+                <input type="checkbox" [(ngModel)]="step4Data.acceptedTerms">
                 <span>
                   Ich akzeptiere die 
                   <a href="#" (click)="$event.preventDefault(); showTermsModal = true" class="link">AGB</a>
@@ -279,7 +230,7 @@ import { PartnerContractModalComponent } from '../../shared/legal/partner-contra
 
             <div class="checkbox-group">
               <label>
-                <input type="checkbox" [(ngModel)]="step5Data.acceptedPrivacy">
+                <input type="checkbox" [(ngModel)]="step4Data.acceptedPrivacy">
                 <span>
                   Ich akzeptiere die 
                   <a href="#" (click)="$event.preventDefault(); showPrivacyModal = true" class="link">Datenschutzerklärung</a>
@@ -289,6 +240,7 @@ import { PartnerContractModalComponent } from '../../shared/legal/partner-contra
 
             <div class="info-box warning">
               <p>⚖️ <strong>Hinweis:</strong> Mit der Bestätigung gehen Sie eine verbindliche Partnerschaft mit ODNWLD ein.</p>
+              <p>💶 <strong>Zahlungskonditionen:</strong> Alle Bestellungen werden auf Rechnung mit 14 Tagen Zahlungsziel abgewickelt.</p>
             </div>
 
             <p class="error-message" *ngIf="error">{{ error }}</p>
@@ -296,7 +248,7 @@ import { PartnerContractModalComponent } from '../../shared/legal/partner-contra
             <div class="button-group">
               <button (click)="previousStep()" class="btn-secondary">Zurück</button>
               <button 
-                (click)="submitStep5()" 
+                (click)="submitStep4()" 
                 [disabled]="submitting || !allTermsAccepted()"
                 class="btn-primary btn-complete">
                 {{ submitting ? 'Wird abgeschlossen...' : 'Onboarding abschließen ✓' }}
@@ -305,7 +257,7 @@ import { PartnerContractModalComponent } from '../../shared/legal/partner-contra
           </div>
 
           <!-- Completed State -->
-          <div *ngIf="currentStep === 6" class="success-state">
+          <div *ngIf="currentStep === 5" class="success-state">
             <div class="success-icon">✓</div>
             <h2>🎉 Onboarding erfolgreich abgeschlossen!</h2>
             <div class="info-box warning" style="text-align: left; margin: var(--space-6) 0;">
@@ -355,9 +307,7 @@ export class WholesalerOnboardingComponent implements OnInit {
   };
 
   step2Data = {
-    photos: [] as File[],
-    delivery_radius: 50,
-    minimum_order: 100
+    photos: [] as File[]
   };
 
   step3Data = {
@@ -366,7 +316,7 @@ export class WholesalerOnboardingComponent implements OnInit {
     tax_number: ''
   };
 
-  step5Data = {
+  step4Data = {
     acceptedTerms: false,
     acceptedPrivacy: false,
     acceptedContract: false
@@ -435,8 +385,6 @@ export class WholesalerOnboardingComponent implements OnInit {
 
     const formData = new FormData();
     formData.append('token', this.token);
-    formData.append('delivery_radius', this.step2Data.delivery_radius.toString());
-    formData.append('minimum_order', this.step2Data.minimum_order.toString());
 
     this.step2Data.photos.forEach(photo => {
       formData.append('photos', photo);
@@ -475,7 +423,7 @@ export class WholesalerOnboardingComponent implements OnInit {
       .subscribe({
         next: () => {
           this.submitting = false;
-          this.currentStep = 4;
+          this.currentStep = 4; // Direkt zu Vertragsschritt
         },
         error: (err) => {
           this.submitting = false;
@@ -488,32 +436,15 @@ export class WholesalerOnboardingComponent implements OnInit {
     this.submitting = true;
     this.error = '';
 
-    this.http.post(`${environment.apiUrl}/wholesaler-onboarding/step-4/stripe-init`, { token: this.token })
-      .subscribe({
-        next: (response: any) => {
-          // Redirect to Stripe
-          window.location.href = response.stripeUrl;
-        },
-        error: (err) => {
-          this.submitting = false;
-          this.error = err.error?.error || 'Fehler beim Initialisieren von Stripe';
-        }
-      });
-  }
-
-  submitStep5() {
-    this.submitting = true;
-    this.error = '';
-
-    this.http.post(`${environment.apiUrl}/wholesaler-onboarding/step-5/complete`, {
+    this.http.post(`${environment.apiUrl}/wholesaler-onboarding/step-4/complete`, {
       token: this.token,
-      acceptedTerms: this.step5Data.acceptedTerms,
-      acceptedPrivacy: this.step5Data.acceptedPrivacy,
-      acceptedContract: this.step5Data.acceptedContract
+      acceptedTerms: this.step4Data.acceptedTerms,
+      acceptedPrivacy: this.step4Data.acceptedPrivacy,
+      acceptedContract: this.step4Data.acceptedContract
     }).subscribe({
       next: () => {
         this.submitting = false;
-        this.currentStep = 6;
+        this.currentStep = 5; // Success state
       },
       error: (err) => {
         this.submitting = false;
@@ -542,9 +473,9 @@ export class WholesalerOnboardingComponent implements OnInit {
   }
 
   allTermsAccepted(): boolean {
-    return this.step5Data.acceptedTerms && 
-           this.step5Data.acceptedPrivacy && 
-           this.step5Data.acceptedContract;
+    return this.step4Data.acceptedTerms && 
+           this.step4Data.acceptedPrivacy && 
+           this.step4Data.acceptedContract;
   }
 
   goToDashboard() {
