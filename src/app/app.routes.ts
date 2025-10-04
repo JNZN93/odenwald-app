@@ -75,6 +75,9 @@ export const routes: Routes = [
   // Restaurant Onboarding
   { path: 'onboarding', loadComponent: () => import('./features/onboarding/onboarding.component').then(m => m.OnboardingComponent) },
   { path: 'onboarding/continue', loadComponent: () => import('./features/onboarding/onboarding.component').then(m => m.OnboardingComponent) },
+  // Wholesaler Onboarding
+  { path: 'wholesaler-onboarding', loadComponent: () => import('./features/onboarding/wholesaler-onboarding.component').then(m => m.WholesalerOnboardingComponent) },
+  { path: 'wholesaler-onboarding/continue', loadComponent: () => import('./features/onboarding/wholesaler-onboarding.component').then(m => m.WholesalerOnboardingComponent) },
   // Stripe Connect onboarding redirects (legacy, kept for compatibility)
   { path: 'onboarding/refresh', loadComponent: () => import('./features/restaurant-manager/stripe-onboarding-redirect.component').then(m => m.StripeOnboardingRedirectComponent) },
   { path: 'onboarding/complete', loadComponent: () => import('./features/restaurant-manager/stripe-onboarding-redirect.component').then(m => m.StripeOnboardingRedirectComponent) },

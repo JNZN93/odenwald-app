@@ -8,7 +8,7 @@ interface WholesalerRegistration {
   id: string | number;
   user_id: string | number;
   wholesaler_id?: string | number;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'awaiting_final_approval' | 'rejected';
   owner_name: string;
   owner_email: string;
   wholesaler_name: string;
@@ -19,6 +19,7 @@ interface WholesalerRegistration {
   submitted_at: string;
   approved_at?: string;
   approval_notes?: string;
+  onboarding_link?: string;
 }
 
 @Component({
@@ -48,7 +49,8 @@ interface WholesalerRegistration {
             <select id="status-filter" [(ngModel)]="statusFilter" (change)="applyFilters()">
               <option value="">Alle</option>
               <option value="pending">Ausstehend</option>
-              <option value="approved">Genehmigt</option>
+              <option value="approved">Onboarding-Link versendet</option>
+              <option value="awaiting_final_approval">Wartet auf finale Freigabe</option>
               <option value="rejected">Abgelehnt</option>
             </select>
           </div>
@@ -117,12 +119,21 @@ interface WholesalerRegistration {
                     [disabled]="loading"
                   >
                     <i class="fa-solid fa-check"></i>
-                    Genehmigen
+                    Onboarding-Link senden
+                  </button>
+                  <button
+                    class="btn btn-success btn-sm"
+                    (click)="finalApproval(reg)"
+                    *ngIf="reg.status === 'awaiting_final_approval'"
+                    [disabled]="loading"
+                  >
+                    <i class="fa-solid fa-check-double"></i>
+                    Final freigeben
                   </button>
                   <button
                     class="btn btn-danger btn-sm"
                     (click)="openRejectModal(reg)"
-                    *ngIf="reg.status === 'pending'"
+                    *ngIf="reg.status === 'pending' || reg.status === 'awaiting_final_approval'"
                     [disabled]="loading"
                   >
                     <i class="fa-solid fa-times"></i>
@@ -467,8 +478,13 @@ interface WholesalerRegistration {
     }
 
     .status-badge.approved {
-      background: var(--bg-success);
-      color: var(--color-success);
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .status-badge.awaiting_final_approval {
+      background: #fef3c7;
+      color: #b45309;
     }
 
     .status-badge.rejected {
@@ -880,18 +896,26 @@ export class AdminWholesalerRegistrationsComponent implements OnInit {
   }
 
   approveRegistration(registration: WholesalerRegistration) {
-    if (confirm(`Sind Sie sicher, dass Sie die Registrierung von "${registration.wholesaler_name}" genehmigen möchten?`)) {
+    if (confirm(`Sind Sie sicher, dass Sie die Registrierung von "${registration.wholesaler_name}" genehmigen möchten?\n\nDer Großhändler erhält einen Onboarding-Link per E-Mail.`)) {
       this.loading = true;
       this.http.post(`${environment.apiUrl}/admin/wholesaler-registrations/${registration.id}/review`, {
         action: 'approve'
       }).subscribe({
-        next: () => {
+        next: (response: any) => {
+          // Zeige Onboarding-Link in der Konsole für Tests
+          if (response.registration?.onboarding_link) {
+            console.log('🔗 Onboarding-Link:', response.registration.onboarding_link);
+            alert(`✅ Registrierung genehmigt!\n\nOnboarding-Link (für Tests):\n${response.registration.onboarding_link}`);
+          } else {
+            alert('✅ Registrierung genehmigt! Onboarding-Link wurde per E-Mail versendet.');
+          }
           this.loadRegistrations();
           this.closeDetails();
           this.loading = false;
         },
         error: (error) => {
           console.error('Error approving registration:', error);
+          alert('❌ Fehler beim Genehmigen: ' + (error.error?.error || error.message));
           this.loading = false;
         }
       });
@@ -910,11 +934,37 @@ export class AdminWholesalerRegistrationsComponent implements OnInit {
     this.rejectNotes = '';
   }
 
+  finalApproval(registration: WholesalerRegistration) {
+    if (confirm(`Sind Sie sicher, dass Sie "${registration.wholesaler_name}" FINAL AKTIVIEREN möchten?\n\nDer Großhändler wird für Restaurants sichtbar!`)) {
+      this.loading = true;
+      this.http.post(`${environment.apiUrl}/admin/wholesaler-registrations/${registration.id}/final-review`, {
+        action: 'approve',
+        notes: 'Alle Dokumente geprüft und genehmigt'
+      }).subscribe({
+        next: (response: any) => {
+          alert('✅ Großhändler wurde aktiviert und ist jetzt LIVE!');
+          this.loadRegistrations();
+          this.closeDetails();
+          this.loading = false;
+        },
+        error: (error) => {
+          console.error('Error in final approval:', error);
+          alert('❌ Fehler bei finaler Freigabe: ' + (error.error?.error || error.message));
+          this.loading = false;
+        }
+      });
+    }
+  }
+
   confirmReject() {
     if (!this.rejectTarget) return;
 
     this.loading = true;
-    this.http.post(`${environment.apiUrl}/admin/wholesaler-registrations/${this.rejectTarget.id}/review`, {
+    const endpoint = this.rejectTarget.status === 'awaiting_final_approval' 
+      ? 'final-review' 
+      : 'review';
+    
+    this.http.post(`${environment.apiUrl}/admin/wholesaler-registrations/${this.rejectTarget.id}/${endpoint}`, {
       action: 'reject',
       notes: this.rejectNotes
     }).subscribe({
@@ -934,7 +984,8 @@ export class AdminWholesalerRegistrationsComponent implements OnInit {
   getStatusIcon(status: string): string {
     switch (status) {
       case 'pending': return 'fa-clock';
-      case 'approved': return 'fa-check';
+      case 'approved': return 'fa-paper-plane';
+      case 'awaiting_final_approval': return 'fa-hourglass-half';
       case 'rejected': return 'fa-times';
       default: return 'fa-question';
     }
@@ -943,7 +994,8 @@ export class AdminWholesalerRegistrationsComponent implements OnInit {
   getStatusText(status: string): string {
     switch (status) {
       case 'pending': return 'Ausstehend';
-      case 'approved': return 'Genehmigt';
+      case 'approved': return 'Onboarding-Link versendet';
+      case 'awaiting_final_approval': return 'Wartet auf finale Freigabe';
       case 'rejected': return 'Abgelehnt';
       default: return status;
     }
