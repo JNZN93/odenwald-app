@@ -271,18 +271,43 @@ interface WholesalerRegistration {
                 <div class="document-item" *ngIf="selectedRegistration.documents?.business_license">
                   <i class="fa-solid fa-file-contract"></i>
                   <span>Gewerbeschein</span>
-                  <small>Hochgeladen</small>
+                  <small *ngIf="selectedRegistration.documents.business_license.url; else noDocBusiness">
+                    <a [href]="selectedRegistration.documents.business_license.url" target="_blank">Anzeigen</a>
+                  </small>
+                  <ng-template #noDocBusiness><small>Hochgeladen</small></ng-template>
                 </div>
                 <div class="document-item" *ngIf="selectedRegistration.documents?.owner_id">
                   <i class="fa-solid fa-id-card"></i>
                   <span>Inhaber-Ausweis</span>
-                  <small>Hochgeladen</small>
+                  <small *ngIf="selectedRegistration.documents.owner_id.url; else noDocOwner">
+                    <a [href]="selectedRegistration.documents.owner_id.url" target="_blank">Anzeigen</a>
+                  </small>
+                  <ng-template #noDocOwner><small>Hochgeladen</small></ng-template>
                 </div>
-                <div class="document-item" *ngIf="selectedRegistration.documents?.wholesaler_photos">
+                <div class="document-item" *ngIf="selectedRegistration.documents?.wholesaler_photos?.length">
                   <i class="fa-solid fa-images"></i>
                   <span>Fotos</span>
-                  <small>{{ selectedRegistration.documents.wholesaler_photos.length }} Dateien</small>
+                  <small *ngIf="selectedRegistration.documents.wholesaler_photos.length > 0; else noDocPhotos">
+                    {{ selectedRegistration.documents.wholesaler_photos.length }} Dateien
+                    <div class="photo-links">
+                      <ng-container *ngFor="let photo of selectedRegistration.documents.wholesaler_photos; let i = index">
+                        <a *ngIf="photo.url"
+                           [href]="photo.url" 
+                           target="_blank" 
+                           class="photo-link">
+                          Foto {{ i + 1 }}
+                        </a>
+                      </ng-container>
+                    </div>
+                  </small>
+                  <ng-template #noDocPhotos><small>Hochgeladen</small></ng-template>
                 </div>
+              </div>
+              
+              <!-- Show message if no documents -->
+              <div class="no-documents" *ngIf="!hasAnyDocuments(selectedRegistration.documents)">
+                <i class="fa-solid fa-file-circle-exclamation"></i>
+                <span>Keine Dokumente hochgeladen</span>
               </div>
             </div>
 
@@ -858,6 +883,52 @@ interface WholesalerRegistration {
       font-size: var(--text-xs);
     }
 
+    .document-item a {
+      color: var(--color-primary);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .document-item a:hover {
+      text-decoration: underline;
+    }
+
+    .photo-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1);
+      margin-top: var(--space-1);
+    }
+
+    .photo-link {
+      background: var(--color-primary);
+      color: white;
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-xs);
+      text-decoration: none;
+    }
+
+    .photo-link:hover {
+      background: var(--color-primary-dark);
+      text-decoration: none;
+    }
+
+    .no-documents {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-4);
+      background: var(--bg-light);
+      border-radius: var(--radius-lg);
+      color: var(--color-muted);
+      font-style: italic;
+    }
+
+    .no-documents i {
+      color: var(--color-warning);
+    }
+
     .status-timeline {
       display: flex;
       flex-direction: column;
@@ -1060,6 +1131,8 @@ export class AdminWholesalerRegistrationsComponent implements OnInit {
 
   viewDetails(registration: WholesalerRegistration) {
     this.selectedRegistration = registration;
+    // Fetch document details when viewing registration
+    this.fetchDocumentDetails(registration.id);
   }
 
   closeDetails() {
@@ -1180,5 +1253,30 @@ export class AdminWholesalerRegistrationsComponent implements OnInit {
       hour: '2-digit',
       minute: '2-digit'
     });
+  }
+
+  // Fetch document details for a registration
+  fetchDocumentDetails(registrationId: string | number) {
+    this.http.get(`${environment.apiUrl}/admin/wholesaler-registrations/${registrationId}/documents`)
+      .subscribe({
+        next: (response: any) => {
+          if (this.selectedRegistration && this.selectedRegistration.id === registrationId) {
+            // Update the documents with secure URLs
+            this.selectedRegistration.documents = response.documents;
+          }
+        },
+        error: (error) => {
+          console.error('Error fetching document details:', error);
+        }
+      });
+  }
+
+  // Check if any documents exist
+  hasAnyDocuments(documents: any): boolean {
+    if (!documents) return false;
+    
+    return !!(documents.business_license?.filename || 
+              documents.owner_id?.filename || 
+              (documents.wholesaler_photos && documents.wholesaler_photos.length > 0));
   }
 }
