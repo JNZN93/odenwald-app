@@ -58,6 +58,7 @@ class RootRedirectComponent implements OnInit {
 export const routes: Routes = [
   { path: '', pathMatch: 'full', component: RootRedirectComponent },
   { path: 'auth/login', component: LoginComponent },
+  { path: 'auth/driver-login', loadComponent: () => import('./features/auth/driver-login.component').then(m => m.DriverLoginComponent) },
   { path: 'auth/register', component: RegistrationComponent },
   { path: 'auth/verify-email', loadComponent: () => import('./features/auth/verify-email.component').then(m => m.VerifyEmailComponent) },
   { path: 'auth/callback', component: GoogleCallbackComponent },

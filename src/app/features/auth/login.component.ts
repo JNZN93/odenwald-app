@@ -99,6 +99,7 @@ import { environment } from '../../../environments/environment';
         
         <div class="login-footer">
           <p class="help-text">Haben Sie noch kein Konto? <a href="/auth/register" class="help-link">Jetzt registrieren</a></p>
+          <p class="help-text driver-login-link">Sind Sie Fahrer? <a href="/auth/driver-login" class="help-link">Hier anmelden</a></p>
         </div>
       </div>
     </div>
@@ -389,6 +390,12 @@ import { environment } from '../../../environments/environment';
       margin: 0;
       color: var(--color-muted);
       font-size: var(--text-sm);
+    }
+
+    .driver-login-link {
+      margin-top: var(--space-2);
+      padding-top: var(--space-2);
+      border-top: 1px solid var(--color-border);
     }
 
     .help-link {
