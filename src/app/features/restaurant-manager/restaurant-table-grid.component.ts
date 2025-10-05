@@ -101,7 +101,6 @@ interface GridCell {
               <div class="cell-content" *ngIf="cell.table">
                 <div class="placed-table" 
                      [class.selected]="selectedTable?.id === cell.table.id"
-                     [class.has-unpaid-orders]="hasUnpaidOrders(cell.table!)"
                      (click)="onTableClick(cell.table!, $event)"
                      (dblclick)="showTableOrders(cell.table!)">
                   <div class="table-content">
@@ -503,18 +502,6 @@ interface GridCell {
       box-shadow: 0 0 0 3px var(--color-warning-200);
     }
 
-    .placed-table.has-unpaid-orders {
-      background: #dc2626 !important;
-      color: white !important;
-      border: 2px solid #b91c1c !important;
-      box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.3);
-    }
-
-    .placed-table.has-unpaid-orders:hover {
-      background: #b91c1c !important;
-      transform: scale(1.02);
-      box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.4);
-    }
 
     .table-content {
       display: flex;
@@ -1024,13 +1011,12 @@ export class RestaurantTableGridComponent implements OnInit {
   currentRestaurantId: string | null = null;
   updatingOrderId: string | null = null;
   
-  // Cache for table order status
-  tableOrderStatusCache = new Map<string, { hasUnpaid: boolean; lastChecked: number }>();
 
   ngOnInit() {
     this.initializeGrid();
     this.loadTables();
   }
+
 
   private initializeGrid() {
     this.gridCells = [];
@@ -1086,6 +1072,7 @@ export class RestaurantTableGridComponent implements OnInit {
           }
         });
 
+
         return availableTables;
       })
     );
@@ -1097,6 +1084,7 @@ export class RestaurantTableGridComponent implements OnInit {
       this.gridCells[cellIndex].table = table;
     }
   }
+
 
   selectTable(table: RestaurantTable) {
     this.selectedTable = table;
@@ -1370,6 +1358,7 @@ export class RestaurantTableGridComponent implements OnInit {
         // Force Angular change detection
         this.tableOrders = [...this.tableOrders];
 
+
         this.toastService.success('Status aktualisiert', `Bestellung ${this.getStatusText(newStatus)}`);
         this.updatingOrderId = null;
       },
@@ -1381,43 +1370,6 @@ export class RestaurantTableGridComponent implements OnInit {
     });
   }
 
-  // Check if table has unpaid orders
-  hasUnpaidOrders(table: RestaurantTable): boolean {
-    if (!this.currentRestaurantId) return false;
-    
-    const cacheKey = `${table.id}`;
-    const cached = this.tableOrderStatusCache.get(cacheKey);
-    const now = Date.now();
-    
-    // Use cache if it's less than 30 seconds old
-    if (cached && (now - cached.lastChecked) < 30000) {
-      return cached.hasUnpaid;
-    }
-    
-    // Check orders for this table
-    this.ordersService.getTableOrders(this.currentRestaurantId, table.table_number?.toString()).subscribe({
-      next: (orders) => {
-        const hasUnpaid = orders.some(order => 
-          order.payment_status === 'pending' || order.payment_status === 'failed'
-        );
-        
-        // Update cache
-        this.tableOrderStatusCache.set(cacheKey, {
-          hasUnpaid,
-          lastChecked: now
-        });
-        
-        // Force change detection to update UI
-        this.gridCells = [...this.gridCells];
-      },
-      error: (error) => {
-        console.error('Error checking table orders:', error);
-      }
-    });
-    
-    // Return cached value or false as fallback
-    return cached?.hasUnpaid || false;
-  }
 
   // Mark order as paid
   markOrderAsPaid(orderId: string) {
@@ -1443,11 +1395,6 @@ export class RestaurantTableGridComponent implements OnInit {
           // Force Angular change detection
           this.tableOrders = [...this.tableOrders];
 
-          // Clear cache for this table to refresh the red indicator
-          if (this.selectedTableForOrders) {
-            this.tableOrderStatusCache.delete(this.selectedTableForOrders.id.toString());
-            this.gridCells = [...this.gridCells];
-          }
 
           this.toastService.success('Zahlung bestätigt', 'Die Bestellung wurde als bezahlt markiert');
           this.updatingOrderId = null;

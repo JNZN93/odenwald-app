@@ -798,38 +798,27 @@ export class RestaurantTablesComponent implements OnInit {
     this.loadTables();
   }
 
-  loadTables() {
+  async loadTables() {
     this.isLoading = true;
     this.loadingService.start('tables');
 
-    this.restaurantManagerService.getManagedRestaurants().subscribe({
-      next: (restaurants) => {
-        if (restaurants?.length > 0) {
-          this.tables$ = this.tablesService.getTables(Number(restaurants[0].restaurant_id));
-          this.tables$.subscribe({
-            next: () => {
-              this.loadingService.stop('tables');
-              this.isLoading = false;
-            },
-            error: (error) => {
-              console.error('Error loading tables:', error);
-              this.toastService.error('Fehler', 'Tische konnten nicht geladen werden');
-              this.loadingService.stop('tables');
-              this.isLoading = false;
-            }
-          });
-        } else {
-          this.loadingService.stop('tables');
-          this.isLoading = false;
-        }
-      },
-      error: (error) => {
-        console.error('Error loading restaurants:', error);
-        this.toastService.error('Fehler', 'Restaurants konnten nicht geladen werden');
-        this.loadingService.stop('tables');
-        this.isLoading = false;
+    try {
+      // FIXED: Use async/await instead of nested subscribes to prevent Observable leaks
+      const restaurants = await this.restaurantManagerService.getManagedRestaurants().toPromise();
+      
+      if (restaurants && restaurants.length > 0) {
+        this.tables$ = this.tablesService.getTables(Number(restaurants[0].restaurant_id));
+        // No need to subscribe here, the template uses async pipe
       }
-    });
+      
+      this.loadingService.stop('tables');
+      this.isLoading = false;
+    } catch (error) {
+      console.error('Error loading tables:', error);
+      this.toastService.error('Fehler', 'Tische konnten nicht geladen werden');
+      this.loadingService.stop('tables');
+      this.isLoading = false;
+    }
   }
 
   openCreateModal() {

@@ -2386,43 +2386,30 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
     document.removeEventListener('visibilitychange', this.visibilityChangeHandler);
   }
 
-  loadOrders() {
+  async loadOrders() {
     this.isLoading = true;
     this.loadingService.start('orders');
 
-    // Get current restaurant manager's restaurant ID
-    this.restaurantManagerService.getManagedRestaurants().subscribe({
-      next: (restaurants: any[]) => {
-        if (restaurants?.length > 0) {
-          // Use the first restaurant for now - in a real app you'd want to handle multiple restaurants
-          const restaurantId = restaurants[0].restaurant_id;
-          this.ordersService.getRestaurantOrders(restaurantId).subscribe({
-            next: (orders) => {
-              console.log('Loaded orders for restaurant:', orders);
-              this.orders = orders;
-              this.applyFilters();
-              this.loadingService.stop('orders');
-              this.isLoading = false;
-            },
-            error: (error: any) => {
-              console.error('Error loading orders:', error);
-              this.toastService.error('Bestellungen laden', 'Fehler beim Laden der Bestellungen');
-              this.loadingService.stop('orders');
-              this.isLoading = false;
-            }
-          });
-        } else {
-          this.loadingService.stop('orders');
-          this.isLoading = false;
-        }
-      },
-      error: (error: any) => {
-        console.error('Error loading restaurants:', error);
-        this.toastService.error('Restaurant laden', 'Fehler beim Laden des Restaurants');
-        this.loadingService.stop('orders');
-        this.isLoading = false;
+    try {
+      // FIXED: Use async/await to prevent Observable leaks from nested subscribes
+      const restaurants = await this.restaurantManagerService.getManagedRestaurants().toPromise();
+      
+      if (restaurants && restaurants.length > 0) {
+        const restaurantId = restaurants[0].restaurant_id;
+        const orders = await this.ordersService.getRestaurantOrders(restaurantId).toPromise();
+        
+        this.orders = orders || [];
+        this.applyFilters();
       }
-    });
+      
+      this.loadingService.stop('orders');
+      this.isLoading = false;
+    } catch (error: any) {
+      console.error('Error loading orders:', error);
+      this.toastService.error('Fehler', 'Bestellungen konnten nicht geladen werden');
+      this.loadingService.stop('orders');
+      this.isLoading = false;
+    }
   }
 
   refreshOrders() {

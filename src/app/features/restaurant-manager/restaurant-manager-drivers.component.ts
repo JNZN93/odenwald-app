@@ -11,12 +11,14 @@ import { Subscription, interval } from 'rxjs';
 import { DriversService } from '../../core/services/drivers.service';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { RestaurantsService } from '../../core/services/restaurants.service';
+import * as QRCode from 'qrcode';
 
 export interface Driver {
   id: string;
   user_id: string;
   tenant_id: string;
   name?: string;
+  username?: string;
   email?: string;
   phone?: string;
   vehicle_type: 'car' | 'motorcycle' | 'bicycle' | 'scooter';
@@ -29,7 +31,7 @@ export interface Driver {
   license_plate?: string;
   is_active: boolean;
   current_status: 'available' | 'busy' | 'offline' | 'on_delivery';
-  status: 'available' | 'busy' | 'offline' | 'on_break';
+  status: 'available' | 'busy' | 'offline' | 'on_break' | 'pending_activation';
   current_location?: {
     lat: number;
     lng: number;
@@ -1994,6 +1996,7 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
 
   // Add driver modal state
   showAddDriverModal = false;
+  addDriverTab: 'quick' | 'qrcode' = 'quick'; // Tab switcher
   newDriver = {
     name: '',
     email: '',
@@ -2005,26 +2008,57 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
     license_plate: ''
   };
 
+  // QR Code registration state
+  showQRCodeModal = false;
+  qrCodeData: string = '';
+  qrCodeImageUrl: string = '';
+  activationUrl: string = '';
+  pendingDriverData: any = null;
+  qrCodeCache: Map<string, string> = new Map();
+
+  // Password reset modal
+  showPasswordResetModal = false;
+  selectedDriverForReset: Driver | null = null;
+  resetPasswordData: {
+    tempPassword: string;
+    resetUrl: string;
+    qrCodeUrl: string;
+  } | null = null;
+
   // Loading states
   isLoading = false;
   isAddingDriver = false;
   isBulkAssigning = false;
+  isGeneratingQR = false;
 
   ngOnInit() {
     this.loadDrivers();
     this.loadPendingOrders();
     this.loadDriverStats();
 
-    // Auto-refresh every 1 minute (60 seconds) - balanced polling
-    const refreshSub = interval(60000).subscribe(() => {
-      this.refreshData();
+    // Auto-refresh every 2 minutes (120 seconds) - reduced polling
+    // Only poll if page is visible
+    const refreshSub = interval(120000).subscribe(() => {
+      if (!document.hidden) {
+        this.refreshData();
+      }
     });
     this.subscriptions.push(refreshSub);
+
+    // Listen for page visibility to stop polling when hidden
+    document.addEventListener('visibilitychange', this.handleVisibilityChange);
   }
 
+  private handleVisibilityChange = () => {
+    if (!document.hidden) {
+      // Page became visible, refresh data once
+      this.refreshData();
+    }
+  }
 
   ngOnDestroy() {
     this.subscriptions.forEach(sub => sub.unsubscribe());
+    document.removeEventListener('visibilitychange', this.handleVisibilityChange);
   }
 
   async loadDrivers() {
@@ -2052,57 +2086,25 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
   async loadPendingOrders() {
     try {
       // Use the same approach as the orders component: get managed restaurants first
-      this.restaurantManagerService.getManagedRestaurants().subscribe({
-        next: async (restaurants: any[]) => {
-          if (restaurants?.length > 0) {
-            // Get orders for the first restaurant (same as orders component)
-            const restaurantId = restaurants[0].restaurant_id;
-            this.managedRestaurantId = String(restaurantId);
+      // IMPORTANT: Use firstValueFrom to avoid Observable leaks
+      const restaurants = await this.restaurantManagerService.getManagedRestaurants().toPromise();
+      
+      if (restaurants && restaurants.length > 0) {
+        // Get orders for the first restaurant
+        const restaurantId = restaurants[0].restaurant_id;
+        this.managedRestaurantId = String(restaurantId);
 
-            // Load orders with different statuses to find pending ones
-            const allOrders = await this.ordersService.getRestaurantOrders(restaurantId).toPromise();
+        // Load orders with different statuses to find pending ones
+        const allOrders = await this.ordersService.getRestaurantOrders(restaurantId).toPromise();
 
-            console.log('All orders for restaurant:', {
-              restaurantId,
-              totalOrders: allOrders?.length || 0,
-              ordersByStatus: allOrders?.reduce((acc, order) => {
-                acc[order.status] = (acc[order.status] || 0) + 1;
-                return acc;
-              }, {} as Record<string, number>),
-              sampleOrders: allOrders?.slice(0, 5).map(o => ({
-                id: o.id,
-                status: o.status,
-                created_at: o.created_at,
-                customer_name: o.customer_name
-              }))
-            });
-
-            // Filter for orders that need driver assignment (pending, ready, open, in_progress without driver)
-            const pendingOrders = allOrders?.filter(order =>
-              (order.status === 'pending' || order.status === 'ready' || order.status === 'open' || order.status === 'in_progress') &&
-              !order.driver_id
-            ) || [];
-
-            console.log('Filtered pending orders:', {
-              count: pendingOrders.length,
-              orders: pendingOrders.map(o => ({
-                id: o.id,
-                status: o.status,
-                hasDriver: !!o.driver_id
-              }))
-            });
-
-            this.pendingOrders = pendingOrders;
-          } else {
-            console.log('No managed restaurants found');
-            this.pendingOrders = [];
-          }
-        },
-        error: (error) => {
-          console.error('Error loading managed restaurants:', error);
-          this.pendingOrders = [];
-        }
-      });
+        // Filter for orders that need driver assignment
+        this.pendingOrders = allOrders?.filter(order =>
+          (order.status === 'pending' || order.status === 'ready' || order.status === 'open' || order.status === 'in_progress') &&
+          !order.driver_id
+        ) || [];
+      } else {
+        this.pendingOrders = [];
+      }
     } catch (error) {
       console.error('Error loading pending orders:', error);
       this.pendingOrders = [];
@@ -2115,12 +2117,7 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
         `${environment.apiUrl}/drivers/stats`
       ).toPromise();
 
-      console.log('Driver stats response:', response);
-      console.log('Response stats property:', (response as any)?.stats);
       this.driverStats = (response as any)?.stats;
-      console.log('Driver stats set to:', this.driverStats);
-      console.log('Average rating value:', this.driverStats?.average_rating);
-      console.log('Average rating type:', typeof this.driverStats?.average_rating);
     } catch (error: any) {
       console.error('Error loading driver stats:', error);
       if (error.status === 500) {
@@ -2165,6 +2162,61 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
   }
 
   async submitAddDriver() {
+    if (this.isAddingDriver) return;
+
+    // Route based on selected tab
+    if (this.addDriverTab === 'qrcode') {
+      await this.submitQRCodeDriver();
+    } else {
+      await this.submitQuickDriver();
+    }
+  }
+
+  // NEW: QR Code registration flow
+  async submitQRCodeDriver() {
+    if (this.isGeneratingQR) return;
+
+    try {
+      this.isGeneratingQR = true;
+
+      if (!this.newDriver.name || !this.newDriver.vehicle_type) {
+        this.toastService.error('Fehler', 'Name und Fahrzeugtyp sind erforderlich');
+        return;
+      }
+
+      // Create pending driver with QR code
+      const response = await this.http.post<any>(
+        `${environment.apiUrl}/drivers/create-pending`,
+        {
+          name: this.newDriver.name,
+          vehicle_type: this.newDriver.vehicle_type,
+          license_plate: this.newDriver.license_plate || null
+        }
+      ).toPromise();
+
+      this.pendingDriverData = response.driver;
+      this.activationUrl = response.activation_url;
+      this.qrCodeData = response.qr_code_data;
+
+      // Generate QR Code image
+      this.qrCodeImageUrl = await this.generateQRCodeImage(this.qrCodeData);
+
+      // Close add modal, open QR modal
+      this.showAddDriverModal = false;
+      this.showQRCodeModal = true;
+
+      this.toastService.success('Erfolg', 'Aktivierungslink erstellt');
+
+    } catch (error: any) {
+      console.error('Error creating pending driver:', error);
+      this.toastService.error('Fehler', error.error?.error || 'Fahrer konnte nicht erstellt werden');
+    } finally {
+      this.isGeneratingQR = false;
+    }
+  }
+
+  // OLD: Quick registration flow (original method)
+  async submitQuickDriver() {
     if (this.isAddingDriver) return;
 
     try {
@@ -3051,5 +3103,177 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
       }
     });
     this.driverMaps.clear();
+  }
+
+  // ===================================================================
+  // QR Code Generation & Modal Management
+  // ===================================================================
+
+  async generateQRCodeImage(data: string): Promise<string> {
+    // Check cache first
+    if (this.qrCodeCache.has(data)) {
+      return this.qrCodeCache.get(data)!;
+    }
+
+    try {
+      // Create canvas and generate QR code
+      const canvas = document.createElement('canvas');
+      await QRCode.toCanvas(canvas, data, {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+
+      const qrCodeUrl = canvas.toDataURL('image/png');
+      this.qrCodeCache.set(data, qrCodeUrl);
+      return qrCodeUrl;
+    } catch (error) {
+      console.error('QR Code generation failed:', error);
+      throw error;
+    }
+  }
+
+  closeQRCodeModal() {
+    this.showQRCodeModal = false;
+    this.qrCodeData = '';
+    this.qrCodeImageUrl = '';
+    this.activationUrl = '';
+    this.pendingDriverData = null;
+    this.resetNewDriverForm();
+    this.refreshData();
+  }
+
+  copyActivationLink() {
+    navigator.clipboard.writeText(this.activationUrl).then(() => {
+      this.toastService.success('Erfolg', 'Link kopiert!');
+    }).catch((error) => {
+      console.error('Copy failed:', error);
+      this.toastService.error('Fehler', 'Kopieren fehlgeschlagen');
+    });
+  }
+
+  shareViaWhatsApp() {
+    const message = encodeURIComponent(
+      `Hallo! Hier ist dein Aktivierungslink für die Fahrer-App:\n\n${this.activationUrl}\n\nBitte registriere dich innerhalb von 7 Tagen.`
+    );
+    const whatsappUrl = `https://wa.me/?text=${message}`;
+    window.open(whatsappUrl, '_blank');
+  }
+
+  printQRCode() {
+    if (!this.qrCodeImageUrl || !this.pendingDriverData) return;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Fahrer Aktivierung - ${this.pendingDriverData.name}</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              text-align: center;
+              padding: 40px;
+            }
+            h1 { color: #333; margin-bottom: 10px; }
+            h2 { color: #666; margin-bottom: 30px; }
+            .qr-container {
+              margin: 30px auto;
+              padding: 20px;
+              border: 2px solid #ccc;
+              display: inline-block;
+              border-radius: 10px;
+            }
+            img { width: 300px; height: 300px; }
+            .info { margin-top: 30px; font-size: 14px; color: #666; }
+            .note { margin-top: 20px; font-size: 12px; color: #999; }
+            @media print {
+              button { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Fahrer-Aktivierung</h1>
+          <h2>${this.pendingDriverData.name}</h2>
+          <div class="qr-container">
+            <img src="${this.qrCodeImageUrl}" alt="QR Code">
+          </div>
+          <div class="info">
+            <p><strong>Benutzername:</strong> ${this.pendingDriverData.username}</p>
+            <p><strong>Fahrzeugtyp:</strong> ${this.getVehicleTypeLabel(this.pendingDriverData.vehicle_type)}</p>
+          </div>
+          <div class="note">
+            <p>Scannen Sie den QR-Code um die Registrierung abzuschließen.</p>
+            <p>Link gültig für 7 Tage.</p>
+          </div>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    }
+  }
+
+  // Password Reset Methods
+  async openPasswordResetModal(driver: Driver) {
+    this.selectedDriverForReset = driver;
+    this.showPasswordResetModal = true;
+    this.resetPasswordData = null;
+  }
+
+  async resetDriverPassword() {
+    if (!this.selectedDriverForReset) return;
+
+    try {
+      const response = await this.http.post<any>(
+        `${environment.apiUrl}/drivers/${this.selectedDriverForReset.id}/reset-password`,
+        {}
+      ).toPromise();
+
+      this.resetPasswordData = {
+        tempPassword: response.temp_password,
+        resetUrl: response.reset_url,
+        qrCodeUrl: await this.generateQRCodeImage(response.qr_code_data)
+      };
+
+      this.toastService.success('Erfolg', 'Passwort wurde zurückgesetzt');
+    } catch (error: any) {
+      console.error('Error resetting password:', error);
+      this.toastService.error('Fehler', error.error?.error || 'Passwort-Reset fehlgeschlagen');
+    }
+  }
+
+  closePasswordResetModal() {
+    this.showPasswordResetModal = false;
+    this.selectedDriverForReset = null;
+    this.resetPasswordData = null;
+  }
+
+  copyTempPassword() {
+    if (!this.resetPasswordData) return;
+    navigator.clipboard.writeText(this.resetPasswordData.tempPassword).then(() => {
+      this.toastService.success('Erfolg', 'Temporäres Passwort kopiert!');
+    });
+  }
+
+  sharePasswordViaWhatsApp() {
+    if (!this.resetPasswordData || !this.selectedDriverForReset) return;
+    
+    const message = encodeURIComponent(
+      `Hallo ${this.selectedDriverForReset.name}!\n\n` +
+      `Dein Passwort wurde zurückgesetzt:\n\n` +
+      `Login: ${this.selectedDriverForReset.username || this.selectedDriverForReset.name}\n` +
+      `Temporäres Passwort: ${this.resetPasswordData.tempPassword}\n\n` +
+      `Bitte ändere dein Passwort beim nächsten Login.\n\n` +
+      `Fahrer-App: ${window.location.origin}/driver-login`
+    );
+    const whatsappUrl = `https://wa.me/?text=${message}`;
+    window.open(whatsappUrl, '_blank');
   }
 }
