@@ -11,7 +11,6 @@ import { Subscription, interval } from 'rxjs';
 import { DriversService } from '../../core/services/drivers.service';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { RestaurantsService } from '../../core/services/restaurants.service';
-import * as QRCode from 'qrcode';
 
 export interface Driver {
   id: string;
@@ -30,7 +29,7 @@ export interface Driver {
   };
   license_plate?: string;
   is_active: boolean;
-  current_status: 'available' | 'busy' | 'offline' | 'on_delivery';
+  current_status: 'available' | 'busy' | 'offline' | 'on_delivery' | 'pending_activation';
   status: 'available' | 'busy' | 'offline' | 'on_break' | 'pending_activation';
   current_location?: {
     lat: number;
@@ -155,6 +154,11 @@ export interface Driver {
                   </div>
                   <!-- Status Badges -->
                   <div class="status-badges">
+                    <!-- Pending Activation Badge -->
+                    <div class="pending-badge" *ngIf="driver.status === 'pending_activation' || driver.current_status === 'pending_activation'">
+                      <i class="fa-solid fa-hourglass-half"></i>
+                      <span>Wartend auf Aktivierung</span>
+                    </div>
                     <!-- Delivery Status Badge for drivers who are busy (since there's no on_delivery status in DB) -->
                     <div class="delivery-status-badge" *ngIf="driver.status === 'busy' || driver.current_status === 'busy'" [class]="getDeliveryBadgeClass(driver)">
                       <i class="fa-solid fa-route"></i>
@@ -320,18 +324,128 @@ export interface Driver {
         </div>
       </div>
 
-      <!-- Add Driver Modal -->
+      <!-- Add Driver Modal with QR Code -->
       <div class="modal" *ngIf="showAddDriverModal" (click)="closeAddDriverModal()">
         <div class="modal-content add-driver-modal" (click)="$event.stopPropagation()">
           <div class="modal-header">
-            <h3>Neuen Fahrer hinzufügen</h3>
+            <h3><i class="fa-solid fa-qrcode"></i> Neuen Fahrer hinzufügen</h3>
             <button class="close-btn" (click)="closeAddDriverModal()">
               <i class="fa-solid fa-times"></i>
             </button>
           </div>
 
+          <!-- Tabs -->
+          <div class="tabs-container">
+            <button 
+              class="tab-btn" 
+              [class.active]="addDriverTab === 'qrcode'"
+              (click)="addDriverTab = 'qrcode'"
+            >
+              <i class="fa-solid fa-qrcode"></i>
+              QR-Code Registrierung
+            </button>
+            <button 
+              class="tab-btn" 
+              [class.active]="addDriverTab === 'quick'"
+              (click)="addDriverTab = 'quick'"
+            >
+              <i class="fa-solid fa-bolt"></i>
+              Schnellerfassung
+            </button>
+          </div>
+
           <div class="modal-body">
-            <form (ngSubmit)="submitAddDriver()" #driverForm="ngForm">
+            <!-- QR-Code Tab -->
+            <div *ngIf="addDriverTab === 'qrcode'">
+              <div class="tab-info qr-info">
+                <i class="fa-solid fa-info-circle"></i>
+                <p><strong>QR-Code Registrierung:</strong> Fahrer wird erstellt und erhält QR-Code zum selbst aktivieren. Kein Passwort nötig!</p>
+              </div>
+
+              <form (ngSubmit)="createPendingDriver()" #qrForm="ngForm">
+                <div class="form-group">
+                  <label for="qrDriverName">Name des Fahrers *</label>
+                  <input
+                    type="text"
+                    id="qrDriverName"
+                    name="qr_name"
+                    [(ngModel)]="qrDriverData.name"
+                    required
+                    class="form-input"
+                    placeholder="Vorname Nachname"
+                  />
+                  <small class="form-hint">Der Benutzername wird automatisch generiert</small>
+                </div>
+
+                <div class="form-group">
+                  <label for="qrVehicleType">Fahrzeugtyp *</label>
+                  <select
+                    id="qrVehicleType"
+                    name="qr_vehicle_type"
+                    [(ngModel)]="qrDriverData.vehicle_type"
+                    required
+                    class="form-select"
+                  >
+                    <option value="car">🚗 Auto</option>
+                    <option value="motorcycle">🏍️ Motorrad</option>
+                    <option value="bicycle">🚲 Fahrrad</option>
+                    <option value="scooter">🛵 Roller</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="qrLicensePlate">Kennzeichen (optional)</label>
+                  <input
+                    type="text"
+                    id="qrLicensePlate"
+                    name="qr_license_plate"
+                    [(ngModel)]="qrDriverData.license_plate"
+                    class="form-input"
+                    placeholder="z.B. M-AB 1234"
+                  />
+                </div>
+
+                <div class="qr-features">
+                  <h4><i class="fa-solid fa-check-circle"></i> Vorteile:</h4>
+                  <ul>
+                    <li>✓ Keine E-Mail erforderlich</li>
+                    <li>✓ Fahrer setzt eigenes Passwort</li>
+                    <li>✓ QR-Code per WhatsApp teilbar</li>
+                    <li>✓ Aktivierung in 2 Minuten</li>
+                  </ul>
+                </div>
+
+                <div class="modal-actions">
+                  <button type="button" class="btn btn-ghost" (click)="closeAddDriverModal()">
+                    Abbrechen
+                  </button>
+                  <button
+                    type="submit"
+                    class="btn btn-success"
+                    [disabled]="!qrForm.form.valid || isCreatingPendingDriver"
+                    style="background: #4caf50 !important; color: white !important; border: none !important;"
+                  >
+                    <span *ngIf="!isCreatingPendingDriver" style="color: white !important; display: flex; align-items: center; gap: 8px;">
+                      <i class="fa-solid fa-qrcode" style="color: white !important;"></i>
+                      <span style="color: white !important;">QR-Code erstellen</span>
+                    </span>
+                    <span *ngIf="isCreatingPendingDriver" style="color: white !important; display: flex; align-items: center; gap: 8px;">
+                      <i class="fa-solid fa-spinner fa-spin" style="color: white !important;"></i>
+                      <span style="color: white !important;">Erstelle...</span>
+                    </span>
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Schnellerfassung Tab -->
+            <div *ngIf="addDriverTab === 'quick'">
+              <div class="tab-info">
+                <i class="fa-solid fa-info-circle"></i>
+                <p>Fahrer wird sofort mit E-Mail und Passwort erstellt</p>
+              </div>
+
+              <form (ngSubmit)="submitAddDriver()" #driverForm="ngForm">
               <div class="form-group">
                 <label for="driverName">Name *</label>
                 <input
@@ -459,6 +573,78 @@ export interface Driver {
                 </button>
               </div>
             </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- QR Code Display Modal -->
+      <div class="modal" *ngIf="showQRCodeModal" (click)="closeQRCodeModal()">
+        <div class="modal-content qr-display-modal" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3><i class="fa-solid fa-qrcode"></i> QR-Code generiert</h3>
+            <button class="close-btn" (click)="closeQRCodeModal()">
+              <i class="fa-solid fa-times"></i>
+            </button>
+          </div>
+
+          <div class="modal-body" *ngIf="pendingDriverData">
+            <div class="qr-success-banner">
+              <i class="fa-solid fa-check-circle"></i>
+              <p>Fahrer wurde erfolgreich erstellt!</p>
+            </div>
+
+            <div class="qr-code-display" *ngIf="qrCodeImageUrl">
+              <img [src]="qrCodeImageUrl" alt="QR Code" />
+            </div>
+
+            <div class="driver-info-card">
+              <div class="info-row">
+                <label><i class="fa-solid fa-user"></i> Name:</label>
+                <span>{{ pendingDriverData.driver.name }}</span>
+              </div>
+              <div class="info-row">
+                <label><i class="fa-solid fa-id-badge"></i> Benutzername:</label>
+                <span class="username-display">{{ pendingDriverData.driver.username }}</span>
+              </div>
+              <div class="info-row">
+                <label><i class="fa-solid fa-car"></i> Fahrzeugtyp:</label>
+                <span>{{ getVehicleTypeLabel(pendingDriverData.driver.vehicle_type) }}</span>
+              </div>
+              <div class="info-row">
+                <label><i class="fa-solid fa-clock"></i> Gültig bis:</label>
+                <span>{{ pendingDriverData.expires_at | date:'dd.MM.yyyy HH:mm' }}</span>
+              </div>
+            </div>
+
+            <div class="qr-actions-grid">
+              <button class="btn btn-primary" (click)="copyActivationLink()">
+                <i class="fa-solid fa-copy"></i>
+                <span>Link kopieren</span>
+              </button>
+              <button class="btn btn-success" (click)="shareViaWhatsApp()">
+                <i class="fa-brands fa-whatsapp"></i>
+                <span>WhatsApp</span>
+              </button>
+              <button class="btn btn-secondary" (click)="downloadQRCode()">
+                <i class="fa-solid fa-download"></i>
+                <span>Herunterladen</span>
+              </button>
+              <button class="btn btn-info" (click)="printQRCode()">
+                <i class="fa-solid fa-print"></i>
+                <span>Drucken</span>
+              </button>
+            </div>
+
+            <div class="qr-instructions">
+              <h4><i class="fa-solid fa-info-circle"></i> Nächste Schritte:</h4>
+              <ol>
+                <li>Teilen Sie den QR-Code mit dem Fahrer</li>
+                <li>Fahrer scannt QR-Code mit Smartphone</li>
+                <li>Fahrer setzt eigenes Passwort</li>
+                <li>Fahrer kann sich direkt einloggen</li>
+              </ol>
+            </div>
           </div>
         </div>
       </div>
@@ -482,14 +668,30 @@ export interface Driver {
                 <div class="driver-basic-info">
                   <h4>{{ selectedDriverForDetails.name || 'Fahrer ' + selectedDriverForDetails.id }}</h4>
                   <div class="driver-meta">
-                    <span class="driver-email">{{ selectedDriverForDetails.email }}</span>
+                    <span class="driver-email" *ngIf="selectedDriverForDetails.email">{{ selectedDriverForDetails.email }}</span>
+                    <span class="driver-username" *ngIf="selectedDriverForDetails.username">{{ selectedDriverForDetails.username }}</span>
                     <span class="driver-phone" *ngIf="selectedDriverForDetails.phone">{{ selectedDriverForDetails.phone }}</span>
                   </div>
                 </div>
                 <div class="driver-status-badge">
-                  <span class="status-dot" [class]="selectedDriverForDetails.current_status"></span>
-                  <span>{{ getStatusLabel(selectedDriverForDetails.current_status) }}</span>
+                  <span class="status-dot" [class]="selectedDriverForDetails.current_status || selectedDriverForDetails.status"></span>
+                  <span>{{ getStatusLabel(selectedDriverForDetails.current_status || selectedDriverForDetails.status) }}</span>
                 </div>
+              </div>
+
+              <!-- Pending Activation Warning & Actions -->
+              <div class="pending-activation-alert" *ngIf="selectedDriverForDetails.status === 'pending_activation' || selectedDriverForDetails.current_status === 'pending_activation'">
+                <div class="alert-content">
+                  <i class="fa-solid fa-hourglass-half"></i>
+                  <div>
+                    <strong>Fahrer wartet auf Aktivierung</strong>
+                    <p>Der Fahrer muss den QR-Code scannen und sein Passwort setzen, bevor er Aufträge annehmen kann.</p>
+                  </div>
+                </div>
+                <button class="btn btn-warning" (click)="showActivationQRCode(selectedDriverForDetails)">
+                  <i class="fa-solid fa-qrcode"></i>
+                  QR-Code erneut anzeigen
+                </button>
               </div>
 
               <div class="driver-stats-grid">
@@ -911,6 +1113,11 @@ export interface Driver {
       opacity: 0.7;
     }
 
+    .driver-card.pending_activation {
+      border-left: 4px solid #ffa726;
+      background: #fff8e1;
+    }
+
     .driver-header {
       display: flex;
       justify-content: space-between;
@@ -996,6 +1203,36 @@ export interface Driver {
       font-size: var(--text-sm);
     }
 
+    /* Pending Activation Badge */
+    .pending-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-full);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, #ffa726, #fb8c00);
+      color: white;
+      border: 1px solid rgba(255, 167, 38, 0.5);
+      box-shadow: 0 2px 8px rgba(255, 167, 38, 0.3);
+      animation: pendingPulse 2s ease-in-out infinite;
+    }
+
+    .pending-badge i {
+      font-size: var(--text-sm);
+    }
+
+    @keyframes pendingPulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.7;
+      }
+    }
+
     @keyframes deliveryPulse {
       0%, 100% {
         transform: scale(1);
@@ -1023,6 +1260,8 @@ export interface Driver {
     .status-dot.available { background: #32cd32; } /* Hellgrün für verfügbar */
     .status-dot.busy { background: #ff8c00; } /* Orange für beschäftigt/unterwegs */
     .status-dot.offline { background: #6c757d; } /* Grau für offline */
+    .status-dot.pending_activation { background: #ffa726; } /* Orange für wartend */
+    .status-dot.on_break { background: #ffeb3b; } /* Gelb für Pause */
 
     .status-text {
       font-size: var(--text-sm);
@@ -1283,6 +1522,35 @@ export interface Driver {
       box-shadow: 0 4px 12px color-mix(in oklab, var(--color-primary) 25%, transparent);
     }
 
+    .btn-success {
+      background: #4caf50 !important;
+      color: white !important;
+      font-weight: 600 !important;
+    }
+
+    .btn-success span,
+    .btn-success i {
+      color: white !important;
+    }
+
+    .btn-success:hover:not(:disabled) {
+      background: #45a049 !important;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+    }
+
+    .btn-warning {
+      background: #ff9800;
+      color: white !important;
+      font-weight: 600;
+    }
+
+    .btn-warning:hover:not(:disabled) {
+      background: #f57c00;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+    }
+
     .btn:focus {
       outline: 2px solid var(--color-primary-300);
       outline-offset: 2px;
@@ -1294,16 +1562,6 @@ export interface Driver {
         outline: 3px solid var(--color-primary-300);
         outline-offset: 1px;
       }
-    }
-
-    .btn-success {
-      background: var(--color-success);
-      color: white;
-    }
-
-    .btn-warning {
-      background: var(--color-warning);
-      color: white;
     }
 
     .btn-ghost {
@@ -1510,6 +1768,51 @@ export interface Driver {
       background: var(--color-surface);
       border-radius: var(--radius-full);
       font-size: var(--text-sm);
+    }
+
+    /* Pending Activation Alert */
+    .pending-activation-alert {
+      background: #fff3e0;
+      border: 2px solid #ffa726;
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+
+    .pending-activation-alert .alert-content {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+    }
+
+    .pending-activation-alert .alert-content i {
+      font-size: var(--text-2xl);
+      color: #f57c00;
+      margin-top: 2px;
+    }
+
+    .pending-activation-alert strong {
+      display: block;
+      color: #e65100;
+      margin-bottom: var(--space-1);
+      font-size: var(--text-base);
+    }
+
+    .pending-activation-alert p {
+      margin: 0;
+      color: #ef6c00;
+      font-size: var(--text-sm);
+      line-height: 1.5;
+    }
+
+    .driver-username {
+      font-family: 'Courier New', monospace;
+      background: #e3f2fd;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      color: #1976d2;
     }
 
     .driver-stats-grid {
@@ -1956,6 +2259,298 @@ export interface Driver {
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
+
+/* Tab Styles for Add Driver Modal */
+.tabs-container {
+  display: flex;
+  gap: 0;
+  padding: 0 var(--space-6);
+  border-bottom: 2px solid var(--color-border);
+  margin-top: -1px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: var(--space-4) var(--space-6);
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-muted);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.tab-btn:hover {
+  color: var(--color-primary);
+  background: var(--color-surface-2);
+}
+
+.tab-btn.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  background: var(--color-surface);
+}
+
+.tab-btn i {
+  font-size: var(--text-lg);
+}
+
+.tab-info {
+  background: #e3f2fd;
+  border: 1px solid #90caf9;
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  margin-bottom: var(--space-4);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: #1565c0;
+  font-size: var(--text-sm);
+}
+
+.tab-info.qr-info {
+  background: #e8f5e9;
+  border-color: #81c784;
+  color: #2e7d32;
+}
+
+.tab-info i {
+  margin-top: 2px;
+  font-size: var(--text-base);
+}
+
+.tab-info p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.form-hint {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+
+.qr-features {
+  background: #f1f8e9;
+  border: 1px solid #aed581;
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.qr-features h4 {
+  margin: 0 0 var(--space-3) 0;
+  color: #33691e;
+  font-size: var(--text-base);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.qr-features ul {
+  margin: 0;
+  padding-left: var(--space-5);
+  color: #558b2f;
+  font-size: var(--text-sm);
+}
+
+.qr-features li {
+  margin-bottom: var(--space-2);
+  line-height: 1.6;
+}
+
+/* QR Code Display Modal Styles */
+.qr-display-modal {
+  max-width: 550px;
+}
+
+.qr-success-banner {
+  text-align: center;
+  background: linear-gradient(135deg, #4caf50, #81c784);
+  color: white;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-6);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.qr-success-banner i {
+  font-size: 3rem;
+  margin-bottom: var(--space-2);
+  display: block;
+}
+
+.qr-success-banner p {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.qr-code-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--space-6);
+  background: var(--color-surface-2);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-6);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.qr-code-display img {
+  max-width: 100%;
+  height: auto;
+  border: 4px solid white;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.driver-info-card {
+  background: var(--color-surface-2);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.driver-info-card .info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.driver-info-card .info-row:last-child {
+  border-bottom: none;
+}
+
+.driver-info-card label {
+  font-weight: 600;
+  color: var(--color-heading);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.driver-info-card label i {
+  color: var(--color-primary);
+  width: 20px;
+}
+
+.driver-info-card span {
+  color: var(--color-text);
+  text-align: right;
+}
+
+.username-display {
+  font-family: 'Courier New', monospace;
+  background: white;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  color: var(--color-primary) !important;
+  border: 2px solid var(--color-primary-200);
+}
+
+.qr-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.qr-actions-grid .btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  font-size: var(--text-sm);
+  border-radius: var(--radius-lg);
+  transition: all 0.2s ease;
+}
+
+.qr-actions-grid .btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.qr-actions-grid .btn i {
+  font-size: var(--text-2xl);
+}
+
+.btn-secondary {
+  background: var(--color-muted);
+  color: white;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #616161;
+}
+
+.btn-info {
+  background: #00bcd4;
+  color: white;
+}
+
+.btn-info:hover:not(:disabled) {
+  background: #00acc1;
+}
+
+.qr-instructions {
+  background: #fff3e0;
+  border: 1px solid #ffb74d;
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.qr-instructions h4 {
+  margin: 0 0 var(--space-3) 0;
+  color: #e65100;
+  font-size: var(--text-base);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.qr-instructions ol {
+  margin: 0;
+  padding-left: var(--space-5);
+  color: #ef6c00;
+}
+
+.qr-instructions li {
+  margin-bottom: var(--space-2);
+  line-height: 1.6;
+  font-size: var(--text-sm);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .tabs-container {
+    padding: 0 var(--space-4);
+  }
+
+  .tab-btn {
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--text-sm);
+  }
+
+  .qr-actions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .qr-display-modal {
+    max-width: 95%;
+  }
+}
   `]
 })
 export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
@@ -1996,7 +2591,7 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
 
   // Add driver modal state
   showAddDriverModal = false;
-  addDriverTab: 'quick' | 'qrcode' = 'quick'; // Tab switcher
+  addDriverTab: 'quick' | 'qrcode' = 'qrcode'; // QR Code als Standard
   newDriver = {
     name: '',
     email: '',
@@ -2008,57 +2603,38 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
     license_plate: ''
   };
 
-  // QR Code registration state
+  // QR Code registration
+  qrDriverData = {
+    name: '',
+    vehicle_type: 'car' as 'car' | 'motorcycle' | 'bicycle' | 'scooter',
+    license_plate: ''
+  };
   showQRCodeModal = false;
-  qrCodeData: string = '';
-  qrCodeImageUrl: string = '';
-  activationUrl: string = '';
+  qrCodeImageUrl = '';
+  activationUrl = '';
   pendingDriverData: any = null;
-  qrCodeCache: Map<string, string> = new Map();
-
-  // Password reset modal
-  showPasswordResetModal = false;
-  selectedDriverForReset: Driver | null = null;
-  resetPasswordData: {
-    tempPassword: string;
-    resetUrl: string;
-    qrCodeUrl: string;
-  } | null = null;
 
   // Loading states
   isLoading = false;
   isAddingDriver = false;
+  isCreatingPendingDriver = false;
   isBulkAssigning = false;
-  isGeneratingQR = false;
 
   ngOnInit() {
     this.loadDrivers();
     this.loadPendingOrders();
     this.loadDriverStats();
 
-    // Auto-refresh every 2 minutes (120 seconds) - reduced polling
-    // Only poll if page is visible
-    const refreshSub = interval(120000).subscribe(() => {
-      if (!document.hidden) {
-        this.refreshData();
-      }
+    // Auto-refresh every 1 minute (60 seconds) - balanced polling
+    const refreshSub = interval(60000).subscribe(() => {
+      this.refreshData();
     });
     this.subscriptions.push(refreshSub);
-
-    // Listen for page visibility to stop polling when hidden
-    document.addEventListener('visibilitychange', this.handleVisibilityChange);
   }
 
-  private handleVisibilityChange = () => {
-    if (!document.hidden) {
-      // Page became visible, refresh data once
-      this.refreshData();
-    }
-  }
 
   ngOnDestroy() {
     this.subscriptions.forEach(sub => sub.unsubscribe());
-    document.removeEventListener('visibilitychange', this.handleVisibilityChange);
   }
 
   async loadDrivers() {
@@ -2086,25 +2662,57 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
   async loadPendingOrders() {
     try {
       // Use the same approach as the orders component: get managed restaurants first
-      // IMPORTANT: Use firstValueFrom to avoid Observable leaks
-      const restaurants = await this.restaurantManagerService.getManagedRestaurants().toPromise();
-      
-      if (restaurants && restaurants.length > 0) {
-        // Get orders for the first restaurant
-        const restaurantId = restaurants[0].restaurant_id;
-        this.managedRestaurantId = String(restaurantId);
+      this.restaurantManagerService.getManagedRestaurants().subscribe({
+        next: async (restaurants: any[]) => {
+          if (restaurants?.length > 0) {
+            // Get orders for the first restaurant (same as orders component)
+            const restaurantId = restaurants[0].restaurant_id;
+            this.managedRestaurantId = String(restaurantId);
 
-        // Load orders with different statuses to find pending ones
-        const allOrders = await this.ordersService.getRestaurantOrders(restaurantId).toPromise();
+            // Load orders with different statuses to find pending ones
+            const allOrders = await this.ordersService.getRestaurantOrders(restaurantId).toPromise();
 
-        // Filter for orders that need driver assignment
-        this.pendingOrders = allOrders?.filter(order =>
-          (order.status === 'pending' || order.status === 'ready' || order.status === 'open' || order.status === 'in_progress') &&
-          !order.driver_id
-        ) || [];
-      } else {
-        this.pendingOrders = [];
-      }
+            console.log('All orders for restaurant:', {
+              restaurantId,
+              totalOrders: allOrders?.length || 0,
+              ordersByStatus: allOrders?.reduce((acc, order) => {
+                acc[order.status] = (acc[order.status] || 0) + 1;
+                return acc;
+              }, {} as Record<string, number>),
+              sampleOrders: allOrders?.slice(0, 5).map(o => ({
+                id: o.id,
+                status: o.status,
+                created_at: o.created_at,
+                customer_name: o.customer_name
+              }))
+            });
+
+            // Filter for orders that need driver assignment (pending, ready, open, in_progress without driver)
+            const pendingOrders = allOrders?.filter(order =>
+              (order.status === 'pending' || order.status === 'ready' || order.status === 'open' || order.status === 'in_progress') &&
+              !order.driver_id
+            ) || [];
+
+            console.log('Filtered pending orders:', {
+              count: pendingOrders.length,
+              orders: pendingOrders.map(o => ({
+                id: o.id,
+                status: o.status,
+                hasDriver: !!o.driver_id
+              }))
+            });
+
+            this.pendingOrders = pendingOrders;
+          } else {
+            console.log('No managed restaurants found');
+            this.pendingOrders = [];
+          }
+        },
+        error: (error) => {
+          console.error('Error loading managed restaurants:', error);
+          this.pendingOrders = [];
+        }
+      });
     } catch (error) {
       console.error('Error loading pending orders:', error);
       this.pendingOrders = [];
@@ -2117,7 +2725,12 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
         `${environment.apiUrl}/drivers/stats`
       ).toPromise();
 
+      console.log('Driver stats response:', response);
+      console.log('Response stats property:', (response as any)?.stats);
       this.driverStats = (response as any)?.stats;
+      console.log('Driver stats set to:', this.driverStats);
+      console.log('Average rating value:', this.driverStats?.average_rating);
+      console.log('Average rating type:', typeof this.driverStats?.average_rating);
     } catch (error: any) {
       console.error('Error loading driver stats:', error);
       if (error.status === 500) {
@@ -2152,6 +2765,183 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
       vehicle_info: '',
       license_plate: ''
     };
+    this.qrDriverData = {
+      name: '',
+      vehicle_type: 'car',
+      license_plate: ''
+    };
+  }
+
+  // QR Code Driver Registration Methods
+  createPendingDriver() {
+    if (!this.qrDriverData.name || !this.qrDriverData.vehicle_type) {
+      this.toastService.error('Fehler', 'Name und Fahrzeugtyp sind erforderlich');
+      return;
+    }
+
+    this.isCreatingPendingDriver = true;
+
+    this.http.post(`${environment.apiUrl}/drivers/create-pending`, this.qrDriverData)
+      .subscribe({
+        next: (response: any) => {
+          this.isCreatingPendingDriver = false;
+          this.toastService.success('Erfolg', 'Fahrer erstellt! QR-Code wird angezeigt.');
+          this.closeAddDriverModal();
+          this.openQRCodeModal(response);
+          this.refreshData();
+        },
+        error: (error) => {
+          this.isCreatingPendingDriver = false;
+          console.error('Create pending driver error:', error);
+          this.toastService.error('Fehler', error.error?.error || 'Fahrer konnte nicht erstellt werden');
+        }
+      });
+  }
+
+  openQRCodeModal(data: any) {
+    this.pendingDriverData = data;
+    this.activationUrl = data.activation_url;
+    this.showQRCodeModal = true;
+    
+    // Generate QR Code image
+    setTimeout(() => {
+      this.generateQRCodeImage();
+    }, 100);
+  }
+
+  closeQRCodeModal() {
+    this.showQRCodeModal = false;
+    this.pendingDriverData = null;
+    this.qrCodeImageUrl = '';
+    this.activationUrl = '';
+  }
+
+  async generateQRCodeImage() {
+    try {
+      const QRCode = await import('qrcode');
+      this.qrCodeImageUrl = await QRCode.toDataURL(this.activationUrl, {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+    } catch (error) {
+      console.error('QR Code generation error:', error);
+      this.toastService.error('Fehler', 'QR-Code konnte nicht generiert werden');
+    }
+  }
+
+  copyActivationLink() {
+    if (this.activationUrl) {
+      navigator.clipboard.writeText(this.activationUrl).then(() => {
+        this.toastService.success('Erfolg', 'Link kopiert!');
+      }).catch(() => {
+        this.toastService.error('Fehler', 'Link konnte nicht kopiert werden');
+      });
+    }
+  }
+
+  shareViaWhatsApp() {
+    if (this.pendingDriverData) {
+      const driver = this.pendingDriverData.driver;
+      const message = encodeURIComponent(
+        `Hallo ${driver.name}!\n\n` +
+        `Dein Fahrer-Account wurde erstellt.\n` +
+        `Benutzername: ${driver.username}\n\n` +
+        `Scanne diesen QR-Code oder nutze den Link zur Aktivierung:\n` +
+        `${this.activationUrl}\n\n` +
+        `Gültig bis: ${new Date(this.pendingDriverData.expires_at).toLocaleString('de-DE')}`
+      );
+      window.open(`https://wa.me/?text=${message}`, '_blank');
+    }
+  }
+
+  downloadQRCode() {
+    if (this.qrCodeImageUrl) {
+      const link = document.createElement('a');
+      link.download = `qr-code-${this.pendingDriverData?.driver?.username || 'driver'}.png`;
+      link.href = this.qrCodeImageUrl;
+      link.click();
+    }
+  }
+
+  printQRCode() {
+    if (this.qrCodeImageUrl && this.pendingDriverData) {
+      const driver = this.pendingDriverData.driver;
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>QR-Code - ${driver.name}</title>
+              <style>
+                body { 
+                  font-family: Arial, sans-serif; 
+                  text-align: center; 
+                  padding: 40px; 
+                }
+                h1 { margin-bottom: 10px; font-size: 24px; }
+                .info { margin: 30px 0; line-height: 2; font-size: 16px; }
+                img { margin: 30px 0; border: 2px solid #000; }
+                .footer { margin-top: 40px; font-size: 14px; color: #666; }
+              </style>
+            </head>
+            <body>
+              <h1>🚗 Fahrer-Aktivierung</h1>
+              <div class="info">
+                <div><strong>Name:</strong> ${driver.name}</div>
+                <div><strong>Benutzername:</strong> ${driver.username}</div>
+                <div><strong>Fahrzeugtyp:</strong> ${this.getVehicleTypeLabel(driver.vehicle_type)}</div>
+                <div><strong>Gültig bis:</strong> ${new Date(this.pendingDriverData.expires_at).toLocaleString('de-DE')}</div>
+              </div>
+              <img src="${this.qrCodeImageUrl}" width="300" height="300" />
+              <p style="font-size: 18px; margin: 20px 0;"><strong>Scannen Sie den QR-Code zur Aktivierung</strong></p>
+              <div class="footer">
+                <p>Bei Problemen kontaktieren Sie Ihren Manager</p>
+              </div>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+        setTimeout(() => {
+          printWindow.print();
+        }, 250);
+      }
+    }
+  }
+
+  // Show activation QR code for pending drivers
+  async showActivationQRCode(driver: Driver) {
+    try {
+      // Get the activation token for this driver
+      const response = await this.http.get<any>(
+        `${environment.apiUrl}/drivers/${driver.id}/activation-token`
+      ).toPromise();
+
+      if (response && response.activation_url) {
+        // Prepare data in the same format as createPendingDriver response
+        const qrData = {
+          driver: {
+            id: driver.id,
+            name: driver.name,
+            username: driver.username,
+            vehicle_type: driver.vehicle_type,
+            status: driver.status
+          },
+          activation_url: response.activation_url,
+          qr_code_data: response.activation_url,
+          expires_at: response.expires_at
+        };
+
+        this.closeDriverDetailsModal();
+        this.openQRCodeModal(qrData);
+      }
+    } catch (error: any) {
+      console.error('Error getting activation token:', error);
+      this.toastService.error('Fehler', error.error?.error || 'Aktivierungs-Token konnte nicht abgerufen werden');
+    }
   }
 
   passwordsMatch(): boolean {
@@ -2162,61 +2952,6 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
   }
 
   async submitAddDriver() {
-    if (this.isAddingDriver) return;
-
-    // Route based on selected tab
-    if (this.addDriverTab === 'qrcode') {
-      await this.submitQRCodeDriver();
-    } else {
-      await this.submitQuickDriver();
-    }
-  }
-
-  // NEW: QR Code registration flow
-  async submitQRCodeDriver() {
-    if (this.isGeneratingQR) return;
-
-    try {
-      this.isGeneratingQR = true;
-
-      if (!this.newDriver.name || !this.newDriver.vehicle_type) {
-        this.toastService.error('Fehler', 'Name und Fahrzeugtyp sind erforderlich');
-        return;
-      }
-
-      // Create pending driver with QR code
-      const response = await this.http.post<any>(
-        `${environment.apiUrl}/drivers/create-pending`,
-        {
-          name: this.newDriver.name,
-          vehicle_type: this.newDriver.vehicle_type,
-          license_plate: this.newDriver.license_plate || null
-        }
-      ).toPromise();
-
-      this.pendingDriverData = response.driver;
-      this.activationUrl = response.activation_url;
-      this.qrCodeData = response.qr_code_data;
-
-      // Generate QR Code image
-      this.qrCodeImageUrl = await this.generateQRCodeImage(this.qrCodeData);
-
-      // Close add modal, open QR modal
-      this.showAddDriverModal = false;
-      this.showQRCodeModal = true;
-
-      this.toastService.success('Erfolg', 'Aktivierungslink erstellt');
-
-    } catch (error: any) {
-      console.error('Error creating pending driver:', error);
-      this.toastService.error('Fehler', error.error?.error || 'Fahrer konnte nicht erstellt werden');
-    } finally {
-      this.isGeneratingQR = false;
-    }
-  }
-
-  // OLD: Quick registration flow (original method)
-  async submitQuickDriver() {
     if (this.isAddingDriver) return;
 
     try {
@@ -2310,7 +3045,9 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
       available: 'Verfügbar',
       busy: 'Beschäftigt',
       offline: 'Offline',
-      on_delivery: 'Unterwegs'
+      on_delivery: 'Unterwegs',
+      pending_activation: '⏳ Wartend auf Aktivierung',
+      on_break: 'Pause'
     };
     return labels[status] || status;
   }
@@ -3103,177 +3840,5 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
       }
     });
     this.driverMaps.clear();
-  }
-
-  // ===================================================================
-  // QR Code Generation & Modal Management
-  // ===================================================================
-
-  async generateQRCodeImage(data: string): Promise<string> {
-    // Check cache first
-    if (this.qrCodeCache.has(data)) {
-      return this.qrCodeCache.get(data)!;
-    }
-
-    try {
-      // Create canvas and generate QR code
-      const canvas = document.createElement('canvas');
-      await QRCode.toCanvas(canvas, data, {
-        width: 300,
-        margin: 2,
-        color: {
-          dark: '#000000',
-          light: '#FFFFFF'
-        }
-      });
-
-      const qrCodeUrl = canvas.toDataURL('image/png');
-      this.qrCodeCache.set(data, qrCodeUrl);
-      return qrCodeUrl;
-    } catch (error) {
-      console.error('QR Code generation failed:', error);
-      throw error;
-    }
-  }
-
-  closeQRCodeModal() {
-    this.showQRCodeModal = false;
-    this.qrCodeData = '';
-    this.qrCodeImageUrl = '';
-    this.activationUrl = '';
-    this.pendingDriverData = null;
-    this.resetNewDriverForm();
-    this.refreshData();
-  }
-
-  copyActivationLink() {
-    navigator.clipboard.writeText(this.activationUrl).then(() => {
-      this.toastService.success('Erfolg', 'Link kopiert!');
-    }).catch((error) => {
-      console.error('Copy failed:', error);
-      this.toastService.error('Fehler', 'Kopieren fehlgeschlagen');
-    });
-  }
-
-  shareViaWhatsApp() {
-    const message = encodeURIComponent(
-      `Hallo! Hier ist dein Aktivierungslink für die Fahrer-App:\n\n${this.activationUrl}\n\nBitte registriere dich innerhalb von 7 Tagen.`
-    );
-    const whatsappUrl = `https://wa.me/?text=${message}`;
-    window.open(whatsappUrl, '_blank');
-  }
-
-  printQRCode() {
-    if (!this.qrCodeImageUrl || !this.pendingDriverData) return;
-
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Fahrer Aktivierung - ${this.pendingDriverData.name}</title>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              text-align: center;
-              padding: 40px;
-            }
-            h1 { color: #333; margin-bottom: 10px; }
-            h2 { color: #666; margin-bottom: 30px; }
-            .qr-container {
-              margin: 30px auto;
-              padding: 20px;
-              border: 2px solid #ccc;
-              display: inline-block;
-              border-radius: 10px;
-            }
-            img { width: 300px; height: 300px; }
-            .info { margin-top: 30px; font-size: 14px; color: #666; }
-            .note { margin-top: 20px; font-size: 12px; color: #999; }
-            @media print {
-              button { display: none; }
-            }
-          </style>
-        </head>
-        <body>
-          <h1>Fahrer-Aktivierung</h1>
-          <h2>${this.pendingDriverData.name}</h2>
-          <div class="qr-container">
-            <img src="${this.qrCodeImageUrl}" alt="QR Code">
-          </div>
-          <div class="info">
-            <p><strong>Benutzername:</strong> ${this.pendingDriverData.username}</p>
-            <p><strong>Fahrzeugtyp:</strong> ${this.getVehicleTypeLabel(this.pendingDriverData.vehicle_type)}</p>
-          </div>
-          <div class="note">
-            <p>Scannen Sie den QR-Code um die Registrierung abzuschließen.</p>
-            <p>Link gültig für 7 Tage.</p>
-          </div>
-        </body>
-        </html>
-      `);
-      printWindow.document.close();
-      setTimeout(() => {
-        printWindow.print();
-      }, 250);
-    }
-  }
-
-  // Password Reset Methods
-  async openPasswordResetModal(driver: Driver) {
-    this.selectedDriverForReset = driver;
-    this.showPasswordResetModal = true;
-    this.resetPasswordData = null;
-  }
-
-  async resetDriverPassword() {
-    if (!this.selectedDriverForReset) return;
-
-    try {
-      const response = await this.http.post<any>(
-        `${environment.apiUrl}/drivers/${this.selectedDriverForReset.id}/reset-password`,
-        {}
-      ).toPromise();
-
-      this.resetPasswordData = {
-        tempPassword: response.temp_password,
-        resetUrl: response.reset_url,
-        qrCodeUrl: await this.generateQRCodeImage(response.qr_code_data)
-      };
-
-      this.toastService.success('Erfolg', 'Passwort wurde zurückgesetzt');
-    } catch (error: any) {
-      console.error('Error resetting password:', error);
-      this.toastService.error('Fehler', error.error?.error || 'Passwort-Reset fehlgeschlagen');
-    }
-  }
-
-  closePasswordResetModal() {
-    this.showPasswordResetModal = false;
-    this.selectedDriverForReset = null;
-    this.resetPasswordData = null;
-  }
-
-  copyTempPassword() {
-    if (!this.resetPasswordData) return;
-    navigator.clipboard.writeText(this.resetPasswordData.tempPassword).then(() => {
-      this.toastService.success('Erfolg', 'Temporäres Passwort kopiert!');
-    });
-  }
-
-  sharePasswordViaWhatsApp() {
-    if (!this.resetPasswordData || !this.selectedDriverForReset) return;
-    
-    const message = encodeURIComponent(
-      `Hallo ${this.selectedDriverForReset.name}!\n\n` +
-      `Dein Passwort wurde zurückgesetzt:\n\n` +
-      `Login: ${this.selectedDriverForReset.username || this.selectedDriverForReset.name}\n` +
-      `Temporäres Passwort: ${this.resetPasswordData.tempPassword}\n\n` +
-      `Bitte ändere dein Passwort beim nächsten Login.\n\n` +
-      `Fahrer-App: ${window.location.origin}/driver-login`
-    );
-    const whatsappUrl = `https://wa.me/?text=${message}`;
-    window.open(whatsappUrl, '_blank');
   }
 }

@@ -84,6 +84,7 @@ export const routes: Routes = [
   { path: 'order-confirmation/:id', loadComponent: () => import('./features/order-confirmation/order-confirmation.component').then(m => m.OrderConfirmationComponent) },
   { path: 'table-order/:restaurantId/:tableNumber', loadComponent: () => import('./features/table-order/table-order.component').then(m => m.TableOrderComponent) },
   { path: 'review', loadComponent: () => import('./features/reviews/review-flow.component').then(m => m.ReviewFlowComponent) },
+  { path: 'driver-activate/:token', loadComponent: () => import('./features/driver/driver-activation.component').then(m => m.DriverActivationComponent) },
   { path: 'driver-dashboard', loadComponent: () => import('./features/driver/driver-dashboard.component').then(m => m.DriverDashboardComponent), canActivate: [authGuard, roleGuard(['driver'])] },
   {
     path: 'admin',
