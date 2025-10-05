@@ -105,6 +105,27 @@ interface OrderIssueVm {
                     [disabled]="updatingIssueId === issue.id">
                   </textarea>
                 </div>
+
+                <!-- Resolution Actions -->
+                <div class="resolution-actions" *ngIf="issue.status !== 'resolved'">
+                  <button 
+                    class="btn-refund" 
+                    (click)="processRefund(issue)"
+                    [disabled]="updatingIssueId === issue.id"
+                    *ngIf="canRefund(issue)"
+                  >
+                    <i class="fa-solid fa-money-bill-wave"></i>
+                    Geld zurück
+                  </button>
+                  <button 
+                    class="btn-resolution" 
+                    (click)="openResolutionModal(issue)"
+                    [disabled]="updatingIssueId === issue.id"
+                  >
+                    <i class="fa-solid fa-gift"></i>
+                    Andere Lösung
+                  </button>
+                </div>
               </div>
 
               <div class="loading-indicator" *ngIf="updatingIssueId === issue.id">
@@ -408,6 +429,66 @@ interface OrderIssueVm {
       grid-column: 2;
     }
 
+    .resolution-actions {
+      grid-column: 1 / -1;
+      margin-top: var(--space-4);
+      padding-top: var(--space-4);
+      border-top: 1px solid var(--color-border);
+    }
+
+    .btn-refund {
+      background: var(--color-primary-500);
+      color: white;
+      border: none;
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin-right: var(--space-2);
+    }
+
+    .btn-refund:hover:not(:disabled) {
+      background: var(--color-primary-600);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px color-mix(in oklab, var(--color-primary-500) 25%, transparent);
+    }
+
+    .btn-refund:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-resolution {
+      background: var(--color-success-500);
+      color: white;
+      border: none;
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .btn-resolution:hover:not(:disabled) {
+      background: var(--color-success-600);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px color-mix(in oklab, var(--color-success-500) 25%, transparent);
+    }
+
+    .btn-resolution:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
     .notes-textarea {
       width: 100%;
       padding: var(--space-3);
@@ -578,6 +659,46 @@ export class RestaurantManagerIssuesComponent implements OnInit {
         this.updatingIssueId = null;
       }
     });
+  }
+
+  canRefund(issue: OrderIssueVm): boolean {
+    // In real implementation, check if order was paid online via Stripe
+    // For now, assume all orders can be refunded if they have a payment
+    return true; // This would check payment_status === 'paid' and payment_method === 'stripe'
+  }
+
+  processRefund(issue: OrderIssueVm) {
+    const confirmMessage = `Möchten Sie wirklich eine Rückerstattung für diese Reklamation verarbeiten?\n\nBestellung: #${issue.order_id}\nGrund: ${this.getReasonLabel(issue.reason)}`;
+    
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    this.updatingIssueId = issue.id;
+
+    this.http.post(`${environment.apiUrl}/order-issues/${issue.id}/refund`, {
+      refund_reason: `Reklamation: ${this.getReasonLabel(issue.reason)}`
+    }).subscribe({
+      next: (response: any) => {
+        this.toastService.success('Rückerstattung erfolgreich', `€${response.refund_amount.toFixed(2)} wurde zurückerstattet.`);
+        
+        // Reload issues to show updated status
+        this.loadIssues();
+      },
+      error: (error: any) => {
+        console.error('Error processing refund:', error);
+        this.toastService.error('Rückerstattung fehlgeschlagen', error.error?.error || 'Fehler beim Verarbeiten der Rückerstattung');
+        this.updatingIssueId = null;
+      }
+    });
+  }
+
+  openResolutionModal(issue: OrderIssueVm) {
+    // Open resolution modal - in real implementation, this would open a modal
+    // or navigate to resolution component
+    console.log('Open resolution modal for issue:', issue.id);
+    // For now, just show a placeholder message
+    this.toastService.info('Resolution Modal', 'Resolution interface would open here');
   }
 
   updateNotes(issue: OrderIssueVm, notes: string) {
