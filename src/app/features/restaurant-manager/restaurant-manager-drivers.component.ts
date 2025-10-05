@@ -732,7 +732,7 @@ export interface Driver {
                     <i class="fa-solid" [ngClass]="getVehicleIcon(selectedDriverForDetails.vehicle_type)"></i>
                     {{ getVehicleTypeLabel(selectedDriverForDetails.vehicle_type) }}
                   </div>
-                  <span class="vehicle-info-text">{{ selectedDriverForDetails.vehicle_info }}</span>
+                  <span class="vehicle-info-text">{{ formatVehicleInfo(selectedDriverForDetails.vehicle_info) }}</span>
                   <span class="license-plate" *ngIf="selectedDriverForDetails.license_plate">
                     <i class="fa-solid fa-id-card"></i> {{ selectedDriverForDetails.license_plate }}
                   </span>
@@ -3070,6 +3070,33 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
       scooter: 'fa-scooter'
     };
     return icons[type] || 'fa-car';
+  }
+
+  formatVehicleInfo(vehicleInfo: any): string {
+    if (!vehicleInfo) return '';
+    
+    // If it's already a string, return it as is
+    if (typeof vehicleInfo === 'string') return vehicleInfo;
+    
+    // If it's an object, format it nicely
+    if (typeof vehicleInfo === 'object') {
+      const parts: string[] = [];
+      
+      // Handle normal vehicle info (make, model, color)
+      if (vehicleInfo.make) parts.push(vehicleInfo.make);
+      if (vehicleInfo.model) parts.push(vehicleInfo.model);
+      if (vehicleInfo.color) parts.push(vehicleInfo.color);
+      
+      // Special case: if only license_plate is present in the object (QR code created drivers)
+      // Don't display it here as it should be shown separately in the license_plate section
+      if (parts.length === 0 && vehicleInfo.license_plate) {
+        return ''; // Return empty string to avoid showing the JSON object
+      }
+      
+      return parts.join(' ');
+    }
+    
+    return '';
   }
 
   // Status Badge Methods
