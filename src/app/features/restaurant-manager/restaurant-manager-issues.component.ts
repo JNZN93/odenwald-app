@@ -21,6 +21,11 @@ interface OrderIssueVm {
   assigned_at?: string;
   restaurant_manager_notes?: string;
   created_at: string;
+  order_type?: 'delivery' | 'pickup' | 'dine_in';
+  order_payment_status?: 'pending' | 'paid' | 'failed' | 'refunded';
+  payment_method?: string;
+  provider?: string;
+  payment_status?: string;
 }
 
 @Component({
@@ -62,6 +67,10 @@ interface OrderIssueVm {
                 </span>
                 <span [ngClass]="getStatusClass(issue.status)" class="status-badge">
                   {{ getStatusLabel(issue.status) }}
+                </span>
+                <span *ngIf="getPaymentMethodLabel(issue)" [ngClass]="getPaymentMethodClass(issue)" class="payment-badge">
+                  <i [class]="getPaymentMethodIcon(issue)"></i>
+                  {{ getPaymentMethodLabel(issue) }}
                 </span>
               </div>
             </div>
@@ -480,6 +489,46 @@ interface OrderIssueVm {
     .status-badge.status-resolved {
       background: color-mix(in oklab, var(--color-success) 12%, white);
       color: var(--color-heading);
+    }
+
+    .payment-badge {
+      padding: var(--space-1) var(--space-3);
+      border-radius: var(--radius-full);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+    }
+
+    .payment-badge i {
+      font-size: var(--text-xs);
+    }
+
+    .payment-badge.payment-cash {
+      background: color-mix(in oklab, #10b981 12%, white);
+      color: var(--color-heading);
+      border-color: #10b981;
+    }
+
+    .payment-badge.payment-stripe {
+      background: color-mix(in oklab, #635bff 12%, white);
+      color: var(--color-heading);
+      border-color: #635bff;
+    }
+
+    .payment-badge.payment-paypal {
+      background: color-mix(in oklab, #0070ba 12%, white);
+      color: var(--color-heading);
+      border-color: #0070ba;
+    }
+
+    .payment-badge.payment-unknown {
+      background: color-mix(in oklab, var(--color-gray-400) 12%, white);
+      color: var(--color-muted);
     }
 
     .issue-details {
@@ -1552,5 +1601,46 @@ export class RestaurantManagerIssuesComponent implements OnInit {
       other: '❓ Sonstiges'
     };
     return labels[reason] || reason.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  }
+
+  getPaymentMethodLabel(issue: OrderIssueVm): string {
+    // Priorität: payment_method > provider > order_type fallback
+    if (issue.payment_method) {
+      const method = issue.payment_method.toLowerCase();
+      if (method === 'cash') return 'Bar';
+      if (method === 'stripe') return 'Stripe';
+      if (method === 'paypal') return 'PayPal';
+      return issue.payment_method;
+    }
+    
+    if (issue.provider) {
+      const provider = issue.provider.toLowerCase();
+      if (provider === 'cash') return 'Bar';
+      if (provider === 'stripe') return 'Stripe';
+      if (provider === 'paypal') return 'PayPal';
+      return issue.provider;
+    }
+
+    // Fallback: order_type
+    if (issue.order_type === 'dine_in' && issue.order_payment_status === 'pending') {
+      return 'Bar (ausstehend)';
+    }
+
+    return '';
+  }
+
+  getPaymentMethodClass(issue: OrderIssueVm): string {
+    const method = (issue.payment_method || issue.provider || '').toLowerCase();
+    if (method === 'cash') return 'payment-cash';
+    if (method === 'stripe') return 'payment-stripe';
+    if (method === 'paypal') return 'payment-paypal';
+    return 'payment-unknown';
+  }
+
+  getPaymentMethodIcon(issue: OrderIssueVm): string {
+    const method = (issue.payment_method || issue.provider || '').toLowerCase();
+    if (method === 'cash') return 'fa-solid fa-money-bill';
+    if (method === 'stripe' || method === 'paypal') return 'fa-solid fa-credit-card';
+    return 'fa-solid fa-question';
   }
 }
