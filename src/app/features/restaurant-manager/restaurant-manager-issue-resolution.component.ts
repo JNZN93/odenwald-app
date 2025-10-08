@@ -675,3 +675,5 @@ export class RestaurantManagerIssueResolutionComponent implements OnInit {
     return new Date(dateString).toLocaleDateString('de-DE');
   }
 }
+
+
