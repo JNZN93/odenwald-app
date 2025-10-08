@@ -143,6 +143,98 @@ interface OrderIssueVm {
         </div>
       </div>
     </div>
+
+    <!-- Refund Modal -->
+    <div class="modal-overlay" *ngIf="showRefundModal" (click)="closeRefundModal()">
+      <div class="modal-content refund-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Rückerstattung verarbeiten</h2>
+          <button class="close-btn" (click)="closeRefundModal()">
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+
+        <div class="modal-body" *ngIf="!loadingRefundItems">
+          <div class="order-info-box">
+            <h3>Bestellung #{{ selectedIssueForRefund?.order_id }}</h3>
+            <p class="issue-reason">{{ getReasonLabel(selectedIssueForRefund?.reason || '') }}</p>
+          </div>
+
+          <div class="refund-items-section">
+            <h4>Produkte auswählen:</h4>
+            
+            <div class="items-list">
+              <div class="item-row" *ngFor="let item of orderItems">
+                <div class="item-info">
+                  <div class="item-name">{{ item.name }}</div>
+                  <div class="item-price">€{{ item.unit_price.toFixed(2) }} × {{ item.quantity }}</div>
+                </div>
+                
+                <div class="item-controls">
+                  <label>Zurückerstatten:</label>
+                  <div class="quantity-selector">
+                    <button 
+                      class="qty-btn" 
+                      (click)="updateRefundQuantity(item, item.refund_quantity - 1)"
+                      [disabled]="item.refund_quantity === 0">
+                      <i class="fa-solid fa-minus"></i>
+                    </button>
+                    <input 
+                      type="number" 
+                      class="qty-input"
+                      [(ngModel)]="item.refund_quantity"
+                      (ngModelChange)="updateRefundQuantity(item, $event)"
+                      [max]="item.quantity"
+                      min="0">
+                    <button 
+                      class="qty-btn"
+                      (click)="updateRefundQuantity(item, item.refund_quantity + 1)"
+                      [disabled]="item.refund_quantity >= item.quantity">
+                      <i class="fa-solid fa-plus"></i>
+                    </button>
+                  </div>
+                  <div class="item-refund-amount">
+                    = €{{ (item.unit_price * item.refund_quantity).toFixed(2) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="refund-total-box">
+              <div class="total-row">
+                <span class="total-label">Rückerstattungsbetrag:</span>
+                <span class="total-amount">€{{ refundTotal.toFixed(2) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-body loading-state" *ngIf="loadingRefundItems">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          <p>Lade Bestellpositionen...</p>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="closeRefundModal()">
+            Abbrechen
+          </button>
+          <button 
+            class="btn btn-warning" 
+            (click)="processFullRefund()"
+            [disabled]="loadingRefundItems">
+            <i class="fa-solid fa-money-bill-wave"></i>
+            Vollständige Rückerstattung
+          </button>
+          <button 
+            class="btn btn-primary" 
+            (click)="processPartialRefund()"
+            [disabled]="loadingRefundItems || refundTotal === 0">
+            <i class="fa-solid fa-check"></i>
+            Teilrückerstattung (€{{ refundTotal.toFixed(2) }})
+          </button>
+        </div>
+      </div>
+    </div>
   `,
   styles: [`
     .issues-container {
@@ -547,6 +639,293 @@ interface OrderIssueVm {
       margin: 0;
     }
 
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: var(--space-4);
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: var(--radius-xl);
+      max-width: 700px;
+      width: 100%;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-6);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: var(--text-2xl);
+      font-weight: 700;
+      color: var(--color-text);
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: var(--text-xl);
+      cursor: pointer;
+      color: var(--color-muted);
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-md);
+      transition: all var(--transition);
+    }
+
+    .close-btn:hover {
+      background: var(--color-gray-100);
+      color: var(--color-text);
+    }
+
+    .modal-body {
+      padding: var(--space-6);
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .modal-body.loading-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-4);
+      min-height: 300px;
+      color: var(--color-muted);
+    }
+
+    .modal-body.loading-state i {
+      font-size: 3rem;
+    }
+
+    .order-info-box {
+      background: var(--bg-light-green);
+      padding: var(--space-4);
+      border-radius: var(--radius-lg);
+      border-left: 4px solid var(--color-primary-500);
+      margin-bottom: var(--space-6);
+    }
+
+    .order-info-box h3 {
+      margin: 0 0 var(--space-2) 0;
+      font-size: var(--text-xl);
+      font-weight: 600;
+      color: var(--color-heading);
+    }
+
+    .issue-reason {
+      margin: 0;
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+    }
+
+    .refund-items-section h4 {
+      font-size: var(--text-lg);
+      font-weight: 600;
+      color: var(--color-heading);
+      margin: 0 0 var(--space-4) 0;
+    }
+
+    .items-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+
+    .item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-4);
+      background: var(--color-gray-50);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-border);
+    }
+
+    .item-info {
+      flex: 1;
+    }
+
+    .item-name {
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: var(--space-1);
+    }
+
+    .item-price {
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+    }
+
+    .item-controls {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .item-controls label {
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--color-muted);
+    }
+
+    .quantity-selector {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      background: white;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-1);
+    }
+
+    .qty-btn {
+      background: none;
+      border: none;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border-radius: var(--radius-md);
+      color: var(--color-primary-500);
+      transition: all var(--transition);
+    }
+
+    .qty-btn:hover:not(:disabled) {
+      background: var(--color-primary-50);
+    }
+
+    .qty-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .qty-input {
+      width: 60px;
+      text-align: center;
+      border: none;
+      font-weight: 600;
+      font-size: var(--text-base);
+      color: var(--color-text);
+    }
+
+    .qty-input:focus {
+      outline: none;
+    }
+
+    .item-refund-amount {
+      min-width: 80px;
+      text-align: right;
+      font-weight: 600;
+      color: var(--color-primary-500);
+    }
+
+    .refund-total-box {
+      background: var(--color-primary-50);
+      padding: var(--space-4);
+      border-radius: var(--radius-lg);
+      border: 2px solid var(--color-primary-500);
+    }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .total-label {
+      font-size: var(--text-lg);
+      font-weight: 600;
+      color: var(--color-heading);
+    }
+
+    .total-amount {
+      font-size: var(--text-2xl);
+      font-weight: 700;
+      color: var(--color-primary-500);
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--space-3);
+      padding: var(--space-6);
+      border-top: 1px solid var(--color-border);
+    }
+
+    .btn {
+      padding: var(--space-3) var(--space-5);
+      border: none;
+      border-radius: var(--radius-lg);
+      font-weight: 600;
+      font-size: var(--text-base);
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--color-primary-500);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--color-primary-600);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(79, 209, 197, 0.3);
+    }
+
+    .btn-warning {
+      background: var(--color-warning);
+      color: white;
+    }
+
+    .btn-warning:hover:not(:disabled) {
+      background: #e0a800;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: var(--color-gray-200);
+      color: var(--color-text);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--color-gray-300);
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
       .issues-container {
@@ -573,6 +952,26 @@ interface OrderIssueVm {
       .notes-group {
         grid-column: 1;
       }
+
+      .item-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-3);
+      }
+
+      .item-controls {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .modal-footer {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
     }
   `]
 })
@@ -586,6 +985,13 @@ export class RestaurantManagerIssuesComponent implements OnInit {
   issues: OrderIssueVm[] = [];
   isLoading = false;
   updatingIssueId: string | null = null;
+  
+  // Refund modal state
+  showRefundModal = false;
+  selectedIssueForRefund: OrderIssueVm | null = null;
+  orderItems: any[] = [];
+  loadingRefundItems = false;
+  refundTotal = 0;
 
   ngOnInit() {
     this.loadIssues();
@@ -668,21 +1074,98 @@ export class RestaurantManagerIssuesComponent implements OnInit {
   }
 
   processRefund(issue: OrderIssueVm) {
-    const confirmMessage = `Möchten Sie wirklich eine Rückerstattung für diese Reklamation verarbeiten?\n\nBestellung: #${issue.order_id}\nGrund: ${this.getReasonLabel(issue.reason)}`;
+    // Open refund modal instead of direct confirm
+    this.openRefundModal(issue);
+  }
+
+  openRefundModal(issue: OrderIssueVm) {
+    this.selectedIssueForRefund = issue;
+    this.showRefundModal = true;
+    this.loadingRefundItems = true;
     
-    if (!confirm(confirmMessage)) {
+    // Load order items
+    this.http.get<any>(`${environment.apiUrl}/order-issues/${issue.id}/order-items`).subscribe({
+      next: (response) => {
+        this.orderItems = response.items.map((item: any) => ({
+          ...item,
+          refund_quantity: 0
+        }));
+        this.loadingRefundItems = false;
+        this.calculateRefundTotal();
+      },
+      error: (error) => {
+        console.error('Error loading order items:', error);
+        this.toastService.error('Fehler', 'Bestellpositionen konnten nicht geladen werden');
+        this.loadingRefundItems = false;
+        this.showRefundModal = false;
+      }
+    });
+  }
+
+  closeRefundModal() {
+    this.showRefundModal = false;
+    this.selectedIssueForRefund = null;
+    this.orderItems = [];
+    this.refundTotal = 0;
+  }
+
+  calculateRefundTotal() {
+    this.refundTotal = this.orderItems.reduce((total, item) => {
+      return total + (item.unit_price * item.refund_quantity);
+    }, 0);
+  }
+
+  updateRefundQuantity(item: any, quantity: number) {
+    item.refund_quantity = Math.max(0, Math.min(quantity, item.quantity));
+    this.calculateRefundTotal();
+  }
+
+  processPartialRefund() {
+    if (!this.selectedIssueForRefund) return;
+
+    const refundItems = this.orderItems
+      .filter(item => item.refund_quantity > 0)
+      .map(item => ({
+        order_item_id: item.id,
+        quantity: item.refund_quantity,
+        reason: `Reklamation: ${this.getReasonLabel(this.selectedIssueForRefund!.reason)}`
+      }));
+
+    if (refundItems.length === 0) {
+      this.toastService.error('Fehler', 'Bitte wählen Sie mindestens ein Produkt aus');
       return;
     }
 
-    this.updatingIssueId = issue.id;
+    this.updatingIssueId = this.selectedIssueForRefund.id;
+    this.closeRefundModal();
 
-    this.http.post(`${environment.apiUrl}/order-issues/${issue.id}/refund`, {
-      refund_reason: `Reklamation: ${this.getReasonLabel(issue.reason)}`
+    this.http.post(`${environment.apiUrl}/order-issues/${this.selectedIssueForRefund.id}/refund`, {
+      refund_items: refundItems,
+      refund_reason: `Reklamation: ${this.getReasonLabel(this.selectedIssueForRefund.reason)}`
     }).subscribe({
       next: (response: any) => {
         this.toastService.success('Rückerstattung erfolgreich', `€${response.refund_amount.toFixed(2)} wurde zurückerstattet.`);
-        
-        // Reload issues to show updated status
+        this.loadIssues();
+      },
+      error: (error: any) => {
+        console.error('Error processing refund:', error);
+        this.toastService.error('Rückerstattung fehlgeschlagen', error.error?.error || 'Fehler beim Verarbeiten der Rückerstattung');
+        this.updatingIssueId = null;
+      }
+    });
+  }
+
+  processFullRefund() {
+    if (!this.selectedIssueForRefund) return;
+
+    this.updatingIssueId = this.selectedIssueForRefund.id;
+    this.closeRefundModal();
+
+    this.http.post(`${environment.apiUrl}/order-issues/${this.selectedIssueForRefund.id}/refund`, {
+      refund_reason: `Reklamation: ${this.getReasonLabel(this.selectedIssueForRefund.reason)}`
+    }).subscribe({
+      next: (response: any) => {
+        this.toastService.success('Rückerstattung erfolgreich', `€${response.refund_amount.toFixed(2)} wurde zurückerstattet.`);
         this.loadIssues();
       },
       error: (error: any) => {
