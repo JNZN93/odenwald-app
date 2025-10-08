@@ -235,6 +235,68 @@ interface OrderIssueVm {
         </div>
       </div>
     </div>
+
+    <!-- Refund Result Modal -->
+    <div class="modal-overlay" *ngIf="showRefundResultModal" (click)="closeRefundResultModal()">
+      <div class="modal-content result-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header" [class.success]="refundResultSuccess" [class.error]="!refundResultSuccess">
+          <div class="result-icon">
+            <i class="fa-solid" [class.fa-check-circle]="refundResultSuccess" [class.fa-exclamation-circle]="!refundResultSuccess"></i>
+          </div>
+          <h2>{{ refundResultSuccess ? 'Rückerstattung erfolgreich' : 'Rückerstattung fehlgeschlagen' }}</h2>
+        </div>
+
+        <div class="modal-body">
+          <div class="result-message">
+            <p>{{ refundResultMessage }}</p>
+          </div>
+
+          <div class="result-details" *ngIf="refundResultSuccess && refundResultDetails">
+            <div class="detail-row highlight">
+              <span class="detail-label">Rückerstattungsbetrag:</span>
+              <span class="detail-value amount">€{{ refundResultDetails.amount.toFixed(2) }}</span>
+            </div>
+
+            <div class="detail-row">
+              <span class="detail-label">Art:</span>
+              <span class="detail-value">
+                {{ refundResultDetails.type === 'partial' ? 'Teilrückerstattung' : 
+                   refundResultDetails.type === 'full' ? 'Vollständige Rückerstattung' : 
+                   'Manuelle Rückerstattung' }}
+              </span>
+            </div>
+
+            <div class="detail-row" *ngIf="refundResultDetails.refund_id">
+              <span class="detail-label">Referenz-ID:</span>
+              <span class="detail-value small">{{ refundResultDetails.refund_id }}</span>
+            </div>
+
+            <div class="refunded-items-list" *ngIf="refundResultDetails.items && refundResultDetails.items.length > 0">
+              <h4>Zurückerstattete Produkte:</h4>
+              <div class="refunded-item" *ngFor="let item of refundResultDetails.items">
+                <span class="item-quantity">{{ item.quantity }}x</span>
+                <span class="item-details">à €{{ item.unit_price }}</span>
+                <span class="item-total">= €{{ item.refund_amount.toFixed(2) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="error-details" *ngIf="!refundResultSuccess">
+            <div class="error-message">
+              <i class="fa-solid fa-info-circle"></i>
+              <p>Bitte überprüfen Sie die Bestellung und versuchen Sie es erneut. Bei anhaltenden Problemen kontaktieren Sie bitte den Support.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn" [class.btn-primary]="refundResultSuccess" [class.btn-secondary]="!refundResultSuccess" (click)="closeRefundResultModal()">
+            <i class="fa-solid fa-check"></i>
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
   `,
   styles: [`
     .issues-container {
@@ -926,6 +988,184 @@ interface OrderIssueVm {
       background: var(--color-gray-300);
     }
 
+    /* Result Modal Styles */
+    .result-modal {
+      max-width: 550px;
+    }
+
+    .result-modal .modal-header {
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-8) var(--space-6) var(--space-6);
+    }
+
+    .result-modal .modal-header.success {
+      background: linear-gradient(135deg, var(--color-success) 0%, #059669 100%);
+      color: white;
+    }
+
+    .result-modal .modal-header.error {
+      background: linear-gradient(135deg, var(--color-danger) 0%, #dc2626 100%);
+      color: white;
+    }
+
+    .result-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+    }
+
+    .result-icon i {
+      font-size: 3rem;
+      color: white;
+    }
+
+    .result-modal .modal-header h2 {
+      color: white;
+      text-align: center;
+    }
+
+    .result-message {
+      text-align: center;
+      padding: var(--space-4) 0;
+      border-bottom: 1px solid var(--color-border);
+      margin-bottom: var(--space-4);
+    }
+
+    .result-message p {
+      margin: 0;
+      font-size: var(--text-lg);
+      color: var(--color-text);
+      font-weight: 500;
+    }
+
+    .result-details {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-3);
+      border-radius: var(--radius-md);
+      background: var(--color-gray-50);
+    }
+
+    .detail-row.highlight {
+      background: var(--color-primary-50);
+      border: 2px solid var(--color-primary-500);
+      padding: var(--space-4);
+    }
+
+    .detail-label {
+      font-weight: 600;
+      color: var(--color-heading);
+    }
+
+    .detail-value {
+      color: var(--color-text);
+    }
+
+    .detail-value.amount {
+      font-size: var(--text-2xl);
+      font-weight: 700;
+      color: var(--color-primary-500);
+    }
+
+    .detail-value.small {
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+      font-family: monospace;
+    }
+
+    .refunded-items-list {
+      margin-top: var(--space-4);
+      padding: var(--space-4);
+      background: var(--bg-light-green);
+      border-radius: var(--radius-lg);
+      border-left: 3px solid var(--color-success);
+    }
+
+    .refunded-items-list h4 {
+      margin: 0 0 var(--space-3) 0;
+      font-size: var(--text-base);
+      font-weight: 600;
+      color: var(--color-heading);
+    }
+
+    .refunded-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) 0;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .refunded-item:last-child {
+      border-bottom: none;
+    }
+
+    .item-quantity {
+      font-weight: 600;
+      color: var(--color-text);
+      min-width: 40px;
+    }
+
+    .item-details {
+      flex: 1;
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+    }
+
+    .item-total {
+      font-weight: 600;
+      color: var(--color-success);
+    }
+
+    .error-details {
+      padding: var(--space-4);
+      background: #fef2f2;
+      border-radius: var(--radius-lg);
+      border-left: 3px solid var(--color-danger);
+    }
+
+    .error-message {
+      display: flex;
+      gap: var(--space-3);
+      align-items: flex-start;
+    }
+
+    .error-message i {
+      color: var(--color-danger);
+      font-size: var(--text-lg);
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    .error-message p {
+      margin: 0;
+      color: var(--color-text);
+      line-height: 1.5;
+    }
+
+    .result-modal .modal-footer {
+      justify-content: center;
+    }
+
+    .result-modal .modal-footer .btn {
+      min-width: 150px;
+      justify-content: center;
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
       .issues-container {
@@ -992,6 +1232,12 @@ export class RestaurantManagerIssuesComponent implements OnInit {
   orderItems: any[] = [];
   loadingRefundItems = false;
   refundTotal = 0;
+  
+  // Refund result modal
+  showRefundResultModal = false;
+  refundResultSuccess = false;
+  refundResultMessage = '';
+  refundResultDetails: any = null;
 
   ngOnInit() {
     this.loadIssues();
@@ -1123,12 +1369,16 @@ export class RestaurantManagerIssuesComponent implements OnInit {
   processPartialRefund() {
     if (!this.selectedIssueForRefund) return;
 
+    // Store issue data before closing modal
+    const issueId = this.selectedIssueForRefund.id;
+    const issueReason = this.selectedIssueForRefund.reason;
+
     const refundItems = this.orderItems
       .filter(item => item.refund_quantity > 0)
       .map(item => ({
         order_item_id: item.id,
         quantity: item.refund_quantity,
-        reason: `Reklamation: ${this.getReasonLabel(this.selectedIssueForRefund!.reason)}`
+        reason: `Reklamation: ${this.getReasonLabel(issueReason)}`
       }));
 
     if (refundItems.length === 0) {
@@ -1136,20 +1386,32 @@ export class RestaurantManagerIssuesComponent implements OnInit {
       return;
     }
 
-    this.updatingIssueId = this.selectedIssueForRefund.id;
+    this.updatingIssueId = issueId;
     this.closeRefundModal();
 
-    this.http.post(`${environment.apiUrl}/order-issues/${this.selectedIssueForRefund.id}/refund`, {
+    this.http.post(`${environment.apiUrl}/order-issues/${issueId}/refund`, {
       refund_items: refundItems,
-      refund_reason: `Reklamation: ${this.getReasonLabel(this.selectedIssueForRefund.reason)}`
+      refund_reason: `Reklamation: ${this.getReasonLabel(issueReason)}`
     }).subscribe({
       next: (response: any) => {
-        this.toastService.success('Rückerstattung erfolgreich', `€${response.refund_amount.toFixed(2)} wurde zurückerstattet.`);
+        this.showRefundResultModal = true;
+        this.refundResultSuccess = true;
+        this.refundResultMessage = 'Teilrückerstattung erfolgreich verarbeitet';
+        this.refundResultDetails = {
+          amount: response.refund_amount,
+          type: response.refund_type,
+          items: response.refunded_items,
+          refund_id: response.refund_id
+        };
         this.loadIssues();
+        this.updatingIssueId = null;
       },
       error: (error: any) => {
         console.error('Error processing refund:', error);
-        this.toastService.error('Rückerstattung fehlgeschlagen', error.error?.error || 'Fehler beim Verarbeiten der Rückerstattung');
+        this.showRefundResultModal = true;
+        this.refundResultSuccess = false;
+        this.refundResultMessage = error.error?.error || 'Fehler beim Verarbeiten der Rückerstattung';
+        this.refundResultDetails = null;
         this.updatingIssueId = null;
       }
     });
@@ -1158,22 +1420,44 @@ export class RestaurantManagerIssuesComponent implements OnInit {
   processFullRefund() {
     if (!this.selectedIssueForRefund) return;
 
-    this.updatingIssueId = this.selectedIssueForRefund.id;
+    // Store issue data before closing modal
+    const issueId = this.selectedIssueForRefund.id;
+    const issueReason = this.selectedIssueForRefund.reason;
+
+    this.updatingIssueId = issueId;
     this.closeRefundModal();
 
-    this.http.post(`${environment.apiUrl}/order-issues/${this.selectedIssueForRefund.id}/refund`, {
-      refund_reason: `Reklamation: ${this.getReasonLabel(this.selectedIssueForRefund.reason)}`
+    this.http.post(`${environment.apiUrl}/order-issues/${issueId}/refund`, {
+      refund_reason: `Reklamation: ${this.getReasonLabel(issueReason)}`
     }).subscribe({
       next: (response: any) => {
-        this.toastService.success('Rückerstattung erfolgreich', `€${response.refund_amount.toFixed(2)} wurde zurückerstattet.`);
+        this.showRefundResultModal = true;
+        this.refundResultSuccess = true;
+        this.refundResultMessage = 'Vollständige Rückerstattung erfolgreich verarbeitet';
+        this.refundResultDetails = {
+          amount: response.refund_amount,
+          type: response.refund_type,
+          refund_id: response.refund_id
+        };
         this.loadIssues();
+        this.updatingIssueId = null;
       },
       error: (error: any) => {
         console.error('Error processing refund:', error);
-        this.toastService.error('Rückerstattung fehlgeschlagen', error.error?.error || 'Fehler beim Verarbeiten der Rückerstattung');
+        this.showRefundResultModal = true;
+        this.refundResultSuccess = false;
+        this.refundResultMessage = error.error?.error || 'Fehler beim Verarbeiten der Rückerstattung';
+        this.refundResultDetails = null;
         this.updatingIssueId = null;
       }
     });
+  }
+
+  closeRefundResultModal() {
+    this.showRefundResultModal = false;
+    this.refundResultSuccess = false;
+    this.refundResultMessage = '';
+    this.refundResultDetails = null;
   }
 
   openResolutionModal(issue: OrderIssueVm) {
