@@ -1,10 +1,9 @@
-import { Component, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { OrdersService, Order } from '../../core/services/orders.service';
-import { Observable, interval, Subscription, BehaviorSubject } from 'rxjs';
-import { take } from 'rxjs/operators';
+import { Observable, BehaviorSubject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -94,6 +93,10 @@ import { environment } from '../../../environments/environment';
           <button class="btn btn-primary" (click)="trackOrder()">
             <i class="fa-solid fa-map-marker-alt"></i>
             Bestellung verfolgen
+          </button>
+          <button class="btn btn-secondary" (click)="refreshOrderData()">
+            <i class="fa-solid fa-refresh"></i>
+            Aktualisieren
           </button>
           <button class="btn btn-ghost" (click)="goToRestaurants()">
             <i class="fa-solid fa-utensils"></i>
@@ -347,6 +350,17 @@ import { environment } from '../../../environments/environment';
       box-shadow: 0 4px 12px color-mix(in oklab, var(--color-primary) 25%, transparent);
     }
 
+    .btn-secondary {
+      background: var(--color-muted-100);
+      color: var(--color-muted-700);
+      border: 1px solid var(--color-border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--color-muted-200);
+      transform: translateY(-2px);
+    }
+
     .btn-ghost {
       background: var(--color-surface);
       color: var(--color-text);
@@ -524,7 +538,7 @@ import { environment } from '../../../environments/environment';
     }
   `]
 })
-export class OrderConfirmationComponent implements OnInit, OnDestroy {
+export class OrderConfirmationComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private ordersService = inject(OrdersService);
@@ -532,22 +546,12 @@ export class OrderConfirmationComponent implements OnInit, OnDestroy {
 
   private orderSubject = new BehaviorSubject<Order | null>(null);
   order$: Observable<Order | null> = this.orderSubject.asObservable();
-  private pollingSubscription: Subscription | null = null;
   
 
   ngOnInit() {
     const orderId = this.route.snapshot.paramMap.get('id');
     if (orderId) {
       this.refreshOrder(orderId);
-      this.pollingSubscription = interval(2000)
-        .pipe(take(30))
-        .subscribe(() => this.refreshOrder(orderId, true));
-    }
-  }
-
-  ngOnDestroy() {
-    if (this.pollingSubscription) {
-      this.pollingSubscription.unsubscribe();
     }
   }
 
@@ -592,15 +596,21 @@ export class OrderConfirmationComponent implements OnInit, OnDestroy {
     this.router.navigate(['/customer']);
   }
 
+  refreshOrderData() {
+    const orderId = this.route.snapshot.paramMap.get('id');
+    if (orderId) {
+      this.refreshOrder(orderId);
+    }
+  }
+
   private showErrorMessage(message: string) {
     console.error(message);
   }
 
-  private refreshOrder(orderId: string, stopOnPaid = false) {
+  private refreshOrder(orderId: string) {
     // Use the public confirmation endpoint that doesn't require authentication
     this.http.get<{ order: any }>(`${environment.apiUrl}/orders/confirmation/${orderId}`).subscribe({
       next: (response) => {
-        console.log('Order confirmation response:', response);
         let orderData = response.order;
 
         // Handle different response formats
@@ -611,13 +621,6 @@ export class OrderConfirmationComponent implements OnInit, OnDestroy {
 
         const order = this.ordersService.normalizeOrder(orderData);
         this.orderSubject.next(order);
-
-        if (stopOnPaid && (order.payment_status === 'paid' || order.payment_status === 'failed')) {
-          if (this.pollingSubscription) {
-            this.pollingSubscription.unsubscribe();
-            this.pollingSubscription = null;
-          }
-        }
       },
       error: (error) => {
         console.error('Error loading order:', error);
