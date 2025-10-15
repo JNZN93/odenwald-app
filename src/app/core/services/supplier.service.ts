@@ -273,11 +273,13 @@ export class CartService {
   }
 
   // Order creation
-  createOrder(deliveryAddress: string, deliveryInstructions?: string, paymentMethod?: string, customerInfo?: any, useLoyaltyReward?: boolean, notes?: string): Observable<any> {
+  createOrder(deliveryAddress: string, deliveryInstructions?: string, paymentMethod?: string, customerInfo?: any, useLoyaltyReward?: boolean, notes?: string, orderType?: 'delivery' | 'pickup'): Observable<any> {
     const cart = this.getCurrentCart();
     if (!cart || cart.items.length === 0) {
       throw new Error('Warenkorb ist leer');
     }
+
+    console.log('CartService createOrder called with orderType:', orderType);
 
     const orderData: any = {
       restaurant_id: cart.restaurant_id,
@@ -285,6 +287,7 @@ export class CartService {
       delivery_instructions: deliveryInstructions || '',
       notes: notes || '',
       payment_method: paymentMethod || 'cash',
+      order_type: orderType || 'delivery',
       items: cart.items.map(item => ({
         menu_item_id: item.menu_item_id,
         quantity: item.quantity,
@@ -293,6 +296,8 @@ export class CartService {
         special_instructions: item.special_instructions
       }))
     };
+
+    console.log('Sending orderData to backend:', orderData);
 
     // Add customer_info for guest orders
     if (customerInfo) {

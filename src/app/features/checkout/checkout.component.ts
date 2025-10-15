@@ -212,8 +212,49 @@ interface MenuItemVariantOption {
             </div>
           </div>
 
-          <!-- Delivery Address -->
-          <div class="delivery-section">
+          <!-- Order Type Selection -->
+          <div class="order-type-section">
+            <h2>Bestellart</h2>
+            
+            <div class="order-type-options">
+              <div class="order-type-option" [class.selected]="orderType === 'delivery'" (click)="selectOrderType('delivery')">
+                <input
+                  type="radio"
+                  id="delivery"
+                  value="delivery"
+                  [checked]="orderType === 'delivery'"
+                  name="orderType"
+                >
+                <label for="delivery">
+                  <i class="fa-solid fa-truck"></i>
+                  <div>
+                    <div class="type-name">Lieferung</div>
+                    <div class="type-desc">Wir liefern direkt zu Ihnen</div>
+                  </div>
+                </label>
+              </div>
+
+              <div class="order-type-option" [class.selected]="orderType === 'pickup'" (click)="selectOrderType('pickup')">
+                <input
+                  type="radio"
+                  id="pickup"
+                  value="pickup"
+                  [checked]="orderType === 'pickup'"
+                  name="orderType"
+                >
+                <label for="pickup">
+                  <i class="fa-solid fa-store"></i>
+                  <div>
+                    <div class="type-name">Abholung</div>
+                    <div class="type-desc">Sie holen Ihre Bestellung ab</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Delivery Address (only shown for delivery orders) -->
+          <div class="delivery-section" *ngIf="orderType === 'delivery'">
             <h2>Lieferadresse</h2>
 
             <!-- Saved Addresses Selection -->
@@ -472,7 +513,7 @@ interface MenuItemVariantOption {
             </div>
 
             <div class="summary-row">
-              <span>Liefergebühr:</span>
+              <span>{{ orderType === 'pickup' ? 'Abholgebühr:' : 'Liefergebühr:' }}</span>
               <span>{{ cart.delivery_fee | currency:'EUR':'symbol':'1.2-2':'de' }}</span>
             </div>
 
@@ -544,7 +585,7 @@ interface MenuItemVariantOption {
             </button>
 
             <div class="order-info">
-              <p><i class="fa-solid fa-clock"></i> Geschätzte Lieferzeit: 30-45 Min</p>
+              <p><i class="fa-solid fa-clock"></i> Geschätzte {{ orderType === 'pickup' ? 'Abholzeit' : 'Lieferzeit' }}: {{ orderType === 'pickup' ? '15-30 Min' : '30-45 Min' }}</p>
               <p><i class="fa-solid fa-shield-alt"></i> Ihre Daten sind sicher</p>
             </div>
           </div>
@@ -630,20 +671,80 @@ interface MenuItemVariantOption {
       gap: var(--space-8);
     }
 
-    .cart-section, .delivery-section, .payment-section, .customer-info-section {
+    .cart-section, .order-type-section, .delivery-section, .payment-section, .customer-info-section {
       background: var(--color-surface);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-2xl);
       padding: var(--space-6);
     }
 
-    .cart-section h2, .delivery-section h2, .payment-section h2, .customer-info-section h2 {
+    .cart-section h2, .order-type-section h2, .delivery-section h2, .payment-section h2, .customer-info-section h2 {
       font-size: var(--text-2xl);
       font-weight: 600;
       color: var(--color-heading);
       margin-bottom: var(--space-6);
       padding-bottom: var(--space-3);
       border-bottom: 2px solid var(--color-primary);
+    }
+
+    .order-type-options {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .order-type-option {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-4);
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: all var(--transition);
+      background: var(--color-surface-2);
+    }
+
+    .order-type-option:hover {
+      border-color: var(--color-primary-300);
+      background: color-mix(in oklab, var(--color-primary) 5%, white);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    }
+
+    .order-type-option.selected {
+      border-color: var(--color-primary);
+      background: color-mix(in oklab, var(--color-primary) 10%, white);
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25);
+      transform: translateY(-1px);
+    }
+
+    .order-type-option input[type="radio"] {
+      display: none;
+    }
+
+    .order-type-option label {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .order-type-option i {
+      font-size: var(--text-xl);
+      color: var(--color-primary);
+      width: 24px;
+    }
+
+    .type-name {
+      font-weight: 600;
+      color: var(--color-heading);
+    }
+
+    .type-desc {
+      color: var(--color-muted);
+      font-size: var(--text-sm);
     }
 
     .cart-header {
@@ -2287,6 +2388,7 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
   };
 
   selectedPaymentMethod = 'cash';
+  orderType: 'delivery' | 'pickup' = 'delivery';
   isAuthenticated = false;
   availablePaymentMethods: { cash: boolean; card: boolean; paypal: boolean } | null = null;
   // Loyalty UI state
@@ -2517,6 +2619,12 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
 
   selectPayPal() {
     this.selectedPaymentMethod = 'paypal';
+  }
+
+  selectOrderType(type: 'delivery' | 'pickup') {
+    console.log('selectOrderType called with:', type);
+    this.orderType = type;
+    console.log('orderType set to:', this.orderType);
   }
 
   goBack() {
@@ -2863,7 +2971,18 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
    * Erweiterte isFormValid-Methode für Adressauswahl
    */
   isFormValid(): boolean {
-    // Check if we have a selected address or manual entry is valid
+    // For pickup orders, address is not required
+    if (this.orderType === 'pickup') {
+      const paymentMethodValid: boolean = !!this.selectedPaymentMethod && this.isPaymentMethodAvailable(this.selectedPaymentMethod);
+      const customerInfoValid: boolean = this.isAuthenticated || (
+        !!this.customerInfo.name.trim() &&
+        !!this.customerInfo.email.trim() &&
+        !!this.customerInfo.phone?.trim()
+      );
+      return paymentMethodValid && customerInfoValid;
+    }
+
+    // For delivery orders, check address requirements
     const hasSelectedAddress: boolean = this.selectedAddressId !== null && this.selectedAddressId !== '';
     const hasValidManualAddress: boolean = Boolean(
       this.deliveryAddress.street.trim() &&
@@ -2895,41 +3014,46 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
     this.loading = true;
     this.loadingService.start('place-order');
 
-    // Determine the full address to use
-    let fullAddress: string;
+    // Determine the full address to use (only for delivery orders)
+    let fullAddress: string = '';
     let addressToSave: DeliveryAddress | null = null;
 
-    if (this.selectedAddressId) {
-      // Use selected saved address
-      const selectedAddress = this.savedAddresses.find(addr => addr.id === this.selectedAddressId);
-      if (selectedAddress) {
-        fullAddress = `${selectedAddress.street}, ${selectedAddress.postal_code} ${selectedAddress.city}`;
-        // Add delivery instructions if provided
-        if (this.deliveryInstructions.trim()) {
-          fullAddress += ` (${this.deliveryInstructions.trim()})`;
+    if (this.orderType === 'delivery') {
+      if (this.selectedAddressId) {
+        // Use selected saved address
+        const selectedAddress = this.savedAddresses.find(addr => addr.id === this.selectedAddressId);
+        if (selectedAddress) {
+          fullAddress = `${selectedAddress.street}, ${selectedAddress.postal_code} ${selectedAddress.city}`;
+          // Add delivery instructions if provided
+          if (this.deliveryInstructions.trim()) {
+            fullAddress += ` (${this.deliveryInstructions.trim()})`;
+          }
+        } else {
+          // Fallback to manual address
+          fullAddress = `${this.deliveryAddress.street}, ${this.deliveryAddress.postal_code} ${this.deliveryAddress.city}`;
+          if (this.deliveryInstructions.trim()) {
+            fullAddress += ` (${this.deliveryInstructions.trim()})`;
+          }
         }
       } else {
-        // Fallback to manual address
+        // Use manual address entry
         fullAddress = `${this.deliveryAddress.street}, ${this.deliveryAddress.postal_code} ${this.deliveryAddress.city}`;
         if (this.deliveryInstructions.trim()) {
           fullAddress += ` (${this.deliveryInstructions.trim()})`;
         }
+
+        // Prepare address for automatic saving (without delivery instructions/hints)
+        addressToSave = {
+          street: this.deliveryAddress.street.trim(),
+          city: this.deliveryAddress.city.trim(),
+          postal_code: this.deliveryAddress.postal_code.trim(),
+          name: this.newAddressName.trim() || undefined
+          // Note: instructions/hints are not saved with the address - only used for current order
+        };
       }
     } else {
-      // Use manual address entry
-      fullAddress = `${this.deliveryAddress.street}, ${this.deliveryAddress.postal_code} ${this.deliveryAddress.city}`;
-      if (this.deliveryInstructions.trim()) {
-        fullAddress += ` (${this.deliveryInstructions.trim()})`;
-      }
-
-      // Prepare address for automatic saving (without delivery instructions/hints)
-      addressToSave = {
-        street: this.deliveryAddress.street.trim(),
-        city: this.deliveryAddress.city.trim(),
-        postal_code: this.deliveryAddress.postal_code.trim(),
-        name: this.newAddressName.trim() || undefined
-        // Note: instructions/hints are not saved with the address - only used for current order
-      };
+      // For pickup orders, use restaurant address or a generic pickup address
+      fullAddress = 'Abholung im Restaurant';
     }
 
     // Prepare customer info for guest orders
@@ -2939,7 +3063,8 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
       phone: this.customerInfo.phone?.trim() || undefined
     };
 
-    this.cartService.createOrder(fullAddress, '', this.selectedPaymentMethod, customerInfo, this.useLoyaltyReward, this.orderNotes)
+    console.log('Creating order with orderType:', this.orderType);
+    this.cartService.createOrder(fullAddress, '', this.selectedPaymentMethod, customerInfo, this.useLoyaltyReward, this.orderNotes, this.orderType)
       .subscribe({
         next: (response) => {
           console.log('Order placed successfully:', response);
