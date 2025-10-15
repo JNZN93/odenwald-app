@@ -154,9 +154,9 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                     <!-- Status Action Buttons - Always visible in same positions -->
                     <button
                       class="action-btn confirm"
-                      [class.hidden]="!canUpdateStatus(order.status, 'confirmed')"
-                      (click)="canUpdateStatus(order.status, 'confirmed') ? updateOrderStatus(order.id, 'confirmed') : null"
-                      [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'confirmed')"
+                      [class.hidden]="!canUpdateStatus(order.status, 'confirmed', order)"
+                      (click)="canUpdateStatus(order.status, 'confirmed', order) ? updateOrderStatus(order.id, 'confirmed') : null"
+                      [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'confirmed', order)"
                       title="Bestätigen"
                     >
                       <i class="fa-solid fa-check"></i>
@@ -164,9 +164,9 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
 
                     <button
                       class="action-btn prepare"
-                      [class.hidden]="!canUpdateStatus(order.status, 'preparing')"
-                      (click)="canUpdateStatus(order.status, 'preparing') ? updateOrderStatus(order.id, 'preparing') : null"
-                      [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'preparing')"
+                      [class.hidden]="!canUpdateStatus(order.status, 'preparing', order)"
+                      (click)="canUpdateStatus(order.status, 'preparing', order) ? updateOrderStatus(order.id, 'preparing') : null"
+                      [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'preparing', order)"
                       title="Zubereiten"
                     >
                       <i class="fa-solid fa-utensils"></i>
@@ -174,9 +174,9 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
 
                     <button
                       class="action-btn ready"
-                      [class.hidden]="!canUpdateStatus(order.status, 'ready')"
-                      (click)="canUpdateStatus(order.status, 'ready') ? updateOrderStatus(order.id, 'ready') : null"
-                      [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'ready')"
+                      [class.hidden]="!canUpdateStatus(order.status, 'ready', order)"
+                      (click)="canUpdateStatus(order.status, 'ready', order) ? updateOrderStatus(order.id, 'ready') : null"
+                      [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'ready', order)"
                       title="Fertig"
                     >
                       <i class="fa-solid fa-check-circle"></i>
@@ -184,9 +184,9 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
 
                     <button
                       class="action-btn pickup"
-                      [class.hidden]="!canUpdateStatus(order.status, 'picked_up')"
-                      (click)="canUpdateStatus(order.status, 'picked_up') ? updateOrderStatus(order.id, 'picked_up') : null"
-                      [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'picked_up')"
+                      [class.hidden]="!canUpdateStatus(order.status, 'picked_up', order)"
+                      (click)="canUpdateStatus(order.status, 'picked_up', order) ? updateOrderStatus(order.id, 'picked_up') : null"
+                      [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'picked_up', order)"
                       title="Abgeholt"
                     >
                       <i class="fa-solid fa-box"></i>
@@ -194,9 +194,9 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
 
                     <button
                       class="action-btn deliver"
-                      [class.hidden]="!canUpdateStatus(order.status, 'delivered')"
-                      (click)="canUpdateStatus(order.status, 'delivered') ? updateOrderStatus(order.id, 'delivered') : null"
-                      [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'delivered')"
+                      [class.hidden]="!canUpdateStatus(order.status, 'delivered', order)"
+                      (click)="canUpdateStatus(order.status, 'delivered', order) ? updateOrderStatus(order.id, 'delivered') : null"
+                      [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'delivered', order)"
                       title="Geliefert"
                     >
                       <i class="fa-solid fa-truck"></i>
@@ -342,9 +342,9 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                 <!-- Status Action Buttons - Always visible in same positions -->
                 <button
                   class="action-btn confirm"
-                  [class.hidden]="!canUpdateStatus(order.status, 'confirmed')"
-                  (click)="canUpdateStatus(order.status, 'confirmed') ? updateOrderStatus(order.id, 'confirmed') : null"
-                  [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'confirmed')"
+                  [class.hidden]="!canUpdateStatus(order.status, 'confirmed', order)"
+                  (click)="canUpdateStatus(order.status, 'confirmed', order) ? updateOrderStatus(order.id, 'confirmed') : null"
+                  [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'confirmed', order)"
                 >
                   <i class="fa-solid fa-check"></i>
                   Bestätigen
@@ -352,9 +352,9 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
 
                 <button
                   class="action-btn prepare"
-                  [class.hidden]="!canUpdateStatus(order.status, 'preparing')"
-                  (click)="canUpdateStatus(order.status, 'preparing') ? updateOrderStatus(order.id, 'preparing') : null"
-                  [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'preparing')"
+                  [class.hidden]="!canUpdateStatus(order.status, 'preparing', order)"
+                  (click)="canUpdateStatus(order.status, 'preparing', order) ? updateOrderStatus(order.id, 'preparing') : null"
+                  [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'preparing', order)"
                 >
                   <i class="fa-solid fa-utensils"></i>
                   Zubereiten
@@ -362,9 +362,9 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
 
                 <button
                   class="action-btn ready"
-                  [class.hidden]="!canUpdateStatus(order.status, 'ready')"
-                  (click)="canUpdateStatus(order.status, 'ready') ? updateOrderStatus(order.id, 'ready') : null"
-                  [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'ready')"
+                  [class.hidden]="!canUpdateStatus(order.status, 'ready', order)"
+                  (click)="canUpdateStatus(order.status, 'ready', order) ? updateOrderStatus(order.id, 'ready') : null"
+                  [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'ready', order)"
                 >
                   <i class="fa-solid fa-check-circle"></i>
                   Fertig
@@ -372,9 +372,9 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
 
                 <button
                   class="action-btn pickup"
-                  [class.hidden]="!canUpdateStatus(order.status, 'picked_up')"
-                  (click)="canUpdateStatus(order.status, 'picked_up') ? updateOrderStatus(order.id, 'picked_up') : null"
-                  [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'picked_up')"
+                  [class.hidden]="!canUpdateStatus(order.status, 'picked_up', order)"
+                  (click)="canUpdateStatus(order.status, 'picked_up', order) ? updateOrderStatus(order.id, 'picked_up') : null"
+                  [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'picked_up', order)"
                 >
                   <i class="fa-solid fa-box"></i>
                   Abgeholt
@@ -382,9 +382,9 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
 
                 <button
                   class="action-btn deliver"
-                  [class.hidden]="!canUpdateStatus(order.status, 'delivered')"
-                  (click)="canUpdateStatus(order.status, 'delivered') ? updateOrderStatus(order.id, 'delivered') : null"
-                  [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'delivered')"
+                  [class.hidden]="!canUpdateStatus(order.status, 'delivered', order)"
+                  (click)="canUpdateStatus(order.status, 'delivered', order) ? updateOrderStatus(order.id, 'delivered') : null"
+                  [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'delivered', order)"
                 >
                   <i class="fa-solid fa-truck"></i>
                   Geliefert
@@ -2706,7 +2706,7 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
     }
   }
 
-  canUpdateStatus(currentStatus: Order['status'] | 'open' | 'in_progress' | 'out_for_delivery', targetStatus: CanonicalStatus): boolean {
+  canUpdateStatus(currentStatus: Order['status'] | 'open' | 'in_progress' | 'out_for_delivery', targetStatus: CanonicalStatus, order?: Order): boolean {
     const statusFlow: Record<CanonicalStatus, CanonicalStatus[]> = {
       'pending': ['confirmed', 'cancelled'],
       'confirmed': ['preparing', 'cancelled'],
@@ -2718,6 +2718,15 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
     };
 
     const normalized: CanonicalStatus = this.canonicalStatus(currentStatus as any);
+    
+    // Special case: Only delivery orders can be marked as 'delivered'
+    if (targetStatus === 'delivered' && order) {
+      // Only allow 'delivered' status for delivery orders
+      if (!this.ordersService.isDeliveryOrder(order)) {
+        return false;
+      }
+    }
+    
     return statusFlow[normalized]?.includes(targetStatus) || false;
   }
 
