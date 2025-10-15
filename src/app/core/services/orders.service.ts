@@ -48,7 +48,7 @@ export interface Order {
   loyalty_discount_amount?: number;
   loyalty_redeemed?: boolean;
   loyalty_redemption_stamps_used?: number;
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked_up' | 'delivered' | 'cancelled' | 'open' | 'in_progress' | 'out_for_delivery';
+  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked_up' | 'delivered' | 'served' | 'paid' | 'cancelled' | 'open' | 'in_progress' | 'out_for_delivery';
   payment_status: 'pending' | 'paid' | 'failed';
   payment_method?: 'cash' | 'card' | 'paypal' | 'bank_transfer';
   delivery_address: string;

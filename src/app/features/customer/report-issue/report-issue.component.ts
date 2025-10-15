@@ -594,6 +594,8 @@ export class ReportIssueComponent implements OnInit {
       ready: 'Bereit zur Abholung',
       picked_up: 'Abgeholt',
       delivered: 'Geliefert',
+      served: 'Serviert',
+      paid: 'Bezahlt',
       cancelled: 'Storniert',
       open: 'Offen',
       in_progress: 'In Bearbeitung',

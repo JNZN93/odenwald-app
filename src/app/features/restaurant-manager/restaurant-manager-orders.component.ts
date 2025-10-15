@@ -8,7 +8,7 @@ import { RestaurantManagerService } from '../../core/services/restaurant-manager
 import { LoadingService } from '../../core/services/loading.service';
 import { ToastService } from '../../core/services/toast.service';
 
-type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked_up' | 'delivered' | 'cancelled';
+type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked_up' | 'delivered' | 'served' | 'paid' | 'cancelled';
 
 @Component({
   selector: 'app-restaurant-manager-orders',
@@ -40,13 +40,14 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
         >
           <i [ngClass]="tab.icon"></i>
           <span>{{ tab.title }}</span>
+          <span class="tab-badge" [ngClass]="getBadgeClass(tab.id)">{{ tabCounts[tab.id] || 0 }}</span>
         </button>
       </div>
 
       <!-- Filters -->
       <div class="filters-section">
         <div class="filters-grid">
-          <div class="filter-group" *ngIf="activeTab === 'active'">
+          <div class="filter-group" *ngIf="activeTab === 'all'">
             <label for="status-filter">Status:</label>
             <select id="status-filter" [(ngModel)]="selectedStatus" (change)="applyFilters()">
               <option value="all">Alle Status</option>
@@ -86,7 +87,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       <!-- Orders List -->
       <div class="orders-section">
         <div class="orders-header">
-          <h2>{{ filteredOrders.length }} {{ activeTab === 'active' ? 'aktive' : 'abgeschlossene' }} Bestellung{{ filteredOrders.length !== 1 ? 'en' : '' }} gefunden</h2>
+          <h2>{{ filteredOrders.length }} {{ activeTab === 'all' ? 'Bestellungen' : (activeTab === 'completed' ? 'abgeschlossene Bestellungen' : 'Bestellungen') }} gefunden</h2>
         </div>
 
         <!-- Desktop Table View -->
@@ -202,10 +203,32 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                       <i class="fa-solid fa-truck"></i>
                     </button>
 
-                    <!-- Payment Button - Only visible when not paid -->
+                    <!-- Served Button - Only for table orders -->
+                    <button
+                      class="action-btn served"
+                      [class.hidden]="!canUpdateStatus(order.status, 'served', order)"
+                      (click)="canUpdateStatus(order.status, 'served', order) ? updateOrderStatus(order.id, 'served') : null"
+                      [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'served', order)"
+                      title="Serviert"
+                    >
+                      <i class="fa-solid fa-utensils"></i>
+                    </button>
+
+                    <!-- Paid Button - Only for table orders -->
+                    <button
+                      class="action-btn paid"
+                      [class.hidden]="!canUpdateStatus(order.status, 'paid', order)"
+                      (click)="canUpdateStatus(order.status, 'paid', order) ? updateOrderStatus(order.id, 'paid') : null"
+                      [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'paid', order)"
+                      title="Bezahlt"
+                    >
+                      <i class="fa-solid fa-credit-card"></i>
+                    </button>
+
+                    <!-- Payment Button - Only visible when not paid and not in table order flow -->
                     <button
                       class="action-btn payment"
-                      *ngIf="order.payment_status === 'pending'"
+                      *ngIf="order.payment_status === 'pending' && !canUpdateStatus(order.status, 'paid', order)"
                       (click)="markOrderAsPaid(order.id)"
                       [disabled]="updatingOrderId === order.id"
                       title="Als bezahlt markieren"
@@ -390,10 +413,32 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                   Geliefert
                 </button>
 
-                <!-- Payment Button - Only visible when not paid -->
+                <!-- Served Button - Only for table orders -->
+                <button
+                  class="action-btn served"
+                  [class.hidden]="!canUpdateStatus(order.status, 'served', order)"
+                  (click)="canUpdateStatus(order.status, 'served', order) ? updateOrderStatus(order.id, 'served') : null"
+                  [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'served', order)"
+                >
+                  <i class="fa-solid fa-utensils"></i>
+                  Serviert
+                </button>
+
+                <!-- Paid Button - Only for table orders -->
+                <button
+                  class="action-btn paid"
+                  [class.hidden]="!canUpdateStatus(order.status, 'paid', order)"
+                  (click)="canUpdateStatus(order.status, 'paid', order) ? updateOrderStatus(order.id, 'paid') : null"
+                  [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'paid', order)"
+                >
+                  <i class="fa-solid fa-credit-card"></i>
+                  Bezahlt
+                </button>
+
+                <!-- Payment Button - Only visible when not paid and not in table order flow -->
                 <button
                   class="action-btn payment"
-                  *ngIf="order.payment_status === 'pending'"
+                  *ngIf="order.payment_status === 'pending' && !canUpdateStatus(order.status, 'paid', order)"
                   (click)="markOrderAsPaid(order.id)"
                   [disabled]="updatingOrderId === order.id"
                 >
@@ -640,29 +685,31 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
     /* Order Tabs */
     .order-tabs {
       display: flex;
-      gap: var(--space-2);
+      gap: var(--space-1);
       margin-bottom: var(--space-6);
-      padding: var(--space-4);
+      padding: var(--space-3);
       background: white;
       border-radius: var(--radius-xl);
       border: 1px solid var(--color-border);
       box-shadow: var(--shadow-sm);
+      flex-wrap: wrap;
     }
 
     .tab-button {
       display: flex;
       align-items: center;
-      gap: var(--space-2);
-      padding: var(--space-3) var(--space-4);
+      gap: var(--space-1);
+      padding: var(--space-2) var(--space-3);
       background: var(--color-gray-50);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-lg);
-      font-size: var(--text-sm);
+      font-size: var(--text-xs);
       font-weight: 500;
       color: var(--color-text);
       cursor: pointer;
       transition: all var(--transition);
       white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .tab-button:hover {
@@ -685,7 +732,48 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
     }
 
     .tab-button i {
-      font-size: var(--text-base);
+      font-size: var(--text-sm);
+    }
+
+    .tab-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 4px;
+      background: #dc2626;
+      color: white;
+      border-radius: 9px;
+      font-size: 10px;
+      font-weight: 700;
+      margin-left: var(--space-1);
+      border: 1px solid #b91c1c;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Badge color variations */
+    .tab-badge.badge-all {
+      background: #6b7280;
+      border-color: #4b5563;
+    }
+
+    .tab-badge.badge-completed {
+      background: #059669;
+      border-color: #047857;
+    }
+
+    /* All other badges remain red (default) */
+
+    .tab-button.active .tab-badge {
+      background: #1f2937 !important;
+      color: white;
+      border: 1px solid #374151 !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    .tab-badge:empty {
+      display: none;
     }
 
     .header-content h1 {
@@ -882,6 +970,8 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
     .status-badge.ready { background: var(--color-success-50); color: var(--color-success); }
     .status-badge.picked_up { background: var(--color-accent-50); color: var(--color-accent-600); }
     .status-badge.delivered { background: var(--color-success-50); color: var(--color-success); }
+    .status-badge.served { background: var(--color-success-50); color: var(--color-success); }
+    .status-badge.paid { background: var(--color-success-50); color: var(--color-success); }
     .status-badge.cancelled { background: var(--color-danger-50); color: var(--color-danger); }
 
     .order-details {
@@ -1055,6 +1145,26 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
     }
 
     .action-btn.deliver:hover {
+      background: var(--color-success-50);
+    }
+
+    .action-btn.served {
+      border-color: var(--color-info-500);
+      color: var(--color-info);
+      background: white;
+    }
+
+    .action-btn.served:hover {
+      background: var(--color-info-50);
+    }
+
+    .action-btn.paid {
+      border-color: var(--color-success-500);
+      color: var(--color-success);
+      background: white;
+    }
+
+    .action-btn.paid:hover {
       background: var(--color-success-50);
     }
 
@@ -2189,6 +2299,26 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       background: var(--color-success-50);
     }
 
+    .col-actions .action-btn.served {
+      border-color: var(--color-info-500);
+      color: var(--color-info);
+      background: white;
+    }
+
+    .col-actions .action-btn.served:hover:not(:disabled) {
+      background: var(--color-info-50);
+    }
+
+    .col-actions .action-btn.paid {
+      border-color: var(--color-success-500);
+      color: var(--color-success);
+      background: white;
+    }
+
+    .col-actions .action-btn.paid:hover:not(:disabled) {
+      background: var(--color-success-50);
+    }
+
     .col-actions .action-btn.cancel {
       border-color: var(--color-danger-500);
       color: var(--color-danger);
@@ -2286,12 +2416,19 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       }
 
       .tab-button {
-        padding: var(--space-2) var(--space-3);
-        font-size: var(--text-xs);
+        padding: var(--space-1) var(--space-2);
+        font-size: 10px;
       }
 
       .tab-button i {
-        font-size: var(--text-sm);
+        font-size: var(--text-xs);
+      }
+
+      .tab-badge {
+        min-width: 16px;
+        height: 16px;
+        font-size: 9px;
+        border-radius: 8px;
       }
 
       .filters-grid {
@@ -2336,6 +2473,9 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
   sortBy = 'newest';
   updatingOrderId: string | null = null;
   isLoading = false;
+  
+  // Tab counts for badges
+  tabCounts: { [key: string]: number } = {};
 
   // Notes modal properties
   notesModalOpen = false;
@@ -2349,13 +2489,16 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
   editingNotes = false;
 
   // Tabs properties - erweitert um Tischangebote
-  activeTab = 'active';
+  activeTab = 'urgent';
   orderTabs = [
-    { id: 'active', title: 'Alle Aktiven', icon: 'fa-solid fa-clock' },
+    { id: 'all', title: 'Alle', icon: 'fa-solid fa-list' },
+    { id: 'urgent', title: 'Sofort bearbeiten', icon: 'fa-solid fa-exclamation-triangle' },
+    { id: 'preparing', title: 'In Zubereitung', icon: 'fa-solid fa-utensils' },
+    { id: 'ready', title: 'Bereit', icon: 'fa-solid fa-check-circle' },
     { id: 'delivery', title: 'Lieferungen', icon: 'fa-solid fa-truck' },
     { id: 'pickup', title: 'Abholungen', icon: 'fa-solid fa-shopping-bag' },
     { id: 'dine_in', title: 'Tischangebote', icon: 'fa-solid fa-utensils' },
-    { id: 'completed', title: 'Abgeschlossene', icon: 'fa-solid fa-check-circle' }
+    { id: 'completed', title: 'Abgeschlossen', icon: 'fa-solid fa-archive' }
   ];
 
   private refreshSubscription?: Subscription;
@@ -2419,7 +2562,7 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
   switchTab(tabId: string) {
     this.activeTab = tabId;
     // Reset status filter when switching tabs
-    if (['active', 'delivery', 'pickup', 'dine_in', 'completed'].includes(tabId)) {
+    if (['all', 'urgent', 'preparing', 'ready', 'delivery', 'pickup', 'dine_in', 'completed'].includes(tabId)) {
       this.selectedStatus = 'all';
     }
     this.applyFilters();
@@ -2430,19 +2573,26 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
     let filtered = [...this.orders];
 
     // First, filter by tab
-    if (this.activeTab === 'active') {
-      // Active orders: NOT (delivered AND paid) OR NOT (served AND paid for table orders)
+    if (this.activeTab === 'all') {
+      // All orders: no additional filtering (show everything)
+      // filtered remains unchanged - shows all orders
+    } else if (this.activeTab === 'urgent') {
+      // Urgent orders: pending status (new orders that need immediate attention)
       filtered = filtered.filter(order => {
         const canonicalStatus = this.canonicalStatus(order.status);
-        const isTableOrder = this.ordersService.isTableOrder(order);
-
-        if (isTableOrder) {
-          // Table orders: NOT (served AND paid)
-          return !(order.table_status === 'served' && order.payment_status === 'paid');
-        } else {
-          // Delivery/Pickup orders: NOT (delivered AND paid)
-          return !(canonicalStatus === 'delivered' && order.payment_status === 'paid');
-        }
+        return canonicalStatus === 'pending';
+      });
+    } else if (this.activeTab === 'preparing') {
+      // Orders currently being prepared
+      filtered = filtered.filter(order => {
+        const canonicalStatus = this.canonicalStatus(order.status);
+        return canonicalStatus === 'preparing';
+      });
+    } else if (this.activeTab === 'ready') {
+      // Orders ready for pickup/delivery
+      filtered = filtered.filter(order => {
+        const canonicalStatus = this.canonicalStatus(order.status);
+        return canonicalStatus === 'ready';
       });
     } else if (this.activeTab === 'delivery') {
       // Only delivery orders
@@ -2454,17 +2604,21 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
       // Only table orders
       filtered = filtered.filter(order => this.ordersService.isTableOrder(order));
     } else if (this.activeTab === 'completed') {
-      // Completed orders: (delivered AND paid) OR (served AND paid for table orders)
+      // Completed orders: served (table), picked_up (pickup), delivered (delivery)
       filtered = filtered.filter(order => {
         const canonicalStatus = this.canonicalStatus(order.status);
         const isTableOrder = this.ordersService.isTableOrder(order);
+        const isPickupOrder = this.ordersService.isPickupOrder(order);
 
         if (isTableOrder) {
-          // Table orders: served AND paid
-          return order.table_status === 'served' && order.payment_status === 'paid';
+          // Table orders are completed when they are served
+          return canonicalStatus === 'served';
+        } else if (isPickupOrder) {
+          // Pickup orders are completed when they are picked up
+          return canonicalStatus === 'picked_up';
         } else {
-          // Delivery/Pickup orders: delivered AND paid
-          return canonicalStatus === 'delivered' && order.payment_status === 'paid';
+          // Delivery orders are completed when they are delivered
+          return canonicalStatus === 'delivered';
         }
       });
     }
@@ -2505,6 +2659,9 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
     // Ensure filteredOrders is always updated with a new reference for Angular change detection
     this.filteredOrders = [...filtered];
 
+    // Update tab counts for badges
+    this.updateTabCounts();
+
     // Debug logging to help identify issues
     console.log(`Filtered ${this.orders.length} orders to ${this.filteredOrders.length} with status filter: ${this.selectedStatus}`);
     console.log('Filtered orders IDs:', this.filteredOrders.map(o => o.id));
@@ -2521,6 +2678,9 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
     if (status === 'open') return 'pending';
     if (status === 'in_progress') return 'preparing';
     if (status === 'out_for_delivery') return 'picked_up';
+    // Handle table order specific statuses
+    if (status === 'served') return 'served';
+    if (status === 'paid') return 'paid';
     return status as CanonicalStatus;
   }
 
@@ -2707,22 +2867,49 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
   }
 
   canUpdateStatus(currentStatus: Order['status'] | 'open' | 'in_progress' | 'out_for_delivery', targetStatus: CanonicalStatus, order?: Order): boolean {
-    const statusFlow: Record<CanonicalStatus, CanonicalStatus[]> = {
+    // Different status flows for different order types
+    const deliveryStatusFlow: Record<CanonicalStatus, CanonicalStatus[]> = {
       'pending': ['confirmed', 'cancelled'],
       'confirmed': ['preparing', 'cancelled'],
       'preparing': ['ready', 'cancelled'],
       'ready': ['picked_up', 'cancelled'],
       'picked_up': ['delivered'],
       'delivered': [],
+      'served': [],
+      'paid': [],
+      'cancelled': []
+    };
+
+    const tableStatusFlow: Record<CanonicalStatus, CanonicalStatus[]> = {
+      'pending': ['confirmed', 'cancelled'],
+      'confirmed': ['preparing', 'cancelled'],
+      'preparing': ['ready', 'cancelled'],
+      'ready': ['served', 'cancelled'], // Table orders go directly to served, not picked_up
+      'served': ['paid'], // Table orders can be marked as paid after being served
+      'paid': [],
+      'picked_up': [],
+      'delivered': [],
       'cancelled': []
     };
 
     const normalized: CanonicalStatus = this.canonicalStatus(currentStatus as any);
     
+    // Choose the appropriate status flow based on order type
+    const statusFlow = order && this.ordersService.isTableOrder(order) ? tableStatusFlow : deliveryStatusFlow;
+    
     // Special case: Only delivery orders can be marked as 'delivered'
     if (targetStatus === 'delivered' && order) {
       // Only allow 'delivered' status for delivery orders
       if (!this.ordersService.isDeliveryOrder(order)) {
+        return false;
+      }
+    }
+    
+    // Special case: Only delivery/pickup orders can be marked as 'picked_up'
+    // Table orders (dine_in) should not have pickup status since they are served directly
+    if (targetStatus === 'picked_up' && order) {
+      // Only allow 'picked_up' status for delivery or pickup orders, not for table orders
+      if (this.ordersService.isTableOrder(order)) {
         return false;
       }
     }
@@ -2773,6 +2960,8 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
       case 'ready': return 'ready';
       case 'picked_up': return 'picked_up';
       case 'delivered': return 'delivered';
+      case 'served': return 'served';
+      case 'paid': return 'paid';
       case 'cancelled': return 'cancelled';
       default: return 'pending';
     }
@@ -2787,6 +2976,8 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
       case 'ready': return 'Bereit zur Abholung';
       case 'picked_up': return 'Abgeholt';
       case 'delivered': return 'Geliefert';
+      case 'served': return 'Serviert';
+      case 'paid': return 'Bezahlt';
       case 'cancelled': return 'Storniert';
       default: return 'Unbekannt';
     }
@@ -3000,5 +3191,66 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
     } else {
       return 'order-type-unknown';
     }
+  }
+
+  updateTabCounts(): void {
+    if (!this.orders || this.orders.length === 0) {
+      // Reset all counts to 0
+      this.orderTabs.forEach(tab => {
+        this.tabCounts[tab.id] = 0;
+      });
+      return;
+    }
+
+    const filtered = [...this.orders];
+
+    // Calculate counts for each tab
+    this.tabCounts['all'] = filtered.length;
+
+    this.tabCounts['urgent'] = filtered.filter(order => {
+      const canonicalStatus = this.canonicalStatus(order.status);
+      return canonicalStatus === 'pending';
+    }).length;
+
+    this.tabCounts['preparing'] = filtered.filter(order => {
+      const canonicalStatus = this.canonicalStatus(order.status);
+      return canonicalStatus === 'preparing';
+    }).length;
+
+    this.tabCounts['ready'] = filtered.filter(order => {
+      const canonicalStatus = this.canonicalStatus(order.status);
+      return canonicalStatus === 'ready';
+    }).length;
+
+    this.tabCounts['delivery'] = filtered.filter(order => this.ordersService.isDeliveryOrder(order)).length;
+
+    this.tabCounts['pickup'] = filtered.filter(order => this.ordersService.isPickupOrder(order)).length;
+
+    this.tabCounts['dine_in'] = filtered.filter(order => this.ordersService.isTableOrder(order)).length;
+
+    this.tabCounts['completed'] = filtered.filter(order => {
+      const canonicalStatus = this.canonicalStatus(order.status);
+      const isTableOrder = this.ordersService.isTableOrder(order);
+      const isPickupOrder = this.ordersService.isPickupOrder(order);
+
+      if (isTableOrder) {
+        // Table orders are completed when they are served
+        return canonicalStatus === 'served';
+      } else if (isPickupOrder) {
+        // Pickup orders are completed when they are picked up
+        return canonicalStatus === 'picked_up';
+      } else {
+        // Delivery orders are completed when they are delivered
+        return canonicalStatus === 'delivered';
+      }
+    }).length;
+  }
+
+  getTabCount(tabId: string): number {
+    return this.tabCounts[tabId] || 0;
+  }
+
+  getBadgeClass(tabId: string): string {
+    return `badge-${tabId}`;
   }
 }

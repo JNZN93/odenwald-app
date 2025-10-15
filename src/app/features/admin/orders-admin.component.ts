@@ -13,7 +13,7 @@ export interface ExtendedOrder extends Omit<Order, 'status'> {
   tax_amount?: number;
   order_time?: string;
   total?: number;
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked_up' | 'delivered' | 'cancelled' | 'open' | 'in_progress' | 'out_for_delivery';
+  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked_up' | 'delivered' | 'served' | 'paid' | 'cancelled' | 'open' | 'in_progress' | 'out_for_delivery';
 }
 
 export interface OrderFilters {
@@ -109,6 +109,8 @@ export interface OrderStatsResponse {
               <option value="ready">Bereit zur Abholung</option>
               <option value="picked_up">Abgeholt</option>
               <option value="delivered">Geliefert</option>
+              <option value="served">Serviert</option>
+              <option value="paid">Bezahlt</option>
               <option value="cancelled">Storniert</option>
               <option value="open">Offen</option>
             </select>
@@ -922,6 +924,8 @@ export class OrdersAdminComponent implements OnInit {
       ready: 'Bereit zur Abholung',
       picked_up: 'Abgeholt',
       delivered: 'Geliefert',
+      served: 'Serviert',
+      paid: 'Bezahlt',
       cancelled: 'Storniert',
       open: 'Offen',
       in_progress: 'In Bearbeitung',
