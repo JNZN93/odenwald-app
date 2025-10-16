@@ -58,6 +58,9 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
               <option value="picked_up">Abgeholt</option>
               <option value="delivered">Geliefert</option>
               <option value="cancelled">Storniert</option>
+              <option value="payment_pending">Zahlung ausstehend</option>
+              <option value="ready_pickup">Bereit zur Abholung</option>
+              <option value="fully_completed">Vollständig abgeschlossen</option>
             </select>
           </div>
 
@@ -132,8 +135,13 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                     Bezahlt
                   </span>
                   <span *ngIf="order.payment_status === 'pending'" class="payment-indicator temp">
-                    <i class="fa-solid fa-clock"></i>
-                    Wartet auf Zahlung
+                    <i class="fa-solid fa-exclamation-triangle"></i>
+                    Zahlung ausstehend
+                  </span>
+                  <!-- Warnung für fast abgeschlossene Bestellungen ohne Zahlung -->
+                  <span *ngIf="isOrderStatusCompleteButNotPaid(order)" class="payment-warning">
+                    <i class="fa-solid fa-exclamation-circle"></i>
+                    Fast fertig - Zahlung fehlt
                   </span>
                 </td>
                 <td class="col-total">
@@ -284,8 +292,13 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                   Bezahlt
                 </span>
                 <span *ngIf="order.payment_status === 'pending'" class="payment-indicator temp">
-                  <i class="fa-solid fa-clock"></i>
-                  Wartet auf Zahlung
+                  <i class="fa-solid fa-exclamation-triangle"></i>
+                  Zahlung ausstehend
+                </span>
+                <!-- Warnung für fast abgeschlossene Bestellungen ohne Zahlung -->
+                <span *ngIf="isOrderStatusCompleteButNotPaid(order)" class="payment-warning">
+                  <i class="fa-solid fa-exclamation-circle"></i>
+                  Fast fertig - Zahlung fehlt
                 </span>
               </div>
             </div>
@@ -965,6 +978,21 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       background: var(--color-warning-50);
       color: var(--color-warning);
       border: 1px solid var(--color-warning-200);
+    }
+
+    .payment-warning {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--color-danger-50);
+      color: var(--color-danger);
+      border: 1px solid var(--color-danger-200);
+      text-transform: uppercase;
+      margin-left: var(--space-1);
     }
     .status-badge.preparing { background: var(--color-primary-50); color: var(--color-primary-600); }
     .status-badge.ready { background: var(--color-success-50); color: var(--color-success); }
@@ -2604,30 +2632,26 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
       // Only table orders
       filtered = filtered.filter(order => this.ordersService.isTableOrder(order));
     } else if (this.activeTab === 'completed') {
-      // Completed orders: served (table), picked_up (pickup), delivered (delivery)
-      filtered = filtered.filter(order => {
-        const canonicalStatus = this.canonicalStatus(order.status);
-        const isTableOrder = this.ordersService.isTableOrder(order);
-        const isPickupOrder = this.ordersService.isPickupOrder(order);
-
-        if (isTableOrder) {
-          // Table orders are completed when they are served
-          return canonicalStatus === 'served';
-        } else if (isPickupOrder) {
-          // Pickup orders are completed when they are picked up
-          return canonicalStatus === 'picked_up';
-        } else {
-          // Delivery orders are completed when they are delivered
-          return canonicalStatus === 'delivered';
-        }
-      });
+      // Completed orders: nur vollständig abgeschlossene Bestellungen (Status + Zahlung)
+      filtered = filtered.filter(order => this.isOrderFullyCompleted(order));
     }
 
     // Filter by status
     if (this.selectedStatus !== 'all') {
       filtered = filtered.filter(order => {
-        const canonicalStatus = this.canonicalStatus(order.status);
-        return canonicalStatus === this.selectedStatus;
+        // Spezielle Filter für benutzerfreundliche Ansichten
+        switch (this.selectedStatus) {
+          case 'payment_pending':
+            return order.payment_status === 'pending';
+          case 'ready_pickup':
+            return order.status === 'ready';
+          case 'fully_completed':
+            return this.isOrderFullyCompleted(order);
+          default:
+            // Standard-Status-Filter
+            const canonicalStatus = this.canonicalStatus(order.status);
+            return canonicalStatus === this.selectedStatus;
+        }
       });
     }
 
@@ -2739,6 +2763,31 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
           // Double-check after filter reset
           const stillVisible = this.filteredOrders.some(order => String(order.id) === String(orderId));
           console.log(`Order visibility after filter reset:`, { orderId, visible: stillVisible });
+        }
+
+        // Automatische Zahlungsmarkierung für Tischangebote
+        if (newStatus === 'served' && order && order.order_type === 'dine_in' && order.payment_status === 'pending') {
+          console.log('Auto-marking table order as paid after serving');
+          // Automatisch als bezahlt markieren für Tischangebote
+          this.orders[index] = {
+            ...this.orders[index],
+            payment_status: 'paid'
+          };
+          
+          // Backend-Update für Zahlungsstatus
+          this.ordersService.updateOrderPaymentStatus(orderId, 'paid').subscribe({
+            next: () => {
+              console.log('Table order automatically marked as paid');
+            },
+            error: (error) => {
+              console.error('Error auto-marking table order as paid:', error);
+              // Rückgängig machen bei Fehler
+              this.orders[index] = {
+                ...this.orders[index],
+                payment_status: 'pending'
+              };
+            }
+          });
         }
 
         this.toastService.success('Status aktualisiert', `Bestellung ${this.getOrderStatusText(newStatus)}`);
@@ -2981,6 +3030,40 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
       case 'cancelled': return 'Storniert';
       default: return 'Unbekannt';
     }
+  }
+
+  /**
+   * Prüft ob eine Bestellung vollständig abgeschlossen ist
+   * Eine Bestellung gilt als abgeschlossen wenn:
+   * 1. Der Bestellungsstatus den Endpunkt erreicht hat UND
+   * 2. Die Zahlung erfolgt ist
+   */
+  private isOrderFullyCompleted(order: Order): boolean {
+    // Bestellungsstatus muss den Endpunkt erreicht haben
+    const isOrderStatusComplete = 
+      (order.order_type === 'delivery' && order.status === 'delivered') ||
+      (order.order_type === 'pickup' && order.status === 'picked_up') ||
+      (order.order_type === 'dine_in' && order.status === 'served');
+    
+    // Zahlung muss erfolgt sein
+    const isPaymentComplete = order.payment_status === 'paid';
+    
+    return isOrderStatusComplete && isPaymentComplete;
+  }
+
+  /**
+   * Prüft ob der Bestellungsstatus abgeschlossen ist, aber die Zahlung noch aussteht
+   * Zeigt eine Warnung für fast fertige Bestellungen ohne Zahlung
+   */
+  isOrderStatusCompleteButNotPaid(order: Order): boolean {
+    const isOrderStatusComplete = 
+      (order.order_type === 'delivery' && order.status === 'delivered') ||
+      (order.order_type === 'pickup' && order.status === 'picked_up') ||
+      (order.order_type === 'dine_in' && order.status === 'served');
+    
+    const isPaymentPending = order.payment_status === 'pending';
+    
+    return isOrderStatusComplete && isPaymentPending;
   }
 
   getVariantSummary(variants: Array<{id: string, name: string, group_name: string, price_modifier_cents: number}>): string {
@@ -3228,22 +3311,7 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
 
     this.tabCounts['dine_in'] = filtered.filter(order => this.ordersService.isTableOrder(order)).length;
 
-    this.tabCounts['completed'] = filtered.filter(order => {
-      const canonicalStatus = this.canonicalStatus(order.status);
-      const isTableOrder = this.ordersService.isTableOrder(order);
-      const isPickupOrder = this.ordersService.isPickupOrder(order);
-
-      if (isTableOrder) {
-        // Table orders are completed when they are served
-        return canonicalStatus === 'served';
-      } else if (isPickupOrder) {
-        // Pickup orders are completed when they are picked up
-        return canonicalStatus === 'picked_up';
-      } else {
-        // Delivery orders are completed when they are delivered
-        return canonicalStatus === 'delivered';
-      }
-    }).length;
+    this.tabCounts['completed'] = filtered.filter(order => this.isOrderFullyCompleted(order)).length;
   }
 
   getTabCount(tabId: string): number {
