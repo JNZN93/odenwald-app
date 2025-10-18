@@ -116,6 +116,7 @@ export const routes: Routes = [
       { path: 'overview', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-overview.component').then(m => m.RestaurantManagerOverviewComponent) },
       { path: 'orders', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-orders.component').then(m => m.RestaurantManagerOrdersComponent) },
       { path: 'menu', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-menu.component').then(m => m.RestaurantManagerMenuComponent) },
+      { path: 'flyer', loadComponent: () => import('./features/restaurant-manager/flyer-generator.component').then(m => m.FlyerGeneratorComponent) },
       { path: 'drivers', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-drivers.component').then(m => m.RestaurantManagerDriversComponent) },
       { path: 'analytics', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-analytics.component').then(m => m.RestaurantManagerAnalyticsComponent) },
       { path: 'customers', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-customers.component').then(m => m.RestaurantManagerCustomersComponent) },

@@ -43,6 +43,7 @@ export interface ManagerMenuItem {
             <i *ngIf="menuItem.icon === 'tables-icon'" class="fas fa-chair nav-icon"></i>
             <i *ngIf="menuItem.icon === 'drivers-icon'" class="fas fa-truck nav-icon"></i>
             <i *ngIf="menuItem.icon === 'menu-icon'" class="fas fa-list nav-icon"></i>
+            <i *ngIf="menuItem.icon === 'flyer-icon'" class="fas fa-file-pdf nav-icon"></i>
             <i *ngIf="menuItem.icon === 'details-icon'" class="fas fa-info-circle nav-icon"></i>
             <i *ngIf="menuItem.icon === 'analytics-icon'" class="fas fa-chart-line nav-icon"></i>
             <i *ngIf="menuItem.icon === 'customers-icon'" class="fas fa-address-book nav-icon"></i>
@@ -752,6 +753,15 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
         route: '/restaurant-manager/menu',
         queryParams: {},
         color: '#3B82F6'
+      },
+      {
+        id: 'flyer',
+        title: 'Flyer Generator',
+        description: 'DIN A4 Flyer erstellen',
+        icon: 'flyer-icon',
+        route: '/restaurant-manager/flyer',
+        queryParams: {},
+        color: '#f59e0b'
       },
       {
         id: 'details',
