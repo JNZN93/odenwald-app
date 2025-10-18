@@ -372,6 +372,17 @@ export class I18nService {
       'orders.add': 'Hinzufügen',
       'orders.notes_warning': 'Notizen können nur einmal hinzugefügt werden. Stellen Sie sicher, dass alle wichtigen Informationen enthalten sind.',
       
+      // Order Details Modal
+      'orders.order_number': 'Bestellung #',
+      'orders.customer_label': 'Kunde:',
+      'orders.email_label': 'E-Mail:',
+      'orders.ordered_at': 'Bestellt am:',
+      'orders.delivery_address': 'Lieferadresse',
+      'orders.special_instructions': 'Spezielle Anweisungen:',
+      'orders.ordered_items': 'Bestellte Artikel',
+      'orders.subtotal': 'Zwischensumme:',
+      'orders.notes': 'Notizen',
+      
       // Settings
       'settings.title': 'Restaurant-Einstellungen',
       'settings.description': 'Verwalten Sie die Einstellungen Ihres Restaurants',
@@ -846,6 +857,17 @@ export class I18nService {
       'orders.update': 'Güncelle',
       'orders.add': 'Ekle',
       'orders.notes_warning': 'Notlar sadece bir kez eklenebilir. Tüm önemli bilgilerin dahil olduğundan emin olun.',
+      
+      // Order Details Modal
+      'orders.order_number': 'Sipariş #',
+      'orders.customer_label': 'Müşteri:',
+      'orders.email_label': 'E-posta:',
+      'orders.ordered_at': 'Sipariş tarihi:',
+      'orders.delivery_address': 'Teslimat adresi',
+      'orders.special_instructions': 'Özel talimatlar:',
+      'orders.ordered_items': 'Sipariş edilen ürünler',
+      'orders.subtotal': 'Ara toplam:',
+      'orders.notes': 'Notlar',
       
       // Settings
       'settings.title': 'Restoran Ayarları',

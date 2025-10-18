@@ -492,7 +492,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       <div class="details-modal-overlay" *ngIf="detailsModalOpen" (click)="closeDetailsModal()">
         <div class="details-modal" (click)="$event.stopPropagation()">
           <div class="details-modal-header">
-            <h3>Bestellung #{{ selectedOrder?.id?.slice(-6) || 'Unbekannt' }}</h3>
+            <h3>{{ 'orders.order_number' | translate }}{{ selectedOrder?.id?.slice(-6) || ('orders.unknown' | translate) }}</h3>
             <button class="close-btn" (click)="closeDetailsModal()">
               <i class="fa-solid fa-times"></i>
             </button>
@@ -502,15 +502,15 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
             <div class="order-summary-section">
               <div class="order-summary-grid">
                 <div class="summary-item">
-                  <label>Kunde:</label>
+                  <label>{{ 'orders.customer_label' | translate }}</label>
                   <span>{{ selectedOrder.customer_name }}</span>
                 </div>
                 <div class="summary-item">
-                  <label>E-Mail:</label>
+                  <label>{{ 'orders.email_label' | translate }}</label>
                   <span>{{ selectedOrder.customer_email }}</span>
                 </div>
                 <div class="summary-item">
-                  <label>Bestellt am:</label>
+                  <label>{{ 'orders.ordered_at' | translate }}</label>
                   <span>{{ formatOrderTime(selectedOrder.created_at) }}</span>
                 </div>
               </div>
@@ -518,7 +518,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
 
             <!-- Delivery Address -->
             <div class="delivery-section" *ngIf="selectedOrder.delivery_address">
-              <h4>Lieferadresse</h4>
+              <h4>{{ 'orders.delivery_address' | translate }}</h4>
               <div class="address-info">
                 <i class="fa-solid fa-map-marker-alt"></i>
                 <span>{{ selectedOrder.delivery_address }}</span>
@@ -531,7 +531,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
 
             <!-- Order Items -->
             <div class="items-section">
-              <h4>Bestellte Artikel</h4>
+              <h4>{{ 'orders.ordered_items' | translate }}</h4>
               <div class="order-items-list">
                 <div *ngFor="let item of selectedOrder.items" class="detail-order-item">
                   <div class="item-header">
@@ -551,7 +551,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                   <div class="item-special-instructions" *ngIf="item.special_instructions">
                     <div class="special-instructions-header">
                       <i class="fa-solid fa-sticky-note"></i>
-                      <span class="special-instructions-label">Spezielle Anweisungen:</span>
+                      <span class="special-instructions-label">{{ 'orders.special_instructions' | translate }}</span>
                     </div>
                     <div class="special-instructions-content">
                       {{ item.special_instructions }}
@@ -565,7 +565,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
             <div class="total-section">
               <div class="total-breakdown">
                 <div class="total-row">
-                  <span class="total-label">Zwischensumme:</span>
+                  <span class="total-label">{{ 'orders.subtotal' | translate }}</span>
                   <span class="total-amount">€{{ (selectedOrder.total_price - (selectedOrder.delivery_fee || 0)).toFixed(2) }}</span>
                 </div>
                 <div class="total-row" *ngIf="selectedOrder.delivery_fee">
@@ -573,7 +573,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                   <span class="total-amount">€{{ selectedOrder.delivery_fee.toFixed(2) }}</span>
                 </div>
                 <div class="total-row final">
-                  <span class="total-label">Gesamt:</span>
+                  <span class="total-label">{{ 'orders.total' | translate }}</span>
                   <span class="total-amount">€{{ selectedOrder.total_price.toFixed(2) }}</span>
                 </div>
               </div>
@@ -582,7 +582,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
             <!-- Order Notes Section -->
             <div class="notes-section">
               <div class="notes-header">
-                <h4>Notizen</h4>
+                <h4>{{ 'orders.notes' | translate }}</h4>
                 <button
                   class="edit-notes-btn"
                   (click)="toggleNotesEdit()"
@@ -618,7 +618,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                   <small class="character-count">{{ notesText.length }}/1000</small>
                 </div>
                 <div class="notes-actions">
-                  <button class="cancel-btn" (click)="cancelNotesEdit()">Abbrechen</button>
+                  <button class="cancel-btn" (click)="cancelNotesEdit()">{{ 'common.cancel' | translate }}</button>
                   <button
                     class="save-btn"
                     (click)="saveNotesInline()"
@@ -662,7 +662,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
             </div>
           </div>
           <div class="notes-modal-footer">
-            <button class="cancel-btn" (click)="closeNotesModal()">Abbrechen</button>
+            <button class="cancel-btn" (click)="closeNotesModal()">{{ 'common.cancel' | translate }}</button>
             <button
               class="save-btn"
               (click)="saveNotes()"
