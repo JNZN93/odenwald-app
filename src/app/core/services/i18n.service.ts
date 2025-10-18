@@ -286,6 +286,8 @@ export class I18nService {
       'order.status.ready': 'Bereit zur Abholung',
       'order.status.picked_up': 'Abgeholt',
       'order.status.delivered': 'Geliefert',
+      'order.status.served': 'Serviert',
+      'order.status.paid': 'Bezahlt',
       'order.status.cancelled': 'Storniert',
 
       // Menu management
@@ -328,6 +330,22 @@ export class I18nService {
       'orders.delivery_fee': 'Liefergebühr',
       'orders.no_notes_add': 'Keine Notizen vorhanden. Klicken Sie auf das Plus-Symbol, um Notizen hinzuzufügen.',
       'orders.additional_notes': 'Zusätzliche Hinweise zur Bestellung',
+      
+      // Order status tabs
+      'orders.tabs.all': 'Alle',
+      'orders.tabs.urgent': 'Sofort bearbeiten',
+      'orders.tabs.preparing': 'In Zubereitung',
+      'orders.tabs.ready': 'Bereit',
+      'orders.tabs.delivery': 'Lieferungen',
+      'orders.tabs.pickup': 'Abholungen',
+      'orders.tabs.dine_in': 'Tischangebote',
+      'orders.tabs.completed': 'Abgeschlossen',
+      
+      // Order type values
+      'orders.type.dine_in': 'Vor Ort',
+      'orders.type.delivery': 'Lieferung',
+      'orders.type.pickup': 'Abholung',
+      'orders.type.unknown': 'Unbekannt',
       'orders.notes_placeholder': 'Fügen Sie hier zusätzliche Hinweise hinzu...',
       'orders.cancelled_by_manager': 'Storniert durch Restaurant-Manager',
       'orders.confirm_cancel': 'Sind Sie sicher, dass Sie diese Bestellung stornieren möchten?',
@@ -738,6 +756,8 @@ export class I18nService {
       'order.status.ready': 'Teslim için hazır',
       'order.status.picked_up': 'Alındı',
       'order.status.delivered': 'Teslim edildi',
+      'order.status.served': 'Servis edildi',
+      'order.status.paid': 'Ödendi',
       'order.status.cancelled': 'İptal edildi',
 
       // Menu management
@@ -764,7 +784,7 @@ export class I18nService {
       'orders.order_status': 'Sipariş durumu',
       'orders.payment': 'Ödeme',
       'orders.total': 'Toplam',
-      'orders.type': 'Tip',
+      'orders.type': 'Tür',
       'orders.address': 'Adres',
       'orders.details': 'Detaylar',
       'orders.paid': 'Ödendi',
@@ -779,6 +799,22 @@ export class I18nService {
       'orders.delivery_fee': 'Teslimat ücreti',
       'orders.no_notes_add': 'Not yok. Not eklemek için artı simgesine tıklayın.',
       'orders.additional_notes': 'Sipariş için ek notlar',
+      
+      // Order status tabs
+      'orders.tabs.all': 'Tümü',
+      'orders.tabs.urgent': 'Hemen işle',
+      'orders.tabs.preparing': 'Hazırlanıyor',
+      'orders.tabs.ready': 'Hazır',
+      'orders.tabs.delivery': 'Teslimatlar',
+      'orders.tabs.pickup': 'Alımlar',
+      'orders.tabs.dine_in': 'Masa Teklifleri',
+      'orders.tabs.completed': 'Tamamlandı',
+      
+      // Order type values
+      'orders.type.dine_in': 'Yerinde',
+      'orders.type.delivery': 'Teslimat',
+      'orders.type.pickup': 'Alım',
+      'orders.type.unknown': 'Bilinmiyor',
       'orders.notes_placeholder': 'Buraya ek notlar ekleyin...',
       'orders.cancelled_by_manager': 'Restoran yöneticisi tarafından iptal edildi',
       'orders.confirm_cancel': 'Bu siparişi iptal etmek istediğinizden emin misiniz?',

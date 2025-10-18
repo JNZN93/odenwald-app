@@ -41,7 +41,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
           class="tab-button"
         >
           <i [ngClass]="tab.icon"></i>
-          <span>{{ tab.title }}</span>
+          <span>{{ tab.titleKey | translate }}</span>
           <span class="tab-badge" [ngClass]="getBadgeClass(tab.id)">{{ tabCounts[tab.id] || 0 }}</span>
         </button>
       </div>
@@ -153,7 +153,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                 <td class="col-order-type">
                   <div class="order-type-badge" [ngClass]="getOrderTypeClass(order)">
                     <i [ngClass]="getOrderTypeIcon(order)"></i>
-                    <span>{{ getOrderTypeText(order) }}</span>
+                    <span>{{ getOrderTypeText(order) | translate }}</span>
                   </div>
                 </td>
                 <td class="col-address">
@@ -317,7 +317,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                 <div class="order-type-info">
                   <div class="order-type-badge mobile" [ngClass]="getOrderTypeClass(order)">
                     <i [ngClass]="getOrderTypeIcon(order)"></i>
-                    <span>{{ getOrderTypeText(order) }}</span>
+                    <span>{{ getOrderTypeText(order) | translate }}</span>
                   </div>
                 </div>
                 <div class="delivery-address" *ngIf="order.delivery_address">{{ order.delivery_address }}</div>
@@ -2522,14 +2522,14 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
   // Tabs properties - erweitert um Tischangebote
   activeTab = 'urgent';
   orderTabs = [
-    { id: 'all', title: 'Alle', icon: 'fa-solid fa-list' },
-    { id: 'urgent', title: 'Sofort bearbeiten', icon: 'fa-solid fa-exclamation-triangle' },
-    { id: 'preparing', title: 'In Zubereitung', icon: 'fa-solid fa-utensils' },
-    { id: 'ready', title: 'Bereit', icon: 'fa-solid fa-check-circle' },
-    { id: 'delivery', title: 'Lieferungen', icon: 'fa-solid fa-truck' },
-    { id: 'pickup', title: 'Abholungen', icon: 'fa-solid fa-shopping-bag' },
-    { id: 'dine_in', title: 'Tischangebote', icon: 'fa-solid fa-utensils' },
-    { id: 'completed', title: 'Abgeschlossen', icon: 'fa-solid fa-archive' }
+    { id: 'all', titleKey: 'orders.tabs.all', icon: 'fa-solid fa-list' },
+    { id: 'urgent', titleKey: 'orders.tabs.urgent', icon: 'fa-solid fa-exclamation-triangle' },
+    { id: 'preparing', titleKey: 'orders.tabs.preparing', icon: 'fa-solid fa-utensils' },
+    { id: 'ready', titleKey: 'orders.tabs.ready', icon: 'fa-solid fa-check-circle' },
+    { id: 'delivery', titleKey: 'orders.tabs.delivery', icon: 'fa-solid fa-truck' },
+    { id: 'pickup', titleKey: 'orders.tabs.pickup', icon: 'fa-solid fa-shopping-bag' },
+    { id: 'dine_in', titleKey: 'orders.tabs.dine_in', icon: 'fa-solid fa-utensils' },
+    { id: 'completed', titleKey: 'orders.tabs.completed', icon: 'fa-solid fa-archive' }
   ];
 
   private refreshSubscription?: Subscription;
@@ -3245,15 +3245,16 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
   // Order type display methods
   getOrderTypeText(order: Order): string {
     if (this.ordersService.isTableOrder(order)) {
-      return 'Vor Ort';
+      return 'orders.type.dine_in';
     } else if (this.ordersService.isDeliveryOrder(order)) {
-      return 'Lieferung';
+      return 'orders.type.delivery';
     } else if (this.ordersService.isPickupOrder(order)) {
-      return 'Abholung';
+      return 'orders.type.pickup';
     } else {
-      return 'Unbekannt';
+      return 'orders.type.unknown';
     }
   }
+
 
   getOrderTypeIcon(order: Order): string {
     if (this.ordersService.isTableOrder(order)) {
