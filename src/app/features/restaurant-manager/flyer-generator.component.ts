@@ -255,27 +255,34 @@ interface PaperFormat {
               </div>
             </div>
 
-            <!-- Products Grid -->
+            <!-- Products Grid - Sorted by Categories -->
             <div class="flyer-content" [ngClass]="'layout-' + selectedTemplate.layout">
-              <div 
-                *ngFor="let item of selectedProducts" 
-                class="flyer-product"
-                [ngClass]="'layout-' + selectedTemplate.layout">
-                <div class="product-image" *ngIf="selectedTemplate.showImages">
-                  <img [src]="getItemImageUrl(item)" [alt]="item.name" (error)="onImageError($event)">
+              <div *ngFor="let category of getSelectedProductsByCategory()" class="category-section">
+                <div class="category-header" *ngIf="selectedTemplate.showCategories">
+                  <h3 class="category-title">{{ category.name }}</h3>
                 </div>
-                <div class="product-content">
-                  <h3>{{ item.name }}</h3>
-                  <p class="product-description" *ngIf="selectedTemplate.showDescriptions">
-                    {{ item.description }}
-                  </p>
-                  <div class="product-price" *ngIf="selectedTemplate.showPrices">
-                    €{{ (item.price || 0).toFixed(2) }}
-                  </div>
-                  <div class="product-badges" *ngIf="item.is_vegetarian || item.is_vegan || item.is_gluten_free">
-                    <span *ngIf="item.is_vegetarian" class="badge vegetarian">Vegetarisch</span>
-                    <span *ngIf="item.is_vegan" class="badge vegan">Vegan</span>
-                    <span *ngIf="item.is_gluten_free" class="badge gluten-free">Glutenfrei</span>
+                <div class="products-container" [ngClass]="'layout-' + selectedTemplate.layout">
+                  <div 
+                    *ngFor="let item of category.items" 
+                    class="flyer-product"
+                    [ngClass]="'layout-' + selectedTemplate.layout">
+                    <div class="product-image" *ngIf="selectedTemplate.showImages">
+                      <img [src]="getItemImageUrl(item)" [alt]="item.name" (error)="onImageError($event)">
+                    </div>
+                    <div class="product-content">
+                      <h4>{{ item.name }}</h4>
+                      <p class="product-description" *ngIf="selectedTemplate.showDescriptions">
+                        {{ item.description }}
+                      </p>
+                      <div class="product-price" *ngIf="selectedTemplate.showPrices">
+                        €{{ (item.price || 0).toFixed(2) }}
+                      </div>
+                      <div class="product-badges" *ngIf="item.is_vegetarian || item.is_vegan || item.is_gluten_free">
+                        <span *ngIf="item.is_vegetarian" class="badge vegetarian">V</span>
+                        <span *ngIf="item.is_vegan" class="badge vegan">VG</span>
+                        <span *ngIf="item.is_gluten_free" class="badge gluten-free">GF</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -726,25 +733,30 @@ interface PaperFormat {
     }
 
     .badge {
-      padding: var(--space-1) var(--space-2);
-      border-radius: var(--radius-sm);
+      padding: calc(var(--space-1) - 1px) var(--space-2);
+      border-radius: var(--radius-full);
       font-size: var(--text-xs);
       font-weight: 600;
+      border: 1px solid var(--color-border);
+      background: white;
     }
 
     .badge.vegetarian {
-      background: var(--color-success-50);
+      background: color-mix(in oklab, var(--color-success) 6%, white);
       color: var(--color-success);
+      border-color: color-mix(in oklab, var(--color-success) 30%, var(--color-border));
     }
 
     .badge.vegan {
-      background: var(--color-info-50);
+      background: color-mix(in oklab, var(--color-info) 6%, white);
       color: var(--color-info);
+      border-color: color-mix(in oklab, var(--color-info) 30%, var(--color-border));
     }
 
     .badge.gluten-free {
-      background: var(--color-warning-50);
+      background: color-mix(in oklab, var(--color-warning) 6%, white);
       color: var(--color-warning);
+      border-color: color-mix(in oklab, var(--color-warning) 30%, var(--color-border));
     }
 
     .selection-indicator {
@@ -963,61 +975,102 @@ interface PaperFormat {
       flex: 1;
     }
 
-    .layout-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: var(--space-4);
+    /* Category Sections */
+    .category-section {
+      margin-bottom: var(--space-4);
     }
 
-    .layout-list {
+    .category-header {
+      background: var(--primary-color);
+      color: white;
+      padding: var(--space-2) var(--space-3);
+      margin-bottom: var(--space-2);
+      border-radius: var(--radius-md);
+    }
+
+    .category-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .products-container {
+      display: grid;
+      gap: var(--space-2);
+    }
+
+    .products-container.layout-grid {
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-1);
+    }
+
+    .products-container.layout-list {
       display: flex;
       flex-direction: column;
-      gap: var(--space-4);
+      gap: var(--space-1);
     }
 
-    .layout-featured {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: var(--space-4);
+    .products-container.layout-featured {
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-2);
     }
 
     .flyer-product {
       border: 1px solid var(--color-border);
-      border-radius: var(--radius-lg);
-      padding: var(--space-4);
+      border-radius: var(--radius-md);
+      padding: var(--space-2);
       background: white;
+      transition: all var(--transition);
+    }
+
+    .flyer-product:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transform: translateY(-1px);
     }
 
     .flyer-product.layout-grid {
       display: flex;
       flex-direction: column;
       text-align: center;
+      padding: var(--space-1);
+      gap: var(--space-1);
     }
 
     .flyer-product.layout-list {
       display: flex;
-      align-items: center;
-      gap: var(--space-4);
+      flex-direction: column;
+      text-align: center;
+      padding: var(--space-1);
+      gap: var(--space-1);
     }
 
     .flyer-product.layout-featured {
       display: flex;
       flex-direction: column;
       text-align: center;
+      padding: var(--space-1-5);
+      gap: var(--space-1);
     }
 
     .flyer-product .product-image {
       width: 100%;
-      height: 120px;
-      border-radius: var(--radius-md);
+      height: 70px;
+      border-radius: var(--radius-sm);
       overflow: hidden;
-      margin-bottom: var(--space-3);
+      flex-shrink: 0;
+      order: 1;
+      border: 1px solid var(--color-border);
+      background: var(--color-muted-100);
     }
 
     .flyer-product.layout-list .product-image {
-      width: 80px;
-      height: 80px;
-      margin-bottom: 0;
+      height: 60px;
+    }
+
+    .flyer-product.layout-featured .product-image {
+      height: 85px;
     }
 
     .flyer-product .product-image img {
@@ -1026,30 +1079,72 @@ interface PaperFormat {
       object-fit: cover;
     }
 
-    .flyer-product h3 {
-      font-size: 1.1rem;
+    .flyer-product .product-content {
+      flex: 1;
+      order: 2;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      text-align: center;
+    }
+
+    .flyer-product h4 {
+      font-size: 0.7rem;
       font-weight: 600;
-      margin: 0 0 var(--space-2) 0;
+      margin: 0;
       color: var(--primary-color);
+      line-height: 1.1;
+    }
+
+    .flyer-product.layout-list h4 {
+      font-size: 0.75rem;
+    }
+
+    .flyer-product.layout-featured h4 {
+      font-size: 0.75rem;
     }
 
     .flyer-product .product-description {
-      font-size: 0.9rem;
+      font-size: 0.6rem;
       color: var(--color-muted);
-      margin: 0 0 var(--space-2) 0;
+      margin: 0;
+      line-height: 1.2;
+      display: -webkit-box;
+      -webkit-line-clamp: 1;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .flyer-product.layout-list .product-description {
+      font-size: 0.65rem;
+    }
+
+    .flyer-product.layout-featured .product-description {
+      font-size: 0.65rem;
+      -webkit-line-clamp: 2;
     }
 
     .flyer-product .product-price {
-      font-size: 1.3rem;
+      font-size: 0.75rem;
       font-weight: 700;
-      color: var(--accent-color);
-      margin-bottom: var(--space-2);
+      color: var(--primary-color);
+      margin: 0;
+    }
+
+    .flyer-product.layout-list .product-price {
+      font-size: 0.8rem;
+    }
+
+    .flyer-product.layout-featured .product-price {
+      font-size: 0.85rem;
     }
 
     .flyer-product .product-badges {
       display: flex;
       justify-content: center;
-      gap: var(--space-1);
+      gap: 1px;
+      flex-wrap: wrap;
+      margin-top: 1px;
     }
 
     .flyer-footer {
@@ -1147,7 +1242,7 @@ export class FlyerGeneratorComponent implements OnInit {
       showImages: true,
       showPrices: true,
       showDescriptions: true,
-      showCategories: false
+      showCategories: true
     },
     {
       id: 'list',
@@ -1157,7 +1252,7 @@ export class FlyerGeneratorComponent implements OnInit {
       showImages: true,
       showPrices: true,
       showDescriptions: true,
-      showCategories: false
+      showCategories: true
     },
     {
       id: 'featured',
@@ -1167,7 +1262,7 @@ export class FlyerGeneratorComponent implements OnInit {
       showImages: true,
       showPrices: true,
       showDescriptions: true,
-      showCategories: false
+      showCategories: true
     }
   ];
 
@@ -1327,6 +1422,34 @@ export class FlyerGeneratorComponent implements OnInit {
     return this.menuItems.filter(item => 
       item.category_id === categoryId && item.is_available
     );
+  }
+
+  getSelectedProductsByCategory(): any[] {
+    if (!this.selectedProducts.length) return [];
+    
+    // Group selected products by category
+    const categoryMap = new Map<string, any[]>();
+    
+    this.selectedProducts.forEach(product => {
+      const categoryId = product.category_id;
+      if (!categoryMap.has(categoryId)) {
+        categoryMap.set(categoryId, []);
+      }
+      categoryMap.get(categoryId)!.push(product);
+    });
+    
+    // Convert to array and sort by category position
+    return Array.from(categoryMap.entries())
+      .map(([categoryId, items]) => {
+        const category = this.categories.find(c => c.id === categoryId);
+        return {
+          id: categoryId,
+          name: category?.name || 'Unbekannte Kategorie',
+          position: category?.position || 999,
+          items: items
+        };
+      })
+      .sort((a, b) => a.position - b.position);
   }
 
   isProductSelected(productId: string): boolean {
@@ -1532,28 +1655,49 @@ export class FlyerGeneratorComponent implements OnInit {
             flex: 1;
           }
           
+          .category-section {
+            margin-bottom: 15px;
+            page-break-inside: avoid;
+          }
+          
+          .category-header {
+            background: var(--primary-color, #2c3e50);
+            color: white;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+          }
+          
+          .category-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          
           .products-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
           }
           
           .products-list {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 3px;
           }
           
           .products-featured {
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 10px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
           }
           
           .flyer-product {
             border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 10px;
+            border-radius: 6px;
+            padding: 8px;
             background: white;
             page-break-inside: avoid;
           }
@@ -1562,32 +1706,43 @@ export class FlyerGeneratorComponent implements OnInit {
             display: flex;
             flex-direction: column;
             text-align: center;
+            padding: 4px;
+            gap: 3px;
           }
           
           .flyer-product.list {
             display: flex;
-            align-items: center;
-            gap: 10px;
+            flex-direction: column;
+            text-align: center;
+            padding: 4px;
+            gap: 3px;
           }
           
           .flyer-product.featured {
             display: flex;
             flex-direction: column;
             text-align: center;
+            padding: 5px;
+            gap: 3px;
           }
           
           .product-image {
             width: 100%;
-            height: 80px;
-            border-radius: 6px;
+            height: 50px;
+            border-radius: 3px;
             overflow: hidden;
-            margin-bottom: 8px;
+            flex-shrink: 0;
+            order: 1;
+            border: 1px solid #e0e0e0;
+            background: #fafafa;
           }
           
           .flyer-product.list .product-image {
-            width: 60px;
+            height: 45px;
+          }
+          
+          .flyer-product.featured .product-image {
             height: 60px;
-            margin-bottom: 0;
           }
           
           .product-image img {
@@ -1596,52 +1751,99 @@ export class FlyerGeneratorComponent implements OnInit {
             object-fit: cover;
           }
           
-          .flyer-product h3 {
-            font-size: 1rem;
+          .product-content {
+            flex: 1;
+            order: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            text-align: center;
+          }
+          
+          .flyer-product h4 {
+            font-size: 0.65rem;
             font-weight: 600;
-            margin: 0 0 5px 0;
+            margin: 0;
             color: var(--primary-color, #2c3e50);
+            line-height: 1.1;
+          }
+          
+          .flyer-product.list h4 {
+            font-size: 0.7rem;
+          }
+          
+          .flyer-product.featured h4 {
+            font-size: 0.7rem;
           }
           
           .flyer-product .product-description {
-            font-size: 0.8rem;
+            font-size: 0.55rem;
             color: #666;
-            margin: 0 0 5px 0;
+            margin: 0;
+            line-height: 1.1;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+          }
+          
+          .flyer-product.list .product-description {
+            font-size: 0.6rem;
+          }
+          
+          .flyer-product.featured .product-description {
+            font-size: 0.6rem;
+            -webkit-line-clamp: 2;
           }
           
           .flyer-product .product-price {
-            font-size: 1.1rem;
+            font-size: 0.7rem;
             font-weight: 700;
-            color: var(--accent-color, #e74c3c);
-            margin-bottom: 5px;
+            color: var(--primary-color, #2c3e50);
+            margin: 0;
+          }
+          
+          .flyer-product.list .product-price {
+            font-size: 0.75rem;
+          }
+          
+          .flyer-product.featured .product-price {
+            font-size: 0.8rem;
           }
           
           .flyer-product .product-badges {
             display: flex;
             justify-content: center;
-            gap: 5px;
+            gap: 1px;
+            flex-wrap: wrap;
+            margin-top: 1px;
           }
           
           .badge {
-            padding: 2px 6px;
-            border-radius: 4px;
+            padding: 2px 8px;
+            border-radius: 9999px;
             font-size: 0.7rem;
             font-weight: 600;
+            border: 1px solid #e0e0e0;
+            background: #fff;
           }
           
           .badge.vegetarian {
-            background: #d4edda;
+            background: #eaf7ef;
             color: #155724;
+            border-color: #b7e1c1;
           }
           
           .badge.vegan {
-            background: #cce7ff;
+            background: #e9f4ff;
             color: #004085;
+            border-color: #b3d7ff;
           }
           
           .badge.gluten-free {
-            background: #fff3cd;
+            background: #fff6e0;
             color: #856404;
+            border-color: #eedc9a;
           }
           
           .flyer-footer {
@@ -1692,31 +1894,42 @@ export class FlyerGeneratorComponent implements OnInit {
           </div>
           
           <div class="flyer-content">
-            <div class="products-${layout}">
-              ${this.selectedProducts.map(item => `
-                <div class="flyer-product ${layout}">
-                  ${this.selectedTemplate?.showImages ? `
-                    <div class="product-image">
-                      <img src="${this.getItemImageUrl(item)}" alt="${item.name}">
+            ${this.getSelectedProductsByCategory().map(category => `
+              <div class="category-section">
+                ${this.selectedTemplate?.showCategories ? `
+                  <div class="category-header">
+                    <h3 class="category-title">${category.name}</h3>
+                  </div>
+                ` : ''}
+                <div class="products-${layout}">
+                  ${category.items.map((item: any) => `
+                    <div class="flyer-product ${layout}">
+                      ${this.selectedTemplate?.showImages ? `
+                        <div class="product-image">
+                          <img src="${this.getItemImageUrl(item)}" alt="${item.name}">
+                        </div>
+                      ` : ''}
+                      <div class="product-content">
+                        <h4>${item.name}</h4>
+                        ${this.selectedTemplate?.showDescriptions && item.description ? `
+                          <p class="product-description">${item.description}</p>
+                        ` : ''}
+                        ${this.selectedTemplate?.showPrices ? `
+                          <div class="product-price">€${(item.price || 0).toFixed(2)}</div>
+                        ` : ''}
+                        ${(item.is_vegetarian || item.is_vegan || item.is_gluten_free) ? `
+                          <div class="product-badges">
+                            ${item.is_vegetarian ? '<span class="badge vegetarian">V</span>' : ''}
+                            ${item.is_vegan ? '<span class="badge vegan">VG</span>' : ''}
+                            ${item.is_gluten_free ? '<span class="badge gluten-free">GF</span>' : ''}
+                          </div>
+                        ` : ''}
+                      </div>
                     </div>
-                  ` : ''}
-                  <h3>${item.name}</h3>
-                  ${this.selectedTemplate?.showDescriptions && item.description ? `
-                    <p class="product-description">${item.description}</p>
-                  ` : ''}
-                  ${this.selectedTemplate?.showPrices ? `
-                    <div class="product-price">€${(item.price || 0).toFixed(2)}</div>
-                  ` : ''}
-                  ${(item.is_vegetarian || item.is_vegan || item.is_gluten_free) ? `
-                    <div class="product-badges">
-                      ${item.is_vegetarian ? '<span class="badge vegetarian">Vegetarisch</span>' : ''}
-                      ${item.is_vegan ? '<span class="badge vegan">Vegan</span>' : ''}
-                      ${item.is_gluten_free ? '<span class="badge gluten-free">Glutenfrei</span>' : ''}
-                    </div>
-                  ` : ''}
+                  `).join('')}
                 </div>
-              `).join('')}
-            </div>
+              </div>
+            `).join('')}
           </div>
           
           <div class="flyer-footer">
