@@ -7,17 +7,19 @@ import { AuthService, User } from '../../core/auth/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { PasswordChangeComponent } from '../../shared/components/password-change.component';
 import { Subscription } from 'rxjs';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { I18nService } from '../../core/services/i18n.service';
 
 @Component({
   selector: 'app-restaurant-manager-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PasswordChangeComponent],
+  imports: [CommonModule, FormsModule, RouterModule, PasswordChangeComponent, TranslatePipe],
   template: `
     <div class="settings-container">
       <!-- Header -->
       <div class="settings-header">
-        <h1>Restaurant-Einstellungen</h1>
-        <p>Verwalten Sie die Einstellungen Ihres Restaurants</p>
+        <h1>{{ 'settings.title' | translate }}</h1>
+        <p>{{ 'settings.description' | translate }}</p>
       </div>
 
       <!-- Settings Tabs -->
@@ -37,7 +39,7 @@ import { Subscription } from 'rxjs';
       <div *ngIf="isLoading && !currentRestaurant" class="loading-container">
         <div class="loading-spinner">
           <i class="fa-solid fa-spinner fa-spin"></i>
-          <p>Restaurant-Daten werden geladen...</p>
+          <p>{{ 'settings.loading_data' | translate }}</p>
         </div>
       </div>
 
@@ -109,7 +111,7 @@ import { Subscription } from 'rxjs';
           <!-- Gallery Section -->
           <div class="image-section">
             <h3>Galerie</h3>
-            <p class="image-description">Fügen Sie bis zu 10 Bilder Ihrer Speisen, Ihres Restaurants oder Ihrer Atmosphäre hinzu.</p>
+            <p class="image-description">{{ 'settings.gallery_description' | translate }}</p>
 
             <div class="gallery-grid" *ngIf="currentRestaurant?.images?.gallery && currentRestaurant!.images!.gallery!.length > 0">
               <div *ngFor="let image of currentRestaurant!.images!.gallery!; let i = index" class="gallery-item">
@@ -160,13 +162,13 @@ import { Subscription } from 'rxjs';
               </div>
 
               <div class="form-group">
-                <label for="restaurantCuisine">Küche/Typ</label>
+                <label for="restaurantCuisine">{{ 'settings.cuisine_type' | translate }}</label>
                 <input id="restaurantCuisine" type="text" [(ngModel)]="restaurant.cuisine_type" name="cuisineType">
               </div>
 
               <!-- Address Fields -->
               <div class="form-group">
-                <label for="addressStreet">Straße und Hausnummer</label>
+                <label for="addressStreet">{{ 'settings.street_number' | translate }}</label>
                 <input id="addressStreet" type="text" [(ngModel)]="restaurant.address_street" name="addressStreet">
               </div>
 
@@ -203,14 +205,14 @@ import { Subscription } from 'rxjs';
 
         <!-- Operating Hours -->
         <div *ngIf="activeTab === 'hours'" class="settings-section">
-          <h2>Öffnungszeiten</h2>
+          <h2>{{ 'settings.opening_hours' | translate }}</h2>
           
           <!-- Immediate Closure Toggle -->
           <div class="immediate-closure-section">
             <div class="closure-toggle-card">
               <div class="closure-info">
-                <h3>Sofort schließen</h3>
-                <p>Schließt das Restaurant sofort, unabhängig von den Öffnungszeiten. Kunden können keine Bestellungen aufgeben.</p>
+                <h3>{{ 'settings.immediate_close' | translate }}</h3>
+                <p>{{ 'settings.immediate_close_description' | translate }}</p>
               </div>
               <div class="closure-toggle">
                 <label class="toggle">
@@ -223,7 +225,7 @@ import { Subscription } from 'rxjs';
                   <span class="toggle-slider"></span>
                 </label>
                 <span class="toggle-label" [class.active]="isImmediatelyClosed">
-                  {{ isImmediatelyClosed ? 'Geschlossen' : 'Geöffnet' }}
+                  {{ isImmediatelyClosed ? ('settings.closed' | translate) : ('settings.open' | translate) }}
                 </span>
               </div>
             </div>
@@ -238,19 +240,19 @@ import { Subscription } from 'rxjs';
                     type="time"
                     [(ngModel)]="operatingHours[i].open"
                     [name]="'open-' + i"
-                    placeholder="Öffnen"
+                    [placeholder]="'settings.open_time' | translate"
                   >
                   <span>bis</span>
                   <input
                     type="time"
                     [(ngModel)]="operatingHours[i].close"
                     [name]="'close-' + i"
-                    placeholder="Schließen"
+                    [placeholder]="'settings.close_time' | translate"
                   >
                   <label class="checkbox-label">
                     <input type="checkbox" [(ngModel)]="operatingHours[i].closed" [name]="'closed-' + i">
                     <span class="checkmark"></span>
-                    Geschlossen
+                    {{ 'settings.closed' | translate }}
                   </label>
                 </div>
               </div>
@@ -260,7 +262,7 @@ import { Subscription } from 'rxjs';
               <button type="submit" class="btn-primary" [disabled]="isLoading">
                 <i class="fa-solid fa-spinner fa-spin" *ngIf="isLoading"></i>
                 <i class="fa-solid fa-save" *ngIf="!isLoading"></i>
-                {{ isLoading ? 'Wird gespeichert...' : 'Öffnungszeiten speichern' }}
+                {{ isLoading ? ('settings.saving' | translate) : ('settings.save_hours' | translate) }}
               </button>
             </div>
           </form>
@@ -270,7 +272,7 @@ import { Subscription } from 'rxjs';
         <div *ngIf="activeTab === 'delivery'" class="settings-section">
           <div class="delivery-header">
             <h2>Liefer-Einstellungen</h2>
-            <p class="section-description">Konfigurieren Sie Ihre Liefergebiete, Gebühren und Auslieferungszeiten</p>
+            <p class="section-description">{{ 'settings.delivery_config_description' | translate }}</p>
           </div>
 
           <form (ngSubmit)="saveDeliverySettings()" #deliveryForm="ngForm">
@@ -385,7 +387,7 @@ import { Subscription } from 'rxjs';
                       <i class="fa-solid fa-cog"></i>
                     </div>
                     <div class="btn-content">
-                      <span class="btn-title">Übernehmen vorbereiten</span>
+                      <span class="btn-title">{{ 'settings.prepare_apply' | translate }}</span>
                       <span class="btn-subtitle">Zonen konfigurieren</span>
                     </div>
                   </button>
@@ -396,7 +398,7 @@ import { Subscription } from 'rxjs';
                     </div>
                     <div class="btn-content">
                       <span class="btn-title">Zonen speichern</span>
-                      <span class="btn-subtitle">Konfiguration übernehmen</span>
+                      <span class="btn-subtitle">{{ 'settings.apply_configuration' | translate }}</span>
                     </div>
                   </button>
                 </div>
@@ -432,7 +434,7 @@ import { Subscription } from 'rxjs';
                 <div class="zones-config" *ngIf="persistZones.length">
                   <div class="config-header">
                     <h4><i class="fa-solid fa-edit"></i> PLZ-Zonen konfigurieren</h4>
-                    <p class="config-description">Passen Sie Gebühren und Einstellungen für jede Zone an</p>
+                    <p class="config-description">{{ 'settings.configure_zones' | translate }}</p>
                   </div>
                   <div class="zones-config-grid">
                     <div *ngFor="let z of persistZones; let i = index" class="zone-config-item">
@@ -451,7 +453,7 @@ import { Subscription } from 'rxjs';
                       </div>
                       <div class="zone-config-fields">
                         <div class="config-field">
-                          <label>Liefergebühr (€)</label>
+                          <label>{{ 'settings.delivery_fee' | translate }}</label>
                           <input type="number" step="0.01" placeholder="2.50" [(ngModel)]="persistZones[i].delivery_fee" [name]="'fee_'+i">
                         </div>
                         <div class="config-field">
@@ -473,7 +475,7 @@ import { Subscription } from 'rxjs';
             <div class="delivery-card">
               <div class="card-header">
                 <h3><i class="fa-solid fa-ban"></i> Ausgeschlossene Bereiche</h3>
-                <p class="card-description">Bestimmte PLZ oder Ortsteile von der Lieferung ausschließen</p>
+                <p class="card-description">{{ 'settings.exclude_areas' | translate }}</p>
               </div>
               <div class="card-content">
                 <div class="excluded-areas-list" *ngIf="deliverySettings.excludedAreas.length > 0">
@@ -506,7 +508,7 @@ import { Subscription } from 'rxjs';
 
                 <button type="button" class="add-area-btn" (click)="addExcludedArea()">
                   <i class="fa-solid fa-plus"></i>
-                  <span>Bereich hinzufügen</span>
+                  <span>{{ 'settings.add_area' | translate }}</span>
                 </button>
 
                 <div class="help-text">
@@ -539,7 +541,7 @@ import { Subscription } from 'rxjs';
                 </div>
               </div>
             </div>
-            <p class="info-note">Diese Bereiche werden bei der Restaurant-Suche für Kunden nicht angezeigt.</p>
+            <p class="info-note">{{ 'settings.excluded_areas_info' | translate }}</p>
           </div>
         </div>
 
@@ -573,7 +575,7 @@ import { Subscription } from 'rxjs';
               <div class="setting-item">
                 <div class="setting-info">
                   <h4>Push-Benachrichtigungen</h4>
-                  <p>Browser-Benachrichtigungen für neue Bestellungen</p>
+                  <p>{{ 'settings.browser_notifications' | translate }}</p>
                 </div>
                 <label class="toggle">
                   <input type="checkbox" [(ngModel)]="notificationSettings.pushNotifications" name="pushNotifications">
@@ -583,8 +585,8 @@ import { Subscription } from 'rxjs';
 
               <div class="setting-item">
                 <div class="setting-info">
-                  <h4>Tägliche Zusammenfassung</h4>
-                  <p>Tägliche Umsatz- und Bestellzusammenfassung</p>
+                  <h4>{{ 'settings.daily_summary' | translate }}</h4>
+                  <p>{{ 'settings.daily_summary_description' | translate }}</p>
                 </div>
                 <label class="toggle">
                   <input type="checkbox" [(ngModel)]="notificationSettings.dailySummary" name="dailySummary">
@@ -611,7 +613,7 @@ import { Subscription } from 'rxjs';
               <i class="fa-solid fa-info-circle"></i>
               <div>
                 <h4>Zahlungsabwicklung</h4>
-                <p>Die Zahlungsabwicklung erfolgt über Stripe. Konfiguration im Admin-Bereich verfügbar.</p>
+                <p>{{ 'settings.stripe_info' | translate }}</p>
               </div>
             </div>
 
@@ -671,7 +673,7 @@ import { Subscription } from 'rxjs';
               </div>
 
               <div class="form-group">
-                <label for="stampsRequired">Bestellungen für Rabatt</label>
+                <label for="stampsRequired">{{ 'settings.orders_for_discount' | translate }}</label>
                 <input id="stampsRequired" type="number" min="1" [(ngModel)]="loyaltySettings.stamps_required" name="stampsRequired">
               </div>
 
@@ -681,7 +683,7 @@ import { Subscription } from 'rxjs';
               </div>
 
               <div class="form-group">
-                <label for="minSubtotal">Mindestwarenkorb für Stempel (€)</label>
+                <label for="minSubtotal">{{ 'settings.min_cart_for_stamps' | translate }}</label>
                 <input id="minSubtotal" type="number" step="0.01" min="0" [(ngModel)]="loyaltySettings.min_subtotal_to_earn" name="minSubtotal">
               </div>
             </div>
@@ -2581,6 +2583,7 @@ import { Subscription } from 'rxjs';
   `]
 })
 export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
+  private i18nService = inject(I18nService);
   private restaurantsService = inject(RestaurantsService);
   private authService = inject(AuthService);
   private toastService = inject(ToastService);
@@ -2607,25 +2610,25 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
   };
 
   settingsTabs = [
-    { id: 'general', title: 'Allgemein', icon: 'fa-solid fa-info-circle' },
-    { id: 'images', title: 'Bilder', icon: 'fa-solid fa-camera' },
-    { id: 'hours', title: 'Öffnungszeiten', icon: 'fa-solid fa-clock' },
-    { id: 'delivery', title: 'Lieferung', icon: 'fa-solid fa-truck' },
-    { id: 'notifications', title: 'Benachrichtigungen', icon: 'fa-solid fa-bell' },
-    { id: 'payment', title: 'Zahlung', icon: 'fa-solid fa-credit-card' },
-    { id: 'loyalty', title: 'Stempelkarten', icon: 'fa-solid fa-ticket' },
-    { id: 'stripe', title: 'Stripe Connect', icon: 'fa-brands fa-stripe' },
-    { id: 'password', title: 'Passwort', icon: 'fa-solid fa-lock' }
+    { id: 'general', title: this.i18nService.translate('settings.tab.general'), icon: 'fa-solid fa-info-circle' },
+    { id: 'images', title: this.i18nService.translate('settings.tab.images'), icon: 'fa-solid fa-camera' },
+    { id: 'hours', title: this.i18nService.translate('settings.tab.hours'), icon: 'fa-solid fa-clock' },
+    { id: 'delivery', title: this.i18nService.translate('settings.tab.delivery'), icon: 'fa-solid fa-truck' },
+    { id: 'notifications', title: this.i18nService.translate('settings.tab.notifications'), icon: 'fa-solid fa-bell' },
+    { id: 'payment', title: this.i18nService.translate('settings.tab.payment'), icon: 'fa-solid fa-credit-card' },
+    { id: 'loyalty', title: this.i18nService.translate('settings.tab.loyalty'), icon: 'fa-solid fa-ticket' },
+    { id: 'stripe', title: this.i18nService.translate('settings.tab.stripe'), icon: 'fa-brands fa-stripe' },
+    { id: 'password', title: this.i18nService.translate('settings.tab.password'), icon: 'fa-solid fa-lock' }
   ];
 
   daysOfWeek = [
-    { name: 'Montag', value: 'monday' },
-    { name: 'Dienstag', value: 'tuesday' },
-    { name: 'Mittwoch', value: 'wednesday' },
-    { name: 'Donnerstag', value: 'thursday' },
-    { name: 'Freitag', value: 'friday' },
-    { name: 'Samstag', value: 'saturday' },
-    { name: 'Sonntag', value: 'sunday' }
+    { name: this.i18nService.translate('settings.day.monday'), value: 'monday' },
+    { name: this.i18nService.translate('settings.day.tuesday'), value: 'tuesday' },
+    { name: this.i18nService.translate('settings.day.wednesday'), value: 'wednesday' },
+    { name: this.i18nService.translate('settings.day.thursday'), value: 'thursday' },
+    { name: this.i18nService.translate('settings.day.friday'), value: 'friday' },
+    { name: this.i18nService.translate('settings.day.saturday'), value: 'saturday' },
+    { name: this.i18nService.translate('settings.day.sunday'), value: 'sunday' }
   ];
 
   operatingHours = this.daysOfWeek.map(day => ({
@@ -2923,7 +2926,7 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
     const parts: string[] = [];
     if ((restaurant as any).stripe_charges_enabled) parts.push('Zahlungen aktiv');
     if ((restaurant as any).stripe_payouts_enabled) parts.push('Auszahlungen aktiv');
-    if ((restaurant as any).stripe_details_submitted) parts.push('Details übermittelt');
+    if ((restaurant as any).stripe_details_submitted) parts.push(this.i18nService.translate('settings.details_submitted'));
     this.stripeStatusText = parts.length ? parts.join(' • ') : 'Noch nicht verbunden';
   }
 
@@ -2992,12 +2995,12 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
     const sub = this.restaurantsService.updateRestaurant(this.currentRestaurant.id, updateData).subscribe({
       next: (updatedRestaurant) => {
         this.currentRestaurant = updatedRestaurant;
-        this.toastService.success('Erfolg', 'Öffnungszeiten wurden gespeichert');
+        this.toastService.success(this.i18nService.translate('common.success'), this.i18nService.translate('settings.hours_saved_success'));
         this.isLoading = false;
       },
       error: (error) => {
         console.error('Error saving operating hours:', error);
-        this.toastService.error('Fehler', 'Öffnungszeiten konnten nicht gespeichert werden');
+        this.toastService.error(this.i18nService.translate('common.error'), this.i18nService.translate('settings.hours_saved_error'));
         this.isLoading = false;
       }
     });
@@ -3017,14 +3020,14 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
           this.isImmediatelyClosed = !this.isImmediatelyClosed;
           this.toastService.success(
             'Erfolg', 
-            this.isImmediatelyClosed ? 'Restaurant wurde geschlossen' : 'Restaurant wurde geöffnet'
+            this.isImmediatelyClosed ? this.i18nService.translate('settings.restaurant_closed') : this.i18nService.translate('settings.restaurant_opened')
           );
         }
         this.isLoading = false;
       },
       error: (error) => {
         console.error('Error toggling immediate closure:', error);
-        this.toastService.error('Fehler', 'Status konnte nicht geändert werden');
+        this.toastService.error(this.i18nService.translate('common.error'), this.i18nService.translate('settings.status_change_error'));
         // Revert the toggle state on error
         this.isImmediatelyClosed = !this.isImmediatelyClosed;
         this.isLoading = false;
@@ -3172,7 +3175,7 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
         const parts: string[] = [];
         if (status.charges_enabled) parts.push('Zahlungen aktiv');
         if (status.payouts_enabled) parts.push('Auszahlungen aktiv');
-        if (status.details_submitted) parts.push('Details übermittelt');
+        if (status.details_submitted) parts.push(this.i18nService.translate('settings.details_submitted'));
         this.stripeStatusText = parts.length ? parts.join(' • ') : status.onboarding_status;
         this.toastService.success('Stripe', 'Status aktualisiert');
         this.isLoading = false;
@@ -3203,7 +3206,7 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
 
   getStatusButtonText(): string {
     if (!this.currentRestaurant?.stripe_account_id) {
-      return 'Status prüfen';
+      return this.i18nService.translate('settings.check_status');
     }
 
     // Check if payments are active
@@ -3214,7 +3217,7 @@ export class RestaurantManagerSettingsComponent implements OnInit, OnDestroy {
       return 'Status aktualisieren';
     }
 
-    return 'Onboarding-Status prüfen';
+    return this.i18nService.translate('settings.check_onboarding_status');
   }
 
   hasActiveStripePayments(): boolean {

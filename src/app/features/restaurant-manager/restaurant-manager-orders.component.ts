@@ -7,25 +7,27 @@ import { OrdersService, Order } from '../../core/services/orders.service';
 import { RestaurantManagerService } from '../../core/services/restaurant-manager.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { ToastService } from '../../core/services/toast.service';
+import { I18nService } from '../../core/services/i18n.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked_up' | 'delivered' | 'served' | 'paid' | 'cancelled';
 
 @Component({
   selector: 'app-restaurant-manager-orders',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, TranslatePipe],
   template: `
     <div class="orders-container">
       <!-- Header -->
       <div class="header">
         <div class="header-content">
-          <h1>Bestellungen verwalten</h1>
-          <p>Verfolgen und aktualisieren Sie alle Bestellungen für Ihr Restaurant</p>
+          <h1>{{ 'orders.title' | translate }}</h1>
+          <p>{{ 'orders.manage_description' | translate }}</p>
         </div>
         <div class="header-actions">
           <button class="refresh-btn" (click)="refreshOrders()" [disabled]="isLoading">
             <i class="fa-solid fa-rotate-right" [class.spin]="isLoading"></i>
-            Aktualisieren
+            {{ 'common.refresh' | translate }}
           </button>
         </div>
       </div>
@@ -48,40 +50,40 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       <div class="filters-section">
         <div class="filters-grid">
           <div class="filter-group" *ngIf="activeTab === 'all'">
-            <label for="status-filter">Status:</label>
+            <label for="status-filter">{{ 'orders.status' | translate }}:</label>
             <select id="status-filter" [(ngModel)]="selectedStatus" (change)="applyFilters()">
-              <option value="all">Alle Status</option>
-              <option value="pending">Ausstehend</option>
-              <option value="confirmed">Bestätigt</option>
-              <option value="preparing">Wird zubereitet</option>
-              <option value="ready">Bereit zur Abholung</option>
-              <option value="picked_up">Abgeholt</option>
-              <option value="delivered">Geliefert</option>
-              <option value="cancelled">Storniert</option>
-              <option value="payment_pending">Zahlung ausstehend</option>
-              <option value="ready_pickup">Bereit zur Abholung</option>
-              <option value="fully_completed">Vollständig abgeschlossen</option>
+              <option value="all">{{ 'orders.all_status' | translate }}</option>
+              <option value="pending">{{ 'order.status.pending' | translate }}</option>
+              <option value="confirmed">{{ 'order.status.confirmed' | translate }}</option>
+              <option value="preparing">{{ 'order.status.preparing' | translate }}</option>
+              <option value="ready">{{ 'order.status.ready' | translate }}</option>
+              <option value="picked_up">{{ 'order.status.picked_up' | translate }}</option>
+              <option value="delivered">{{ 'order.status.delivered' | translate }}</option>
+              <option value="cancelled">{{ 'order.status.cancelled' | translate }}</option>
+              <option value="payment_pending">{{ 'orders.payment_pending' | translate }}</option>
+              <option value="ready_pickup">{{ 'orders.ready_pickup' | translate }}</option>
+              <option value="fully_completed">{{ 'orders.fully_completed' | translate }}</option>
             </select>
           </div>
 
           <div class="filter-group">
-            <label for="search-filter">Suchen:</label>
+            <label for="search-filter">{{ 'common.search' | translate }}:</label>
             <input
               id="search-filter"
               type="text"
               [(ngModel)]="searchTerm"
               (input)="applyFilters()"
-              placeholder="Kunde, Bestellnummer..."
+              [placeholder]="'orders.search_placeholder' | translate"
             >
           </div>
 
           <div class="filter-group">
-            <label for="sort-filter">Sortieren nach:</label>
+            <label for="sort-filter">{{ 'orders.sort_by' | translate }}:</label>
             <select id="sort-filter" [(ngModel)]="sortBy" (change)="applyFilters()">
-              <option value="newest">Neueste zuerst</option>
-              <option value="oldest">Älteste zuerst</option>
-              <option value="total_high">Höchster Betrag</option>
-              <option value="total_low">Niedrigster Betrag</option>
+              <option value="newest">{{ 'orders.newest_first' | translate }}</option>
+              <option value="oldest">{{ 'orders.oldest_first' | translate }}</option>
+              <option value="total_high">{{ 'orders.highest_amount' | translate }}</option>
+              <option value="total_low">{{ 'orders.lowest_amount' | translate }}</option>
             </select>
           </div>
         </div>
@@ -90,7 +92,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       <!-- Orders List -->
       <div class="orders-section">
         <div class="orders-header">
-          <h2>{{ filteredOrders.length }} {{ activeTab === 'all' ? 'Bestellungen' : (activeTab === 'completed' ? 'abgeschlossene Bestellungen' : 'Bestellungen') }} gefunden</h2>
+          <h2>{{ filteredOrders.length }} {{ (activeTab === 'all' ? 'orders.orders_found' : (activeTab === 'completed' ? 'orders.completed_orders_found' : 'orders.orders_found')) | translate }}</h2>
         </div>
 
         <!-- Desktop Table View -->
@@ -98,15 +100,15 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
           <table class="orders-table">
             <thead>
               <tr>
-                <th class="col-order-id">Bestellung</th>
-                <th class="col-customer">Kunde</th>
-                <th class="col-order-status">Bestellstatus</th>
-                <th class="col-payment-status">Zahlung</th>
-                <th class="col-total">Gesamt</th>
-                <th class="col-order-type">Typ</th>
-                <th class="col-address">Adresse</th>
-                <th class="col-actions">Aktionen</th>
-                <th class="col-details">Details</th>
+                <th class="col-order-id">{{ 'orders.order' | translate }}</th>
+                <th class="col-customer">{{ 'orders.customer' | translate }}</th>
+                <th class="col-order-status">{{ 'orders.order_status' | translate }}</th>
+                <th class="col-payment-status">{{ 'orders.payment' | translate }}</th>
+                <th class="col-total">{{ 'orders.total' | translate }}</th>
+                <th class="col-order-type">{{ 'orders.type' | translate }}</th>
+                <th class="col-address">{{ 'orders.address' | translate }}</th>
+                <th class="col-actions">{{ 'orders.actions' | translate }}</th>
+                <th class="col-details">{{ 'orders.details' | translate }}</th>
               </tr>
             </thead>
             <tbody>
@@ -132,21 +134,21 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                 <td class="col-payment-status">
                   <span *ngIf="order.payment_status === 'paid'" class="payment-indicator">
                     <i class="fa-solid fa-credit-card"></i>
-                    Bezahlt
+                    {{ 'orders.paid' | translate }}
                   </span>
                   <span *ngIf="order.payment_status === 'pending'" class="payment-indicator temp">
                     <i class="fa-solid fa-exclamation-triangle"></i>
-                    Zahlung ausstehend
+                    {{ 'orders.payment_pending' | translate }}
                   </span>
                   <!-- Warnung für fast abgeschlossene Bestellungen ohne Zahlung -->
                   <span *ngIf="isOrderStatusCompleteButNotPaid(order)" class="payment-warning">
                     <i class="fa-solid fa-exclamation-circle"></i>
-                    Fast fertig - Zahlung fehlt
+                    {{ 'orders.almost_ready_payment_missing' | translate }}
                   </span>
                 </td>
                 <td class="col-total">
                   <div class="total-amount">€{{ order.total_price.toFixed(2) }}</div>
-                  <div class="item-count">{{ order.items.length }} Artikel</div>
+                  <div class="item-count">{{ order.items.length }} {{ 'orders.items' | translate }}</div>
                 </td>
                 <td class="col-order-type">
                   <div class="order-type-badge" [ngClass]="getOrderTypeClass(order)">
@@ -156,7 +158,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                 </td>
                 <td class="col-address">
                   <div class="delivery-address" *ngIf="order.delivery_address">{{ order.delivery_address }}</div>
-                  <div class="no-address" *ngIf="!order.delivery_address">Keine Adresse</div>
+                  <div class="no-address" *ngIf="!order.delivery_address">{{ 'orders.no_address' | translate }}</div>
                 </td>
                 <td class="col-actions">
                   <div class="action-buttons">
@@ -166,7 +168,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                       [class.hidden]="!canUpdateStatus(order.status, 'confirmed', order)"
                       (click)="canUpdateStatus(order.status, 'confirmed', order) ? updateOrderStatus(order.id, 'confirmed') : null"
                       [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'confirmed', order)"
-                      title="Bestätigen"
+                      [title]="'orders.confirm' | translate"
                     >
                       <i class="fa-solid fa-check"></i>
                     </button>
@@ -176,7 +178,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                       [class.hidden]="!canUpdateStatus(order.status, 'preparing', order)"
                       (click)="canUpdateStatus(order.status, 'preparing', order) ? updateOrderStatus(order.id, 'preparing') : null"
                       [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'preparing', order)"
-                      title="Zubereiten"
+                      [title]="'orders.prepare' | translate"
                     >
                       <i class="fa-solid fa-utensils"></i>
                     </button>
@@ -186,7 +188,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                       [class.hidden]="!canUpdateStatus(order.status, 'ready', order)"
                       (click)="canUpdateStatus(order.status, 'ready', order) ? updateOrderStatus(order.id, 'ready') : null"
                       [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'ready', order)"
-                      title="Fertig"
+                      [title]="'orders.ready' | translate"
                     >
                       <i class="fa-solid fa-check-circle"></i>
                     </button>
@@ -196,7 +198,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                       [class.hidden]="!canUpdateStatus(order.status, 'picked_up', order)"
                       (click)="canUpdateStatus(order.status, 'picked_up', order) ? updateOrderStatus(order.id, 'picked_up') : null"
                       [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'picked_up', order)"
-                      title="Abgeholt"
+                      [title]="'orders.picked_up' | translate"
                     >
                       <i class="fa-solid fa-box"></i>
                     </button>
@@ -567,7 +569,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                   <span class="total-amount">€{{ (selectedOrder.total_price - (selectedOrder.delivery_fee || 0)).toFixed(2) }}</span>
                 </div>
                 <div class="total-row" *ngIf="selectedOrder.delivery_fee">
-                  <span class="total-label">Liefergebühr:</span>
+                  <span class="total-label">{{ 'orders.delivery_fee' | translate }}:</span>
                   <span class="total-amount">€{{ selectedOrder.delivery_fee.toFixed(2) }}</span>
                 </div>
                 <div class="total-row final">
@@ -584,7 +586,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                 <button
                   class="edit-notes-btn"
                   (click)="toggleNotesEdit()"
-                  [title]="editingNotes ? 'Bearbeitung abbrechen' : (selectedOrder.notes ? 'Notizen bearbeiten' : 'Notizen hinzufügen')"
+                  [title]="editingNotes ? ('orders.cancel_editing' | translate) : (selectedOrder.notes ? ('orders.edit_notes' | translate) : ('orders.add_notes' | translate))"
                 >
                   <i [ngClass]="editingNotes ? 'fa-solid fa-times' : (selectedOrder.notes ? 'fa-solid fa-edit' : 'fa-solid fa-plus')"></i>
                 </button>
@@ -599,17 +601,17 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
               <!-- No Notes Message -->
               <div *ngIf="!editingNotes && !selectedOrder.notes" class="no-notes">
                 <i class="fa-solid fa-info-circle"></i>
-                <span>Keine Notizen vorhanden. Klicken Sie auf das Plus-Symbol, um Notizen hinzuzufügen.</span>
+                <span>{{ 'orders.no_notes_add' | translate }}</span>
               </div>
               
               <!-- Edit Notes Form -->
               <div *ngIf="editingNotes" class="notes-edit-form">
                 <div class="form-group">
-                  <label for="notes-textarea">Zusätzliche Hinweise zur Bestellung</label>
+                  <label for="notes-textarea">{{ 'orders.additional_notes' | translate }}</label>
                   <textarea
                     id="notes-textarea"
                     [(ngModel)]="notesText"
-                    placeholder="Fügen Sie hier zusätzliche Hinweise hinzu..."
+                    [placeholder]="'orders.notes_placeholder' | translate"
                     rows="4"
                     maxlength="1000">
                   </textarea>
@@ -624,7 +626,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                     [class.loading]="savingNotes">
                     <i class="fa-solid fa-save" *ngIf="!savingNotes"></i>
                     <i class="fa-solid fa-spinner fa-spin" *ngIf="savingNotes"></i>
-                    {{ selectedOrder.notes ? 'Aktualisieren' : 'Hinzufügen' }}
+                    {{ selectedOrder.notes ? ('orders.update' | translate) : ('orders.add' | translate) }}
                   </button>
                 </div>
               </div>
@@ -637,18 +639,18 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       <div class="notes-modal-overlay" *ngIf="notesModalOpen" (click)="closeNotesModal()">
         <div class="notes-modal" (click)="$event.stopPropagation()">
           <div class="notes-modal-header">
-            <h3>{{ editingOrder?.notes ? 'Notizen bearbeiten' : 'Notizen hinzufügen' }}</h3>
+            <h3>{{ editingOrder?.notes ? ('orders.edit_notes' | translate) : ('orders.add_notes' | translate) }}</h3>
             <button class="close-btn" (click)="closeNotesModal()">
               <i class="fa-solid fa-times"></i>
             </button>
           </div>
           <div class="notes-modal-body">
             <div class="form-group">
-              <label for="notes-textarea">Zusätzliche Hinweise zur Bestellung</label>
+              <label for="notes-textarea">{{ 'orders.additional_notes' | translate }}</label>
               <textarea
                 id="notes-textarea"
                 [(ngModel)]="notesText"
-                placeholder="Fügen Sie hier zusätzliche Hinweise hinzu..."
+                [placeholder]="'orders.notes_placeholder' | translate"
                 rows="4"
                 maxlength="1000">
               </textarea>
@@ -656,7 +658,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
             </div>
             <div class="notes-modal-info" *ngIf="!editingOrder?.notes">
               <i class="fa-solid fa-info-circle"></i>
-              <span>Notizen können nur einmal hinzugefügt werden. Stellen Sie sicher, dass alle wichtigen Informationen enthalten sind.</span>
+              <span>{{ 'orders.notes_warning' | translate }}</span>
             </div>
           </div>
           <div class="notes-modal-footer">
@@ -668,7 +670,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
               [class.loading]="savingNotes">
               <i class="fa-solid fa-save" *ngIf="!savingNotes"></i>
               <i class="fa-solid fa-spinner fa-spin" *ngIf="savingNotes"></i>
-              {{ editingOrder?.notes ? 'Aktualisieren' : 'Hinzufügen' }}
+              {{ editingOrder?.notes ? ('orders.update' | translate) : ('orders.add' | translate) }}
             </button>
           </div>
         </div>
@@ -2493,6 +2495,7 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
   private restaurantManagerService = inject(RestaurantManagerService);
   private loadingService = inject(LoadingService);
   private toastService = inject(ToastService);
+  private i18nService = inject(I18nService);
 
   orders: Order[] = [];
   filteredOrders: Order[] = [];
@@ -2802,10 +2805,10 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
   }
 
   cancelOrder(orderId: string) {
-    if (confirm('Sind Sie sicher, dass Sie diese Bestellung stornieren möchten?')) {
+    if (confirm(this.i18nService.translate('orders.confirm_cancel'))) {
       this.updatingOrderId = orderId;
 
-      this.ordersService.cancelOrder(orderId, 'Storniert durch Restaurant-Manager').subscribe({
+      this.ordersService.cancelOrder(orderId, this.i18nService.translate('orders.cancelled_by_manager')).subscribe({
         next: (response) => {
           console.log('Cancel order response:', response);
 
@@ -2847,12 +2850,12 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
             console.log(`Cancelled order visibility after filter reset:`, { orderId, visible: stillVisible });
           }
 
-          this.toastService.success('Bestellung storniert', 'Die Bestellung wurde erfolgreich storniert');
+          this.toastService.success(this.i18nService.translate('orders.order_cancelled'), this.i18nService.translate('orders.order_cancelled_success'));
           this.updatingOrderId = null;
         },
         error: (error: any) => {
           console.error('Error cancelling order:', error);
-          this.toastService.error('Stornierung fehlgeschlagen', 'Fehler beim Stornieren der Bestellung');
+          this.toastService.error(this.i18nService.translate('orders.cancel_failed'), this.i18nService.translate('orders.cancel_error'));
           this.updatingOrderId = null;
         }
       });
@@ -2860,7 +2863,7 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
   }
 
   markOrderAsPaid(orderId: string) {
-    if (confirm('Sind Sie sicher, dass Sie diese Bestellung als bezahlt markieren möchten?')) {
+    if (confirm(this.i18nService.translate('orders.confirm_mark_paid'))) {
       this.updatingOrderId = orderId;
       console.log('Starting payment status update:', { orderId, paymentStatus: 'paid' });
 
@@ -2903,12 +2906,12 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
             this.applyFilters();
           }
 
-          this.toastService.success('Zahlung bestätigt', 'Die Bestellung wurde als bezahlt markiert');
+          this.toastService.success(this.i18nService.translate('orders.payment_confirmed'), this.i18nService.translate('orders.order_marked_paid'));
           this.updatingOrderId = null;
         },
         error: (error: any) => {
           console.error('Error updating order payment status:', error);
-          this.toastService.error('Zahlung bestätigen', 'Fehler beim Aktualisieren des Zahlungsstatus');
+          this.toastService.error(this.i18nService.translate('orders.payment_confirm'), this.i18nService.translate('orders.payment_update_error'));
           this.updatingOrderId = null;
         }
       });
@@ -2979,7 +2982,7 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
 
     // Check if date is valid
     if (isNaN(date.getTime())) {
-      return 'Ungültiges Datum';
+      return this.i18nService.translate('orders.invalid_date');
     }
 
     const now = new Date();
@@ -3019,16 +3022,16 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
   getOrderStatusText(status: Order['status'] | 'open' | 'in_progress' | 'out_for_delivery'): string {
     const normalized = this.canonicalStatus(status as any);
     switch (normalized) {
-      case 'pending': return 'Ausstehend';
-      case 'confirmed': return 'Bestätigt';
-      case 'preparing': return 'Wird zubereitet';
-      case 'ready': return 'Bereit zur Abholung';
-      case 'picked_up': return 'Abgeholt';
-      case 'delivered': return 'Geliefert';
-      case 'served': return 'Serviert';
-      case 'paid': return 'Bezahlt';
-      case 'cancelled': return 'Storniert';
-      default: return 'Unbekannt';
+      case 'pending': return this.i18nService.translate('order.status.pending');
+      case 'confirmed': return this.i18nService.translate('order.status.confirmed');
+      case 'preparing': return this.i18nService.translate('order.status.preparing');
+      case 'ready': return this.i18nService.translate('order.status.ready');
+      case 'picked_up': return this.i18nService.translate('order.status.picked_up');
+      case 'delivered': return this.i18nService.translate('order.status.delivered');
+      case 'served': return this.i18nService.translate('order.status.served');
+      case 'paid': return this.i18nService.translate('order.status.paid');
+      case 'cancelled': return this.i18nService.translate('order.status.cancelled');
+      default: return this.i18nService.translate('orders.unknown');
     }
   }
 

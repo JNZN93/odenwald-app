@@ -7,6 +7,8 @@ import { RestaurantManagerService } from '../../core/services/restaurant-manager
 import { LoadingService } from '../../core/services/loading.service';
 import { ToastService } from '../../core/services/toast.service';
 import { Router } from '@angular/router';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { I18nService } from '../../core/services/i18n.service';
 
 interface OrderIssueVm {
   id: string;
@@ -31,14 +33,14 @@ interface OrderIssueVm {
 @Component({
   selector: 'app-restaurant-manager-issues',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
     <div class="issues-container">
       <!-- Header -->
       <div class="header">
         <div class="header-content">
           <h1>Reklamationen</h1>
-          <p>Verwalte alle Kundenreklamationen für dein Restaurant</p>
+          <p>{{ 'issues.manage_complaints' | translate }}</p>
         </div>
         <div class="header-actions">
           <button class="refresh-btn" (click)="loadIssues()" [disabled]="isLoading">
@@ -99,7 +101,7 @@ interface OrderIssueVm {
                   <select [ngModel]="issue.status" (ngModelChange)="updateIssueStatus(issue, $event)" class="action-select" [disabled]="updatingIssueId === issue.id">
                     <option value="open">Offen</option>
                     <option value="in_progress">In Bearbeitung</option>
-                    <option value="resolved">Gelöst</option>
+                    <option value="resolved">{{ 'issues.resolved' | translate }}</option>
                   </select>
                 </div>
 
@@ -108,7 +110,7 @@ interface OrderIssueVm {
                   <textarea
                     [ngModel]="issue.restaurant_manager_notes"
                     (ngModelChange)="updateNotes(issue, $event)"
-                    placeholder="Fügen Sie Ihre Notizen hinzu..."
+                    [placeholder]="'issues.add_notes' | translate"
                     class="notes-textarea"
                     rows="3"
                     [disabled]="updatingIssueId === issue.id">
@@ -147,7 +149,7 @@ interface OrderIssueVm {
           <div *ngIf="issues.length === 0 && !isLoading" class="empty-state">
             <i class="fa-solid fa-inbox"></i>
             <h3>Keine Reklamationen</h3>
-            <p>Derzeit sind keine Reklamationen für Ihr Restaurant vorhanden.</p>
+            <p>{{ 'issues.no_complaints' | translate }}</p>
           </div>
         </div>
       </div>
@@ -157,7 +159,7 @@ interface OrderIssueVm {
     <div class="modal-overlay" *ngIf="showRefundModal" (click)="closeRefundModal()">
       <div class="modal-content refund-modal" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <h2>Rückerstattung verarbeiten</h2>
+          <h2>{{ 'issues.process_refund' | translate }}</h2>
           <button class="close-btn" (click)="closeRefundModal()">
             <i class="fa-solid fa-times"></i>
           </button>
@@ -170,7 +172,7 @@ interface OrderIssueVm {
           </div>
 
           <div class="refund-items-section">
-            <h4>Produkte auswählen:</h4>
+            <h4>{{ 'issues.select_products' | translate }}</h4>
             
             <div class="items-list">
               <div class="item-row" *ngFor="let item of orderItems">
@@ -1270,6 +1272,7 @@ export class RestaurantManagerIssuesComponent implements OnInit {
   private loadingService = inject(LoadingService);
   private toastService = inject(ToastService);
   private router = inject(Router);
+  private i18nService = inject(I18nService);
 
   issues: OrderIssueVm[] = [];
   isLoading = false;
