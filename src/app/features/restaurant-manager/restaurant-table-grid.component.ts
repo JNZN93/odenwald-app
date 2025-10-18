@@ -130,7 +130,7 @@ interface GridCell {
       <div class="modal-overlay" *ngIf="showOrdersModal" (click)="closeOrdersModal()">
         <div class="modal-content" (click)="$event.stopPropagation()">
           <div class="modal-header">
-            <h2>{{ translate('table_grid.table_orders', {tableNumber: selectedTableForOrders?.table_number}) }}</h2>
+            <h2>{{ translate('table_grid.table_orders', {tableNumber: selectedTableForOrders?.table_number || ''}) }}</h2>
             <button class="close-btn" (click)="closeOrdersModal()">✕</button>
           </div>
           

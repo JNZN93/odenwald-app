@@ -14,7 +14,7 @@ export const guestGuard: CanActivateFn = (route, state) => {
         // Redirect authenticated users based on their role
         if (user.role === 'app_admin' || user.role === 'admin') {
           router.navigate(['/admin']);
-        } else if (user.role === 'manager') {
+        } else if (user.role === 'manager' || user.role === 'staff') {
           router.navigate(['/restaurant-manager']);
         } else if (user.role === 'wholesaler') {
           router.navigate(['/wholesaler']);

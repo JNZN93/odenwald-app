@@ -38,7 +38,7 @@ class RootRedirectComponent implements OnInit {
         // Redirect authenticated users based on their role
         if (user.role === 'app_admin' || user.role === 'admin') {
           this.router.navigate(['/admin'], { replaceUrl: true });
-        } else if (user.role === 'manager') {
+        } else if (user.role === 'manager' || user.role === 'staff') {
           this.router.navigate(['/restaurant-manager'], { replaceUrl: true });
         } else if (user.role === 'wholesaler') {
           this.router.navigate(['/wholesaler'], { replaceUrl: true });
@@ -90,7 +90,7 @@ export const routes: Routes = [
   {
     path: 'admin',
     component: AdminDashboardComponent,
-    canActivate: [authGuard, roleGuard(['app_admin', 'admin', 'manager'])],
+    canActivate: [authGuard, roleGuard(['app_admin', 'admin', 'manager', 'staff'])],
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: DashboardHomeComponent },
@@ -110,26 +110,26 @@ export const routes: Routes = [
   {
     path: 'restaurant-manager',
     component: RestaurantManagerDashboardComponent,
-    canActivate: [authGuard, roleGuard(['manager'])],
+    canActivate: [authGuard, roleGuard(['manager', 'staff'])],
     children: [
-      { path: '', redirectTo: 'overview', pathMatch: 'full' },
-      { path: 'overview', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-overview.component').then(m => m.RestaurantManagerOverviewComponent) },
+      { path: '', redirectTo: 'orders', pathMatch: 'full' },
+      { path: 'overview', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-overview.component').then(m => m.RestaurantManagerOverviewComponent), canActivate: [roleGuard(['manager'])] },
       { path: 'orders', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-orders.component').then(m => m.RestaurantManagerOrdersComponent) },
-      { path: 'menu', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-menu.component').then(m => m.RestaurantManagerMenuComponent) },
-      { path: 'flyer', loadComponent: () => import('./features/restaurant-manager/flyer-generator.component').then(m => m.FlyerGeneratorComponent) },
-      { path: 'drivers', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-drivers.component').then(m => m.RestaurantManagerDriversComponent) },
-      { path: 'analytics', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-analytics.component').then(m => m.RestaurantManagerAnalyticsComponent) },
-      { path: 'customers', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-customers.component').then(m => m.RestaurantManagerCustomersComponent) },
-      { path: 'settings', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-settings.component').then(m => m.RestaurantManagerSettingsComponent) },
-      { path: 'details', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-details.component').then(m => m.RestaurantManagerDetailsComponent) },
-      { path: 'payment-methods', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-payment-methods.component').then(m => m.RestaurantManagerPaymentMethodsComponent) },
-      { path: 'wholesale', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-wholesale.component').then(m => m.RestaurantManagerWholesaleComponent) },
-      { path: 'wholesale/:id', loadComponent: () => import('./features/restaurant-manager/wholesaler-detail.component').then(m => m.WholesalerDetailComponent) },
+      { path: 'menu', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-menu.component').then(m => m.RestaurantManagerMenuComponent), canActivate: [roleGuard(['manager'])] },
+      { path: 'flyer', loadComponent: () => import('./features/restaurant-manager/flyer-generator.component').then(m => m.FlyerGeneratorComponent), canActivate: [roleGuard(['manager'])] },
+      { path: 'drivers', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-drivers.component').then(m => m.RestaurantManagerDriversComponent), canActivate: [roleGuard(['manager'])] },
+      { path: 'analytics', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-analytics.component').then(m => m.RestaurantManagerAnalyticsComponent), canActivate: [roleGuard(['manager'])] },
+      { path: 'customers', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-customers.component').then(m => m.RestaurantManagerCustomersComponent), canActivate: [roleGuard(['manager'])] },
+      { path: 'settings', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-settings.component').then(m => m.RestaurantManagerSettingsComponent), canActivate: [roleGuard(['manager'])] },
+      { path: 'details', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-details.component').then(m => m.RestaurantManagerDetailsComponent), canActivate: [roleGuard(['manager'])] },
+      { path: 'payment-methods', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-payment-methods.component').then(m => m.RestaurantManagerPaymentMethodsComponent), canActivate: [roleGuard(['manager'])] },
+      { path: 'wholesale', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-wholesale.component').then(m => m.RestaurantManagerWholesaleComponent), canActivate: [roleGuard(['manager'])] },
+      { path: 'wholesale/:id', loadComponent: () => import('./features/restaurant-manager/wholesaler-detail.component').then(m => m.WholesalerDetailComponent), canActivate: [roleGuard(['manager'])] },
       { path: 'tables', loadComponent: () => import('./features/restaurant-manager/restaurant-tables.component').then(m => m.RestaurantTablesComponent) },
       { path: 'tables/grid', loadComponent: () => import('./features/restaurant-manager/restaurant-table-grid.component').then(m => m.RestaurantTableGridComponent) },
-      { path: 'invoices', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-invoices.component').then(m => m.RestaurantManagerInvoicesComponent) },
-      { path: 'issues', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-issues.component').then(m => m.RestaurantManagerIssuesComponent) },
-      { path: 'support', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-support.component').then(m => m.RestaurantManagerSupportComponent) }
+      { path: 'invoices', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-invoices.component').then(m => m.RestaurantManagerInvoicesComponent), canActivate: [roleGuard(['manager'])] },
+      { path: 'issues', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-issues.component').then(m => m.RestaurantManagerIssuesComponent), canActivate: [roleGuard(['manager'])] },
+      { path: 'support', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-support.component').then(m => m.RestaurantManagerSupportComponent), canActivate: [roleGuard(['manager'])] }
     ]
   },
   {

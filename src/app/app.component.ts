@@ -70,7 +70,7 @@ export class AppComponent implements OnInit {
   }
 
   get hasManagerRole() {
-    return this.authService.hasRole('manager');
+    return this.authService.hasAnyRole(['manager', 'staff']);
   }
 
   get hasAppAdminRole() {
@@ -122,6 +122,7 @@ export class AppComponent implements OnInit {
       case 'app_admin': return 'App Admin';
       case 'admin': return 'Admin';
       case 'manager': return 'Restaurant Manager';
+      case 'staff': return 'Restaurant Mitarbeiter';
       case 'driver': return 'Fahrer';
       case 'customer': return 'Kunde';
       default: return 'Unbekannt';

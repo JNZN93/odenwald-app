@@ -14,7 +14,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'app_admin' | 'admin' | 'manager' | 'driver' | 'customer' | 'wholesaler';
+  role: 'app_admin' | 'admin' | 'manager' | 'staff' | 'driver' | 'customer' | 'wholesaler';
   tenant_id: string; // 'public' für Kunden, spezifischer Tenant für Business-User
   is_active: boolean;
 }
@@ -182,7 +182,7 @@ export class AuthService {
 
     if (user.role === 'app_admin' || user.role === 'admin') {
       targetRoute = '/admin';
-    } else if (user.role === 'manager') {
+    } else if (user.role === 'manager' || user.role === 'staff') {
       targetRoute = '/restaurant-manager';
     } else if (user.role === 'wholesaler') {
       targetRoute = '/wholesaler';
@@ -192,10 +192,19 @@ export class AuthService {
 
     // Check for stored return URL
     const returnUrl = localStorage.getItem('returnUrl');
-    if (returnUrl && !returnUrl.includes('/auth/login')) {
+    console.log('User role:', user.role, 'Target route:', targetRoute, 'Return URL:', returnUrl);
+    
+    // For staff and manager users, always go to restaurant-manager, ignore returnUrl
+    if (user.role === 'staff' || user.role === 'manager') {
+      console.log('Staff/Manager user - forcing restaurant-manager route');
+      localStorage.removeItem('returnUrl');
+      window.location.href = '/restaurant-manager';
+    } else if (returnUrl && !returnUrl.includes('/auth/login')) {
+      console.log('Using return URL:', returnUrl);
       localStorage.removeItem('returnUrl');
       window.location.href = returnUrl;
     } else {
+      console.log('Using target route:', targetRoute);
       window.location.href = targetRoute;
     }
   }

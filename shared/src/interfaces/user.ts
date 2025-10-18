@@ -2,7 +2,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'app_admin' | 'admin' | 'manager' | 'driver' | 'customer';
+  role: 'app_admin' | 'admin' | 'manager' | 'staff' | 'driver' | 'customer';
   tenant_id: string;
   phone?: string;
   address?: string;

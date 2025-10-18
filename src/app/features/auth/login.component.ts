@@ -648,7 +648,7 @@ export class LoginComponent implements OnInit {
 
     if (user.role === 'app_admin' || user.role === 'admin') {
       targetRoute = '/admin';
-    } else if (user.role === 'manager') {
+    } else if (user.role === 'manager' || user.role === 'staff') {
       targetRoute = '/restaurant-manager';
     } else if (user.role === 'wholesaler') {
       targetRoute = '/wholesaler';
@@ -696,31 +696,37 @@ export class LoginComponent implements OnInit {
             return;
           }
 
-          // Check for return URL first
-          const returnUrl = new URLSearchParams(window.location.search).get('returnUrl');
+          // Determine where to navigate based on user role
+          const user = response.user;
 
+          // Force staff/manager to restaurant-manager, ignore any returnUrl to avoid misroutes
+          if (user.role === 'manager' || user.role === 'staff') {
+            console.log('Staff/Manager login - forcing /restaurant-manager');
+            this.router.navigateByUrl('/restaurant-manager', { replaceUrl: true });
+            return;
+          }
+
+          // For other roles, prefer returnUrl if present (and not login page)
+          const returnUrl = new URLSearchParams(window.location.search).get('returnUrl');
           if (returnUrl && !returnUrl.includes('/auth/login')) {
             console.log('Navigating to return URL:', returnUrl);
             this.router.navigateByUrl(returnUrl);
-          } else {
-            // Determine where to navigate based on user role
-            const user = response.user;
-            let targetRoute = '/customer'; // Default route
-
-            if (user.role === 'app_admin' || user.role === 'admin') {
-              targetRoute = '/admin';
-            } else if (user.role === 'manager') {
-              targetRoute = '/restaurant-manager';
-            } else if (user.role === 'wholesaler') {
-              targetRoute = '/wholesaler';
-            } else if (user.role === 'driver') {
-              targetRoute = '/driver-dashboard';
-            }
-
-            console.log('Navigating to target route:', targetRoute, 'for user role:', user.role);
-            // Use replace to avoid back button issues
-            this.router.navigateByUrl(targetRoute, { replaceUrl: true });
+            return;
           }
+
+          let targetRoute = '/customer'; // Default route
+
+          if (user.role === 'app_admin' || user.role === 'admin') {
+            targetRoute = '/admin';
+          } else if (user.role === 'wholesaler') {
+            targetRoute = '/wholesaler';
+          } else if (user.role === 'driver') {
+            targetRoute = '/driver-dashboard';
+          }
+
+          console.log('Navigating to target route:', targetRoute, 'for user role:', user.role);
+          // Use replace to avoid back button issues
+          this.router.navigateByUrl(targetRoute, { replaceUrl: true });
         }, 500); // Increased delay to ensure auth state is fully updated
       },
       error: (err) => {

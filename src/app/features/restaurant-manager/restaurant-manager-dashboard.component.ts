@@ -691,6 +691,9 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
 
 
   setupManagerMenu() {
+    const currentUser = this.authService.currentUserSubject.value;
+    const isStaff = currentUser?.role === 'staff';
+    
     this.managerMenuItems = [
       {
         id: 'overview',
@@ -812,6 +815,14 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
         badge: this.pendingWholesalerOrdersCount > 0 ? this.pendingWholesalerOrdersCount.toString() : undefined
       }
     ];
+
+    // Filter menu items based on user role
+    if (isStaff) {
+      // Staff can only see orders and tables
+      this.managerMenuItems = this.managerMenuItems.filter(item => 
+        item.id === 'orders' || item.id === 'tables'
+      );
+    }
   }
 
 }

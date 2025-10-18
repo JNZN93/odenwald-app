@@ -111,7 +111,7 @@ export class GoogleCallbackComponent implements OnInit {
 
     if (user.role === 'app_admin' || user.role === 'admin') {
       targetRoute = '/admin';
-    } else if (user.role === 'manager') {
+    } else if (user.role === 'manager' || user.role === 'staff') {
       targetRoute = '/restaurant-manager';
     } else if (user.role === 'wholesaler') {
       targetRoute = '/wholesaler';
@@ -121,7 +121,13 @@ export class GoogleCallbackComponent implements OnInit {
 
     // Check for stored return URL
     const returnUrl = localStorage.getItem('returnUrl');
-    if (returnUrl && !returnUrl.includes('/auth/login')) {
+    
+    // For staff and manager users, always go to restaurant-manager, ignore returnUrl
+    if (user.role === 'staff' || user.role === 'manager') {
+      console.log('Staff/Manager user - forcing restaurant-manager route');
+      localStorage.removeItem('returnUrl');
+      this.router.navigate(['/restaurant-manager']);
+    } else if (returnUrl && !returnUrl.includes('/auth/login')) {
       localStorage.removeItem('returnUrl');
       this.router.navigateByUrl(returnUrl);
     } else {
