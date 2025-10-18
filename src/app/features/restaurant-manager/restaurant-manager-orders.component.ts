@@ -208,7 +208,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                       [class.hidden]="!canUpdateStatus(order.status, 'delivered', order)"
                       (click)="canUpdateStatus(order.status, 'delivered', order) ? updateOrderStatus(order.id, 'delivered') : null"
                       [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'delivered', order)"
-                      title="Geliefert"
+                      [title]="'orders.delivered' | translate"
                     >
                       <i class="fa-solid fa-truck"></i>
                     </button>
@@ -219,7 +219,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                       [class.hidden]="!canUpdateStatus(order.status, 'served', order)"
                       (click)="canUpdateStatus(order.status, 'served', order) ? updateOrderStatus(order.id, 'served') : null"
                       [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'served', order)"
-                      title="Serviert"
+                      [title]="'orders.served' | translate"
                     >
                       <i class="fa-solid fa-utensils"></i>
                     </button>
@@ -230,7 +230,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                       [class.hidden]="!canUpdateStatus(order.status, 'paid', order)"
                       (click)="canUpdateStatus(order.status, 'paid', order) ? updateOrderStatus(order.id, 'paid') : null"
                       [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'paid', order)"
-                      title="Bezahlt"
+                      [title]="'orders.paid' | translate"
                     >
                       <i class="fa-solid fa-credit-card"></i>
                     </button>
@@ -241,7 +241,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                       *ngIf="order.payment_status === 'pending' && !canUpdateStatus(order.status, 'paid', order)"
                       (click)="markOrderAsPaid(order.id)"
                       [disabled]="updatingOrderId === order.id"
-                      title="Als bezahlt markieren"
+                      [title]="'orders.mark_as_paid' | translate"
                     >
                       <i class="fa-solid fa-credit-card"></i>
                     </button>
@@ -252,7 +252,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                       [class.hidden]="!canCancelOrder(order.status)"
                       (click)="canCancelOrder(order.status) ? cancelOrder(order.id) : null"
                       [disabled]="updatingOrderId === order.id || !canCancelOrder(order.status)"
-                      title="Stornieren"
+                      [title]="'orders.cancel' | translate"
                     >
                       <i class="fa-solid fa-times"></i>
                     </button>
@@ -267,7 +267,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                     class="action-btn details"
                     [class.has-notes]="order.notes"
                     (click)="openDetailsModal(order)"
-                    [title]="order.notes ? 'Details anzeigen (mit Notizen)' : 'Details anzeigen'"
+                    [title]="order.notes ? ('orders.show_details_with_notes' | translate) : ('orders.show_details' | translate)"
                   >
                     <i class="fa-solid fa-eye"></i>
                   </button>
@@ -385,7 +385,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                   [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'confirmed', order)"
                 >
                   <i class="fa-solid fa-check"></i>
-                  Bestätigen
+                  {{ 'orders.confirm' | translate }}
                 </button>
 
                 <button
@@ -395,7 +395,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                   [disabled]="updatingOrderId === order.id || !canUpdateStatus(order.status, 'preparing', order)"
                 >
                   <i class="fa-solid fa-utensils"></i>
-                  Zubereiten
+                  {{ 'orders.prepare' | translate }}
                 </button>
 
                 <button
@@ -469,7 +469,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                   [disabled]="updatingOrderId === order.id || !canCancelOrder(order.status)"
                 >
                   <i class="fa-solid fa-times"></i>
-                  Stornieren
+                  {{ 'orders.cancel' | translate }}
                 </button>
               </div>
 
