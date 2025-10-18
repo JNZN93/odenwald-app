@@ -5,17 +5,19 @@ import { FormsModule } from '@angular/forms';
 import { Subscription, interval, forkJoin } from 'rxjs';
 import { RestaurantManagerService } from '../../core/services/restaurant-manager.service';
 import { RestaurantsService } from '../../core/services/restaurants.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { I18nService } from '../../core/services/i18n.service';
 
 @Component({
   selector: 'app-restaurant-manager-overview',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, TranslatePipe],
   template: `
     <div class="overview-container" *ngIf="!isLoading; else loadingTemplate">
       <!-- Welcome Section -->
       <div class="welcome-section">
-        <h1>Willkommen zurück!</h1>
-        <p class="subtitle">Hier ist der aktuelle Status deines Restaurants</p>
+        <h1>{{ 'overview.welcome_back' | translate }}</h1>
+        <p class="subtitle">{{ 'overview.restaurant_status' | translate }}</p>
       </div>
 
       <!-- Key Metrics Grid -->
@@ -26,8 +28,8 @@ import { RestaurantsService } from '../../core/services/restaurants.service';
           </div>
           <div class="metric-content">
             <h3>{{ getTotalOrdersToday() }}</h3>
-            <p>Bestellungen heute</p>
-            <span class="change positive">+12% vs gestern</span>
+            <p>{{ 'overview.orders_today' | translate }}</p>
+            <span class="change positive">+12% {{ 'overview.vs_yesterday' | translate }}</span>
           </div>
         </div>
 
@@ -37,8 +39,8 @@ import { RestaurantsService } from '../../core/services/restaurants.service';
           </div>
           <div class="metric-content">
             <h3>{{ getTotalRevenueToday() }}</h3>
-            <p>Umsatz heute</p>
-            <span class="change positive">+8% vs gestern</span>
+            <p>{{ 'overview.revenue_today' | translate }}</p>
+            <span class="change positive">+8% {{ 'overview.vs_yesterday' | translate }}</span>
           </div>
         </div>
 
@@ -48,8 +50,8 @@ import { RestaurantsService } from '../../core/services/restaurants.service';
           </div>
           <div class="metric-content">
             <h3>{{ getPendingOrdersCount() }}</h3>
-            <p>Ausstehende Bestellungen</p>
-            <span class="change neutral">Aktualisiert</span>
+            <p>{{ 'overview.pending_orders' | translate }}</p>
+            <span class="change neutral">{{ 'overview.updated' | translate }}</span>
           </div>
         </div>
 
@@ -59,7 +61,7 @@ import { RestaurantsService } from '../../core/services/restaurants.service';
           </div>
           <div class="metric-content">
             <h3>{{ getRatingDisplay() }}</h3>
-            <p>Durchschnittliche Bewertung</p>
+            <p>{{ 'overview.average_rating' | translate }}</p>
             <span class="change neutral">{{ getReviewCountDisplay() }}</span>
           </div>
         </div>
@@ -70,24 +72,24 @@ import { RestaurantsService } from '../../core/services/restaurants.service';
         <!-- Recent Orders -->
         <div class="content-card">
           <div class="card-header">
-            <h2>Letzte Bestellungen</h2>
-            <a [routerLink]="['/restaurant-manager/orders']" class="view-all-link">Alle anzeigen</a>
+            <h2>{{ 'overview.recent_orders' | translate }}</h2>
+            <a [routerLink]="['/restaurant-manager/orders']" class="view-all-link">{{ 'overview.view_all' | translate }}</a>
           </div>
           <div class="orders-list">
             <div *ngFor="let order of recentOrders; trackBy: trackByOrderId" class="order-item">
               <div class="order-info">
                 <div class="order-number">#{{ getOrderIdDisplay(order.id) }}</div>
-                <div class="order-customer">{{ order.customer_name || 'Unbekannter Kunde' }}</div>
+                <div class="order-customer">{{ order.customer_name || ('overview.unknown_customer' | translate) }}</div>
                 <div class="order-time">{{ formatOrderTime(order.order_time) }}</div>
               </div>
               <div class="order-status">
                 <span [ngClass]="getOrderStatusClass(order.status)" class="status-badge">
                   {{ getOrderStatusText(order.status) }}
                 </span>
-                <span *ngIf="order.payment_status === 'paid'" class="payment-indicator" title="Bezahlt">
+                <span *ngIf="order.payment_status === 'paid'" class="payment-indicator" [title]="'overview.paid' | translate">
                   <i class="fa-solid fa-credit-card"></i>
                 </span>
-                <span *ngIf="order.payment_status === 'pending'" class="payment-indicator temp" title="Zahlung ausstehend">
+                <span *ngIf="order.payment_status === 'pending'" class="payment-indicator temp" [title]="'overview.payment_pending' | translate">
                   <i class="fa-solid fa-clock"></i>
                 </span>
               </div>
@@ -95,7 +97,7 @@ import { RestaurantsService } from '../../core/services/restaurants.service';
             </div>
             <div *ngIf="!recentOrders || recentOrders.length === 0" class="empty-state">
               <i class="fa-solid fa-shopping-cart"></i>
-              <p>Keine Bestellungen vorhanden</p>
+              <p>{{ 'overview.no_orders' | translate }}</p>
             </div>
           </div>
         </div>
@@ -103,15 +105,15 @@ import { RestaurantsService } from '../../core/services/restaurants.service';
         <!-- Popular Items -->
         <div class="content-card">
           <div class="card-header">
-            <h2>Beliebteste Gerichte</h2>
-            <a [routerLink]="['/restaurant-manager/menu']" class="view-all-link">Menu bearbeiten</a>
+            <h2>{{ 'overview.popular_items' | translate }}</h2>
+            <a [routerLink]="['/restaurant-manager/menu']" class="view-all-link">{{ 'overview.edit_menu' | translate }}</a>
           </div>
           <div class="popular-items-list">
             <div *ngFor="let item of getPopularItems(); let i = index" class="popular-item">
               <div class="item-rank">#{{ i + 1 }}</div>
               <div class="item-info">
                 <div class="item-name">{{ item.name }}</div>
-                <div class="item-orders">{{ item.order_count }} Bestellungen</div>
+                <div class="item-orders">{{ item.order_count }} {{ 'overview.orders' | translate }}</div>
               </div>
               <div class="item-trend">
                 <span class="trend-indicator positive">
@@ -121,7 +123,7 @@ import { RestaurantsService } from '../../core/services/restaurants.service';
             </div>
             <div *ngIf="getPopularItems().length === 0" class="empty-state">
               <i class="fa-solid fa-utensils"></i>
-              <p>Keine Daten verfügbar</p>
+              <p>{{ 'overview.no_data' | translate }}</p>
             </div>
           </div>
         </div>
@@ -129,23 +131,23 @@ import { RestaurantsService } from '../../core/services/restaurants.service';
 
       <!-- Quick Actions -->
       <div class="quick-actions">
-        <h2>Schnellaktionen</h2>
+        <h2>{{ 'overview.quick_actions' | translate }}</h2>
         <div class="actions-grid">
           <button [routerLink]="['/restaurant-manager/menu']" class="action-button primary">
             <i class="fa-solid fa-plus"></i>
-            <span>Neues Gericht hinzufügen</span>
+            <span>{{ 'overview.add_new_dish' | translate }}</span>
           </button>
           <button [routerLink]="['/restaurant-manager/orders']" class="action-button secondary">
             <i class="fa-solid fa-list-check"></i>
-            <span>Bestellungen verwalten</span>
+            <span>{{ 'overview.manage_orders' | translate }}</span>
           </button>
           <button [routerLink]="['/restaurant-manager/analytics']" class="action-button accent">
             <i class="fa-solid fa-chart-pie"></i>
-            <span>Berichte anzeigen</span>
+            <span>{{ 'overview.view_reports' | translate }}</span>
           </button>
           <button [routerLink]="['/restaurant-manager/settings']" class="action-button neutral">
             <i class="fa-solid fa-cog"></i>
-            <span>Einstellungen</span>
+            <span>{{ 'overview.settings' | translate }}</span>
           </button>
         </div>
       </div>
@@ -157,7 +159,7 @@ import { RestaurantsService } from '../../core/services/restaurants.service';
         <div class="loading-spinner">
           <i class="fa-solid fa-spinner fa-spin"></i>
         </div>
-        <p>Daten werden geladen...</p>
+        <p>{{ 'overview.loading_data' | translate }}</p>
       </div>
     </ng-template>
   `,
@@ -649,6 +651,7 @@ import { RestaurantsService } from '../../core/services/restaurants.service';
 export class RestaurantManagerOverviewComponent implements OnInit, OnDestroy {
   private restaurantManagerService = inject(RestaurantManagerService);
   private restaurantsService = inject(RestaurantsService);
+  private i18nService = inject(I18nService);
 
   currentStats: any = {
     total_orders_today: 0,
@@ -761,7 +764,7 @@ export class RestaurantManagerOverviewComponent implements OnInit, OnDestroy {
 
   getReviewCountDisplay(): string {
     const count = this.currentRestaurant?.total_reviews || 0;
-    return `${count} Bewertungen`;
+    return `${count} ${this.i18nService.translate('overview.reviews')}`;
   }
 
   getTotalOrdersToday(): number {
@@ -826,21 +829,21 @@ export class RestaurantManagerOverviewComponent implements OnInit, OnDestroy {
 
   formatOrderTime(orderTime: string): string {
     if (!orderTime || typeof orderTime !== 'string') {
-      return 'Unbekannt';
+      return this.i18nService.translate('overview.unknown');
     }
 
     const date = new Date(orderTime);
     if (isNaN(date.getTime())) {
-      return 'Ungültig';
+      return this.i18nService.translate('overview.invalid');
     }
 
     const now = new Date();
     const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
 
     if (diffInMinutes < 60) {
-      return `vor ${Math.max(1, diffInMinutes)} Min.`;
+      return `${this.i18nService.translate('overview.minutes_ago')} ${Math.max(1, diffInMinutes)}`;
     } else if (diffInMinutes < 1440) { // 24 hours
-      return `vor ${Math.floor(diffInMinutes / 60)} Std.`;
+      return `${this.i18nService.translate('overview.hours_ago')} ${Math.floor(diffInMinutes / 60)}`;
     } else {
       return date.toLocaleDateString('de-DE');
     }
@@ -865,18 +868,18 @@ export class RestaurantManagerOverviewComponent implements OnInit, OnDestroy {
 
   getOrderStatusText(status: string): string {
     if (!status || typeof status !== 'string') {
-      return 'Unbekannt';
+      return this.i18nService.translate('overview.unknown');
     }
 
     switch (status.toLowerCase()) {
-      case 'pending': return 'Ausstehend';
-      case 'confirmed': return 'Bestätigt';
-      case 'preparing': return 'Wird zubereitet';
-      case 'ready': return 'Bereit zur Abholung';
-      case 'picked_up': return 'Abgeholt';
-      case 'delivered': return 'Geliefert';
-      case 'cancelled': return 'Storniert';
-      default: return 'Unbekannt';
+      case 'pending': return this.i18nService.translate('order.status.pending');
+      case 'confirmed': return this.i18nService.translate('order.status.confirmed');
+      case 'preparing': return this.i18nService.translate('order.status.preparing');
+      case 'ready': return this.i18nService.translate('order.status.ready');
+      case 'picked_up': return this.i18nService.translate('order.status.picked_up');
+      case 'delivered': return this.i18nService.translate('order.status.delivered');
+      case 'cancelled': return this.i18nService.translate('order.status.cancelled');
+      default: return this.i18nService.translate('overview.unknown');
     }
   }
 }

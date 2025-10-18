@@ -5,6 +5,8 @@ import { RouterModule, RouterOutlet, Router } from '@angular/router';
 import { RestaurantManagerService } from '../../core/services/restaurant-manager.service';
 import { AuthService, User } from '../../core/auth/auth.service';
 import { ToastService } from '../../core/services/toast.service';
+import { I18nService } from '../../core/services/i18n.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { Subscription, interval } from 'rxjs';
 
 
@@ -22,12 +24,11 @@ export interface ManagerMenuItem {
 @Component({
   selector: 'app-restaurant-manager-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, RouterOutlet],
+  imports: [CommonModule, FormsModule, RouterModule, RouterOutlet, TranslatePipe],
   template: `
     <div class="manager-dashboard-container">
       <!-- Navigation Header -->
       <div class="manager-nav-header">
-
         <nav class="manager-nav">
           <a
             *ngFor="let menuItem of managerMenuItems"
@@ -50,7 +51,7 @@ export interface ManagerMenuItem {
             <i *ngIf="menuItem.icon === 'settings-icon'" class="fas fa-cog nav-icon"></i>
             <i *ngIf="menuItem.icon === 'wholesale-icon'" class="fas fa-store nav-icon"></i>
             <i *ngIf="menuItem.icon === 'support-icon'" class="fas fa-headset nav-icon"></i>
-            <span>{{ menuItem.title }}</span>
+            <span>{{ menuItem.title | translate }}</span>
             <span *ngIf="menuItem.badge" class="badge">{{ menuItem.badge }}</span>
           </a>
         </nav>
@@ -72,24 +73,24 @@ export interface ManagerMenuItem {
       <!-- Quick Stats Bar -->
       <div class="quick-stats-bar" *ngIf="currentStats && !isLoadingStats && shouldShowQuickStatsBar()">
         <div class="stat-card">
-          <div class="stat-label">Heutige Bestellungen</div>
+          <div class="stat-label">{{ 'stats.orders_today' | translate }}</div>
           <div class="stat-value">{{ currentStats.total_orders_today }}</div>
-          <div class="stat-change">+12% vs gestern</div>
+          <div class="stat-change">+12% {{ 'stats.vs_yesterday' | translate }}</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Umsatz heute</div>
+          <div class="stat-label">{{ 'stats.revenue_today' | translate }}</div>
           <div class="stat-value">€{{ currentStats.total_revenue_today?.toFixed(2) || '0.00' }}</div>
-          <div class="stat-change">+8% vs gestern</div>
+          <div class="stat-change">+8% {{ 'stats.vs_yesterday' | translate }}</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Ø Bestellwert</div>
+          <div class="stat-label">{{ 'stats.avg_order_value' | translate }}</div>
           <div class="stat-value">€{{ currentStats.average_order_value?.toFixed(2) || '0.00' }}</div>
-          <div class="stat-change">+5% vs gestern</div>
+          <div class="stat-change">+5% {{ 'stats.vs_yesterday' | translate }}</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Bestellungen diese Woche</div>
+          <div class="stat-label">{{ 'stats.orders_week' | translate }}</div>
           <div class="stat-value">{{ currentStats.total_orders_this_week || 0 }}</div>
-          <div class="stat-change">+15% vs letzte Woche</div>
+          <div class="stat-change">+15% {{ 'stats.vs_last_week' | translate }}</div>
         </div>
       </div>
 
@@ -116,24 +117,24 @@ export interface ManagerMenuItem {
       <!-- Quick Stats Bar (Fallback when no data) -->
       <div class="quick-stats-bar" *ngIf="!currentStats && !isLoadingStats && shouldShowQuickStatsBar()">
         <div class="stat-card">
-          <div class="stat-label">Heutige Bestellungen</div>
+          <div class="stat-label">{{ 'stats.orders_today' | translate }}</div>
           <div class="stat-value">0</div>
-          <div class="stat-change">Keine Daten verfügbar</div>
+          <div class="stat-change">{{ 'stats.no_data' | translate }}</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Umsatz heute</div>
+          <div class="stat-label">{{ 'stats.revenue_today' | translate }}</div>
           <div class="stat-value">€0.00</div>
-          <div class="stat-change">Keine Daten verfügbar</div>
+          <div class="stat-change">{{ 'stats.no_data' | translate }}</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Ø Bestellwert</div>
+          <div class="stat-label">{{ 'stats.avg_order_value' | translate }}</div>
           <div class="stat-value">€0.00</div>
-          <div class="stat-change">Keine Daten verfügbar</div>
+          <div class="stat-change">{{ 'stats.no_data' | translate }}</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Bestellungen diese Woche</div>
+          <div class="stat-label">{{ 'stats.orders_week' | translate }}</div>
           <div class="stat-value">0</div>
-          <div class="stat-change">Keine Daten verfügbar</div>
+          <div class="stat-change">{{ 'stats.no_data' | translate }}</div>
         </div>
       </div>
 
@@ -454,6 +455,7 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
   private restaurantManagerService = inject(RestaurantManagerService);
   private authService = inject(AuthService);
   private toastService = inject(ToastService);
+  private i18nService = inject(I18nService);
   private router = inject(Router);
   private subscriptions: Subscription[] = [];
   private badgeRefreshSubscription?: Subscription;
@@ -530,7 +532,7 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error('Error loading managed restaurants:', error);
-        this.toastService.error('Fehler', 'Restaurants konnten nicht geladen werden');
+        this.toastService.error(this.i18nService.translate('common.error'), this.i18nService.translate('error.restaurants_load'));
       }
     });
     this.subscriptions.push(sub);
@@ -546,7 +548,7 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error('Error loading restaurant stats:', error);
-        this.toastService.error('Fehler', 'Restaurant-Statistiken konnten nicht geladen werden');
+        this.toastService.error(this.i18nService.translate('common.error'), this.i18nService.translate('error.stats_load'));
         this.isLoadingStats = false;
         // Set fallback stats
         this.currentStats = {
@@ -692,8 +694,8 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
     this.managerMenuItems = [
       {
         id: 'overview',
-        title: 'Übersicht',
-        description: 'Dashboard und Statistiken',
+        title: 'nav.overview',
+        description: 'desc.overview',
         icon: 'overview-icon',
         route: '/restaurant-manager/overview',
         queryParams: {},
@@ -701,8 +703,8 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
       },
       {
         id: 'orders',
-        title: 'Bestellungen',
-        description: 'Bestellungen verwalten',
+        title: 'nav.orders',
+        description: 'desc.orders',
         icon: 'orders-icon',
         route: '/restaurant-manager/orders',
         queryParams: {},
@@ -711,8 +713,8 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
       },
       {
         id: 'issues',
-        title: 'Reklamationen',
-        description: 'Zugewiesene Kundenreklamationen',
+        title: 'nav.issues',
+        description: 'desc.issues',
         icon: 'issues-icon',
         route: '/restaurant-manager/issues',
         queryParams: {},
@@ -720,8 +722,8 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
       },
       {
         id: 'support',
-        title: 'Support',
-        description: 'Support-Tickets an Admin-Team',
+        title: 'nav.support',
+        description: 'desc.support',
         icon: 'support-icon',
         route: '/restaurant-manager/support',
         queryParams: {},
@@ -729,8 +731,8 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
       },
       {
         id: 'tables',
-        title: 'Tische',
-        description: 'Tischverwaltung & Tischangebote',
+        title: 'nav.tables',
+        description: 'desc.tables',
         icon: 'tables-icon',
         route: '/restaurant-manager/tables',
         queryParams: {},
@@ -738,8 +740,8 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
       },
       {
         id: 'drivers',
-        title: 'Fahrer',
-        description: 'Fahrer verwalten & zuweisen',
+        title: 'nav.drivers',
+        description: 'desc.drivers',
         icon: 'drivers-icon',
         route: '/restaurant-manager/drivers',
         queryParams: {},
@@ -747,8 +749,8 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
       },
       {
         id: 'menu',
-        title: 'Speisekarte',
-        description: 'Menu bearbeiten',
+        title: 'nav.menu',
+        description: 'desc.menu',
         icon: 'menu-icon',
         route: '/restaurant-manager/menu',
         queryParams: {},
@@ -756,8 +758,8 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
       },
       {
         id: 'flyer',
-        title: 'Flyer Generator',
-        description: 'DIN A4 Flyer erstellen',
+        title: 'nav.flyer',
+        description: 'desc.flyer',
         icon: 'flyer-icon',
         route: '/restaurant-manager/flyer',
         queryParams: {},
@@ -765,8 +767,8 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
       },
       {
         id: 'details',
-        title: 'Details',
-        description: 'Restaurant-Details für Kunden',
+        title: 'nav.details',
+        description: 'desc.details',
         icon: 'details-icon',
         route: '/restaurant-manager/details',
         queryParams: {},
@@ -774,8 +776,8 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
       },
       {
         id: 'analytics',
-        title: 'Analytics',
-        description: 'Berichte & Statistiken',
+        title: 'nav.analytics',
+        description: 'desc.analytics',
         icon: 'analytics-icon',
         route: '/restaurant-manager/analytics',
         queryParams: {},
@@ -783,8 +785,8 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
       },
       {
         id: 'customers',
-        title: 'Kunden',
-        description: 'Kunden verwalten',
+        title: 'nav.customers',
+        description: 'desc.customers',
         icon: 'customers-icon',
         route: '/restaurant-manager/customers',
         queryParams: {},
@@ -792,8 +794,8 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
       },
       {
         id: 'settings',
-        title: 'Einstellungen',
-        description: 'Restaurant-Einstellungen',
+        title: 'nav.settings',
+        description: 'desc.settings',
         icon: 'settings-icon',
         route: '/restaurant-manager/settings',
         queryParams: { tab: 'stripe' },
@@ -801,8 +803,8 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
       },
       {
         id: 'wholesale',
-        title: 'Großhandel Einkauf',
-        description: 'Zutaten und Waren bestellen',
+        title: 'nav.wholesale',
+        description: 'desc.wholesale',
         icon: 'wholesale-icon',
         route: '/restaurant-manager/wholesale',
         queryParams: {},

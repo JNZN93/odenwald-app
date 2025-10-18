@@ -5,6 +5,8 @@ import { RouterModule } from '@angular/router';
 import { RestaurantsService } from '../../core/services/restaurants.service';
 import { RestaurantManagerService } from '../../core/services/restaurant-manager.service';
 import { MenuItemVariantsComponent } from './menu-item-variants.component';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { I18nService } from '../../core/services/i18n.service';
 
 // Local interface for category management
 interface CategoryFormData {
@@ -16,20 +18,20 @@ interface CategoryFormData {
 @Component({
   selector: 'app-restaurant-manager-menu',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MenuItemVariantsComponent],
+  imports: [CommonModule, FormsModule, RouterModule, MenuItemVariantsComponent, TranslatePipe],
   template: `
     <div class="menu-container">
       <!-- Header -->
       <div class="menu-header">
-        <h1>Speisekarte verwalten</h1>
+        <h1>{{ 'menu.manage_menu' | translate }}</h1>
         <div class="header-actions">
           <button class="btn-primary" (click)="showAddItemModal = true">
             <i class="fa-solid fa-plus"></i>
-            Neues Gericht
+            {{ 'menu.new_dish' | translate }}
           </button>
           <button class="btn-secondary" (click)="showAddCategoryModal = true">
             <i class="fa-solid fa-folder-plus"></i>
-            Neue Kategorie
+            {{ 'menu.new_category' | translate }}
           </button>
         </div>
       </div>
@@ -56,7 +58,7 @@ interface CategoryFormData {
               <div class="item-image">
                 <img [src]="getItemImageUrl(item)" [alt]="item.name" (error)="onImageError($event)">
                 <div class="item-status" [class.available]="item.is_available" [class.unavailable]="!item.is_available">
-                  {{ item.is_available ? 'Verfügbar' : 'Nicht verfügbar' }}
+                  {{ (item.is_available ? 'menu.available' : 'menu.unavailable') | translate }}
                 </div>
               </div>
 
@@ -68,22 +70,22 @@ interface CategoryFormData {
                   <span class="prep-time">{{ item.preparation_time_minutes }} Min.</span>
                 </div>
                 <div class="item-badges">
-                  <span *ngIf="item.is_vegetarian" class="badge vegetarian">Vegetarisch</span>
-                  <span *ngIf="item.is_vegan" class="badge vegan">Vegan</span>
-                  <span *ngIf="item.is_gluten_free" class="badge gluten-free">Glutenfrei</span>
+                  <span *ngIf="item.is_vegetarian" class="badge vegetarian">{{ 'menu.vegetarian' | translate }}</span>
+                  <span *ngIf="item.is_vegan" class="badge vegan">{{ 'menu.vegan' | translate }}</span>
+                  <span *ngIf="item.is_gluten_free" class="badge gluten-free">{{ 'menu.gluten_free' | translate }}</span>
                 </div>
               </div>
 
               <div class="item-actions">
-                <button class="btn-sm" (click)="editItem(item)" title="Bearbeiten">
+                <button class="btn-sm" (click)="editItem(item)" [title]="'menu.edit' | translate">
                   <i class="fa-solid fa-edit"></i>
                 </button>
                 <button class="btn-sm" [class.success]="item.is_available" [class.warning]="!item.is_available"
                         (click)="toggleItemAvailability(item)"
-                        [title]="item.is_available ? 'Deaktivieren' : 'Aktivieren'">
+                        [title]="(item.is_available ? 'menu.deactivate' : 'menu.activate') | translate">
                   <i class="fa-solid" [class.fa-eye]="item.is_available" [class.fa-eye-slash]="!item.is_available"></i>
                 </button>
-                <button class="btn-sm danger" (click)="deleteItem(item)" title="Deaktivieren">
+                <button class="btn-sm danger" (click)="deleteItem(item)" [title]="'menu.deactivate' | translate">
                   <i class="fa-solid fa-trash"></i>
                 </button>
               </div>
@@ -91,7 +93,7 @@ interface CategoryFormData {
 
             <div *ngIf="getActiveItemsForCategory(category.id).length === 0" class="empty-category">
               <i class="fa-solid fa-utensils"></i>
-              <p>Keine Gerichte in dieser Kategorie</p>
+              <p>{{ 'menu.no_dishes_in_category' | translate }}</p>
             </div>
           </div>
         </div>
@@ -99,9 +101,9 @@ interface CategoryFormData {
         <!-- Deactivated Items Category -->
         <div *ngIf="getDeactivatedItems().length > 0" class="category-section deactivated">
           <div class="category-header">
-            <h2>🚫 Deaktivierte Gerichte</h2>
+            <h2>🚫 {{ 'menu.deactivated_dishes' | translate }}</h2>
             <div class="category-info">
-              <span class="info-badge">{{ getDeactivatedItems().length }} Gericht{{ getDeactivatedItems().length !== 1 ? 'e' : '' }}</span>
+              <span class="info-badge">{{ getDeactivatedItems().length }} {{ (getDeactivatedItems().length !== 1 ? 'menu.dishes' : 'menu.dish') | translate }}</span>
             </div>
           </div>
 
@@ -110,7 +112,7 @@ interface CategoryFormData {
               <div class="item-image">
                 <img [src]="getItemImageUrl(item)" [alt]="item.name" (error)="onImageError($event)">
                 <div class="item-status unavailable">
-                  Deaktiviert
+                  {{ 'menu.deactivated' | translate }}
                 </div>
               </div>
 
@@ -122,16 +124,16 @@ interface CategoryFormData {
                   <span class="prep-time">{{ item.preparation_time_minutes }} Min.</span>
                 </div>
                 <div class="item-badges">
-                  <span *ngIf="item.is_vegetarian" class="badge vegetarian">Vegetarisch</span>
-                  <span *ngIf="item.is_vegan" class="badge vegan">Vegan</span>
-                  <span *ngIf="item.is_gluten_free" class="badge gluten-free">Glutenfrei</span>
+                  <span *ngIf="item.is_vegetarian" class="badge vegetarian">{{ 'menu.vegetarian' | translate }}</span>
+                  <span *ngIf="item.is_vegan" class="badge vegan">{{ 'menu.vegan' | translate }}</span>
+                  <span *ngIf="item.is_gluten_free" class="badge gluten-free">{{ 'menu.gluten_free' | translate }}</span>
                 </div>
               </div>
 
               <div class="item-actions">
-                <button class="btn-sm success" (click)="restoreItem(item)" title="Wiederherstellen">
+                <button class="btn-sm success" (click)="restoreItem(item)" [title]="'menu.restore' | translate">
                   <i class="fa-solid fa-undo"></i>
-                  Aktivieren
+                  {{ 'menu.activate' | translate }}
                 </button>
               </div>
             </div>
@@ -143,7 +145,7 @@ interface CategoryFormData {
       <div *ngIf="showAddItemModal" class="modal-overlay" (click)="showAddItemModal = false">
         <div class="modal-content" (click)="$event.stopPropagation()">
           <div class="modal-header">
-            <h3>{{ editingItem ? 'Gericht bearbeiten' : 'Neues Gericht hinzufügen' }}</h3>
+            <h3>{{ editingItem ? ('menu.edit_dish' | translate) : ('menu.add_new_dish' | translate) }}</h3>
             <button class="close-btn" (click)="showAddItemModal = false">
               <i class="fa-solid fa-times"></i>
             </button>
@@ -156,52 +158,52 @@ interface CategoryFormData {
               class="tab-btn"
               [class.active]="activeTab === 'details'"
               (click)="activeTab = 'details'">
-              Grunddaten
+              {{ 'menu.basic_data' | translate }}
             </button>
             <button
               type="button"
               class="tab-btn"
               [class.active]="activeTab === 'variants'"
               (click)="activeTab = 'variants'">
-              Varianten
+              {{ 'menu.variants' | translate }}
             </button>
           </div>
 
           <div [class.hidden]="activeTab !== 'details'">
             <form (ngSubmit)="saveItem()" #itemForm="ngForm" class="modal-form">
               <div class="form-group">
-                <label for="itemName">Name *</label>
+                <label for="itemName">{{ 'menu.name' | translate }} *</label>
                 <input id="itemName" type="text" [(ngModel)]="currentItem.name" name="name" required>
               </div>
 
             <div class="form-group">
-              <label for="itemDescription">Beschreibung</label>
+              <label for="itemDescription">{{ 'menu.description' | translate }}</label>
               <textarea id="itemDescription" [(ngModel)]="currentItem.description" name="description" rows="3"></textarea>
             </div>
 
             <div class="form-row">
               <div class="form-group">
-                <label for="itemPrice">Preis (€) *</label>
+                <label for="itemPrice">{{ 'menu.price_eur' | translate }} *</label>
                 <input id="itemPrice" type="number" step="0.01" [(ngModel)]="currentItem.price" name="price" required>
               </div>
 
               <div class="form-group">
-                <label for="itemPrepTime">Zubereitungszeit (Min.) *</label>
+                <label for="itemPrepTime">{{ 'menu.prep_time_min' | translate }} *</label>
                 <input id="itemPrepTime" type="number" [(ngModel)]="currentItem.preparation_time_minutes" name="prepTime" required>
               </div>
             </div>
 
             <div class="form-group">
-              <label for="itemCategory">Kategorie (optional)</label>
+              <label for="itemCategory">{{ 'menu.category_optional' | translate }}</label>
               <select id="itemCategory" [(ngModel)]="currentItem.category_id" name="category">
-                <option [ngValue]="undefined">Ohne Kategorie</option>
+                <option [ngValue]="undefined">{{ 'menu.no_category' | translate }}</option>
                 <option *ngFor="let category of categories" [ngValue]="category.id">{{ category.name }}</option>
               </select>
             </div>
 
             <!-- Image Upload Section -->
             <div class="form-group">
-              <label for="itemImage">Bild</label>
+              <label for="itemImage">{{ 'menu.image' | translate }}</label>
 
               <!-- Image Source Toggle -->
               <div class="image-source-toggle">
@@ -211,7 +213,7 @@ interface CategoryFormData {
                   [class.active]="imageSource === 'url'"
                   (click)="setImageSource('url')">
                   <i class="fa-solid fa-link"></i>
-                  Bild-URL
+                  {{ 'menu.image_url' | translate }}
                 </button>
                 <button
                   type="button"
@@ -219,7 +221,7 @@ interface CategoryFormData {
                   [class.active]="imageSource === 'upload'"
                   (click)="setImageSource('upload')">
                   <i class="fa-solid fa-upload"></i>
-                  Datei hochladen
+                  {{ 'menu.upload_file' | translate }}
                 </button>
               </div>
 
@@ -232,7 +234,7 @@ interface CategoryFormData {
                   name="imageUrl"
                   placeholder="https://beispiel.com/bild.jpg"
                   class="url-input">
-                <small class="input-help">Geben Sie eine URL zu einem Bild ein</small>
+                <small class="input-help">{{ 'menu.enter_image_url' | translate }}</small>
               </div>
 
               <!-- File Upload -->
@@ -254,7 +256,7 @@ interface CategoryFormData {
                   <div class="upload-content" (click)="imageFileInput.click()">
                     <i class="fa-solid fa-cloud-upload-alt upload-icon"></i>
                     <div class="upload-text">
-                      <strong>Bild auswählen</strong>
+                      <strong>{{ 'menu.select_image' | translate }}</strong>
                       <span>JPEG, PNG, GIF oder WebP (max. 3MB)</span>
                     </div>
                   </div>
@@ -273,37 +275,37 @@ interface CategoryFormData {
               <label class="checkbox-label">
                 <input type="checkbox" [(ngModel)]="currentItem.is_available" name="isAvailable">
                 <span class="checkmark"></span>
-                Verfügbar
+                {{ 'menu.available' | translate }}
               </label>
 
               <label class="checkbox-label">
                 <input type="checkbox" [(ngModel)]="currentItem.is_vegetarian" name="isVegetarian">
                 <span class="checkmark"></span>
-                Vegetarisch
+                {{ 'menu.vegetarian' | translate }}
               </label>
 
               <label class="checkbox-label">
                 <input type="checkbox" [(ngModel)]="currentItem.is_vegan" name="isVegan">
                 <span class="checkmark"></span>
-                Vegan
+                {{ 'menu.vegan' | translate }}
               </label>
 
               <label class="checkbox-label">
                 <input type="checkbox" [(ngModel)]="currentItem.is_gluten_free" name="isGlutenFree">
                 <span class="checkmark"></span>
-                Glutenfrei
+                {{ 'menu.gluten_free' | translate }}
               </label>
             </div>
 
             <div class="form-group">
-              <label for="itemAllergens">Allergene (kommagetrennt)</label>
+              <label for="itemAllergens">{{ 'menu.allergens_comma_separated' | translate }}</label>
               <input id="itemAllergens" type="text" [(ngModel)]="currentItem.allergens" name="allergens">
             </div>
 
               <div class="modal-actions">
-                <button type="button" class="btn-secondary" (click)="showAddItemModal = false">Abbrechen</button>
+                <button type="button" class="btn-secondary" (click)="showAddItemModal = false">{{ 'common.cancel' | translate }}</button>
                 <button type="submit" class="btn-primary" [disabled]="!itemForm.valid">
-                  {{ editingItem ? 'Speichern' : 'Hinzufügen' }}
+                  {{ editingItem ? ('common.save' | translate) : ('common.add' | translate) }}
                 </button>
               </div>
             </form>
@@ -325,7 +327,7 @@ interface CategoryFormData {
       <div *ngIf="showAddCategoryModal" class="modal-overlay" (click)="showAddCategoryModal = false">
         <div class="modal-content small" (click)="$event.stopPropagation()">
           <div class="modal-header">
-            <h3>{{ editingCategory ? 'Kategorie bearbeiten' : 'Neue Kategorie' }}</h3>
+            <h3>{{ editingCategory ? ('menu.edit_category' | translate) : ('menu.new_category' | translate) }}</h3>
             <button class="close-btn" (click)="showAddCategoryModal = false">
               <i class="fa-solid fa-times"></i>
             </button>
@@ -333,14 +335,14 @@ interface CategoryFormData {
 
           <form (ngSubmit)="saveCategory()" #categoryForm="ngForm" class="modal-form">
             <div class="form-group">
-              <label for="categoryName">Name *</label>
+              <label for="categoryName">{{ 'menu.name' | translate }} *</label>
               <input id="categoryName" type="text" [(ngModel)]="currentCategory.name" name="name" required>
             </div>
 
             <div class="modal-actions">
-              <button type="button" class="btn-secondary" (click)="showAddCategoryModal = false">Abbrechen</button>
+              <button type="button" class="btn-secondary" (click)="showAddCategoryModal = false">{{ 'common.cancel' | translate }}</button>
               <button type="submit" class="btn-primary" [disabled]="!categoryForm.valid">
-                {{ editingCategory ? 'Speichern' : 'Hinzufügen' }}
+                {{ editingCategory ? ('common.save' | translate) : ('common.add' | translate) }}
               </button>
             </div>
           </form>
@@ -1062,6 +1064,7 @@ interface CategoryFormData {
 export class RestaurantManagerMenuComponent implements OnInit {
   private restaurantsService = inject(RestaurantsService);
   private restaurantManagerService = inject(RestaurantManagerService);
+  private i18nService = inject(I18nService);
 
   menuItems: any[] = [];
   categories: CategoryFormData[] = [];
@@ -1232,7 +1235,7 @@ export class RestaurantManagerMenuComponent implements OnInit {
   }
 
   deleteItem(item: any) {
-    if (!confirm(`Sind Sie sicher, dass Sie "${item.name}" deaktivieren möchten?`) || !this.managedRestaurantId) {
+    if (!confirm(`${this.i18nService.translate('menu.confirm_deactivate')} "${item.name}"?`) || !this.managedRestaurantId) {
       return;
     }
 
@@ -1249,17 +1252,17 @@ export class RestaurantManagerMenuComponent implements OnInit {
             ...this.menuItems.slice(index + 1)
           ];
         }
-        alert('Gericht wurde erfolgreich deaktiviert.');
+        alert(this.i18nService.translate('menu.dish_deactivated_successfully'));
       },
       error: (err) => {
         console.error('Deactivate menu item failed', err);
-        alert('Fehler beim Deaktivieren des Gerichts. Bitte versuchen Sie es erneut.');
+        alert(this.i18nService.translate('menu.error_deactivating_dish'));
       }
     });
   }
 
   restoreItem(item: any) {
-    if (!confirm(`Sind Sie sicher, dass Sie "${item.name}" wieder aktivieren möchten?`) || !this.managedRestaurantId) {
+    if (!confirm(`${this.i18nService.translate('menu.confirm_activate')} "${item.name}"?`) || !this.managedRestaurantId) {
       return;
     }
 
@@ -1276,11 +1279,11 @@ export class RestaurantManagerMenuComponent implements OnInit {
             ...this.menuItems.slice(index + 1)
           ];
         }
-        alert('Gericht wurde erfolgreich wieder aktiviert.');
+        alert(this.i18nService.translate('menu.dish_activated_successfully'));
       },
       error: (err) => {
         console.error('Restore menu item failed', err);
-        alert('Fehler beim Wiederherstellen des Gerichts. Bitte versuchen Sie es erneut.');
+        alert(this.i18nService.translate('menu.error_restoring_dish'));
       }
     });
   }
@@ -1310,7 +1313,7 @@ export class RestaurantManagerMenuComponent implements OnInit {
       },
       error: (err) => {
         console.error('Toggle availability failed', err);
-        alert('Fehler beim Ändern der Verfügbarkeit. Bitte versuchen Sie es erneut.');
+        alert(this.i18nService.translate('menu.error_changing_availability'));
       }
     });
   }
@@ -1323,7 +1326,7 @@ export class RestaurantManagerMenuComponent implements OnInit {
   }
 
   deleteCategory(category: CategoryFormData) {
-    if (!confirm(`Sind Sie sicher, dass Sie die Kategorie "${category.name}" löschen möchten?`) || !this.managedRestaurantId || !category.id) {
+    if (!confirm(`${this.i18nService.translate('menu.confirm_delete_category')} "${category.name}"?`) || !this.managedRestaurantId || !category.id) {
       return;
     }
 
@@ -1398,11 +1401,11 @@ export class RestaurantManagerMenuComponent implements OnInit {
           }
           this.showAddItemModal = false;
           this.resetItemForm();
-          alert('Gericht wurde erfolgreich aktualisiert!');
+          alert(this.i18nService.translate('menu.dish_updated_successfully'));
         },
         error: (err) => {
           console.error('Update menu item failed', err);
-          alert('Fehler beim Aktualisieren des Gerichts. Bitte versuchen Sie es erneut.');
+          alert(this.i18nService.translate('menu.error_updating_dish'));
         }
       });
       return;
@@ -1502,11 +1505,11 @@ export class RestaurantManagerMenuComponent implements OnInit {
 
         this.showAddItemModal = false;
         this.resetItemForm();
-        alert('Gericht wurde erfolgreich hinzugefügt!');
+        alert(this.i18nService.translate('menu.dish_added_successfully'));
       },
       error: (err) => {
         console.error('Create menu item failed', err);
-        alert('Fehler beim Hinzufügen des Gerichts. Bitte versuchen Sie es erneut.');
+        alert(this.i18nService.translate('menu.error_adding_dish'));
       }
     });
   }
@@ -1606,20 +1609,20 @@ export class RestaurantManagerMenuComponent implements OnInit {
 
   uploadImageFile(file: File) {
     if (!this.managedRestaurantId) {
-      alert('Fehler: Kein Restaurant gefunden.');
+      alert(this.i18nService.translate('menu.error_no_restaurant'));
       return;
     }
 
     // Validate file size (3MB)
     if (file.size > 3 * 1024 * 1024) {
-      alert('Datei ist zu groß. Maximale Größe ist 3MB.');
+      alert(this.i18nService.translate('menu.error_file_too_large'));
       return;
     }
 
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
-      alert('Ungültiger Dateityp. Erlaubt: JPEG, PNG, GIF, WebP.');
+      alert(this.i18nService.translate('menu.error_invalid_file_type'));
       return;
     }
 
@@ -1636,13 +1639,13 @@ export class RestaurantManagerMenuComponent implements OnInit {
           this.currentItem.image_url = response.image_url;
           this.isUploadingImage = false;
           this.uploadProgress = 100;
-          alert('Bild erfolgreich hochgeladen!');
+          alert(this.i18nService.translate('menu.image_uploaded_successfully'));
         },
         error: (error) => {
           console.error('Upload failed:', error);
           this.isUploadingImage = false;
           this.uploadProgress = 0;
-          alert('Fehler beim Hochladen des Bildes. Bitte versuchen Sie es erneut.');
+          alert(this.i18nService.translate('menu.error_uploading_image'));
         }
       });
     } else {
@@ -1651,7 +1654,7 @@ export class RestaurantManagerMenuComponent implements OnInit {
       this.tempImageFile = file;
       this.uploadProgress = 100;
       this.isUploadingImage = false;
-      alert('Bild ausgewählt. Es wird nach dem Speichern des Gerichts hochgeladen.');
+      alert(this.i18nService.translate('menu.image_selected_upload_after_save'));
     }
   }
 
@@ -1661,11 +1664,11 @@ export class RestaurantManagerMenuComponent implements OnInit {
       this.restaurantsService.deleteMenuItemImage(this.managedRestaurantId, this.editingItem.id).subscribe({
         next: () => {
           this.currentItem.image_url = '';
-          alert('Bild erfolgreich entfernt.');
+          alert(this.i18nService.translate('menu.image_removed_successfully'));
         },
         error: (error) => {
           console.error('Remove image failed:', error);
-          alert('Fehler beim Entfernen des Bildes.');
+          alert(this.i18nService.translate('menu.error_removing_image'));
         }
       });
     } else {

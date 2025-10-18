@@ -190,6 +190,18 @@
   gap: 1rem;
 }
 
+.language-switcher-container {
+  display: flex;
+  align-items: center;
+}
+
+.mobile-language-switcher {
+  display: flex;
+  justify-content: center;
+  margin: 1rem 0;
+  padding: 0 1rem;
+}
+
 /* Ensure all buttons in header are white */
 .btn {
   color: white !important;

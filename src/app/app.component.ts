@@ -8,6 +8,8 @@ import { ToastContainerComponent } from './shared/components/toast-container.com
 import { ConfirmationDialogComponent } from './shared/components/confirmation-dialog.component';
 import { LoadingSpinnerComponent } from './shared/components/loading-spinner.component';
 import { AIChatWidgetComponent } from './shared/components/ai-chat-widget.component';
+import { LanguageSwitcherComponent } from './shared/components/language-switcher.component';
+import { TranslatePipe } from './shared/pipes/translate.pipe';
 import { LoadingService } from './core/services/loading.service';
 import { environment } from '../environments/environment';
 
@@ -22,7 +24,9 @@ import { environment } from '../environments/environment';
     ToastContainerComponent,
     ConfirmationDialogComponent,
     LoadingSpinnerComponent,
-    AIChatWidgetComponent
+    AIChatWidgetComponent,
+    LanguageSwitcherComponent,
+    TranslatePipe
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'

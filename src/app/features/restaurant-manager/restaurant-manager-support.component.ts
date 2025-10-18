@@ -6,11 +6,13 @@ import { RestaurantManagerService } from '../../core/services/restaurant-manager
 import { LoadingService } from '../../core/services/loading.service';
 import { ToastService } from '../../core/services/toast.service';
 import { environment } from '../../../environments/environment';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { I18nService } from '../../core/services/i18n.service';
 
 @Component({
   selector: 'app-restaurant-manager-support',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
     <div class="support-container">
       <!-- Header -->
@@ -59,7 +61,7 @@ import { environment } from '../../../environments/environment';
             <i class="fa-solid fa-check-circle"></i>
           </div>
           <div class="stat-content">
-            <h3>Gelöst</h3>
+            <h3>{{ 'support.resolved' | translate }}</h3>
             <div class="stat-value">{{ getStatusCount('resolved') }}</div>
           </div>
         </div>
@@ -75,7 +77,7 @@ import { environment } from '../../../environments/environment';
               <option value="open">Offen</option>
               <option value="in_progress">In Bearbeitung</option>
               <option value="waiting_for_response">Wartet auf Antwort</option>
-              <option value="resolved">Gelöst</option>
+              <option value="resolved">{{ 'support.resolved' | translate }}</option>
               <option value="closed">Geschlossen</option>
             </select>
           </div>
@@ -173,7 +175,7 @@ import { environment } from '../../../environments/environment';
             <div class="form-group">
               <label class="form-label">Kategorie *</label>
               <select [(ngModel)]="newTicket.category" name="category" class="form-select" required>
-                <option value="">Kategorie auswählen</option>
+                <option value="">{{ 'support.category_select' | translate }}</option>
                 <option value="technical_issue">🔧 Technisches Problem</option>
                 <option value="payment_issue">💳 Zahlungsproblem</option>
                 <option value="feature_request">✨ Feature-Anfrage</option>
@@ -187,7 +189,7 @@ import { environment } from '../../../environments/environment';
             </div>
 
             <div class="form-group">
-              <label class="form-label">Priorität</label>
+              <label class="form-label">{{ 'support.priority' | translate }}</label>
               <select [(ngModel)]="newTicket.priority" name="priority" class="form-select">
                 <option value="normal">🟡 Normal</option>
                 <option value="low">🟢 Niedrig</option>
@@ -209,13 +211,13 @@ import { environment } from '../../../environments/environment';
             </div>
 
             <div class="form-group">
-              <label class="form-label">Bilder/Dokumente anhängen (optional)</label>
+              <label class="form-label">{{ 'support.attach_files' | translate }}</label>
               <div class="file-upload-area" (click)="fileInput.click()" (dragover)="onDragOver($event)" (drop)="onDrop($event)">
                 <input #fileInput type="file" multiple accept="image/*,.pdf" (change)="onFileSelected($event)" style="display: none;">
                 <div class="upload-content" *ngIf="selectedFiles.length === 0">
                   <i class="fa-solid fa-cloud-upload-alt"></i>
                   <p>Klicken Sie hier oder ziehen Sie Dateien hierher</p>
-                  <small>Unterstützte Formate: JPEG, PNG, GIF, WebP, PDF (max. 5MB pro Datei)</small>
+                  <small>{{ 'support.supported_formats' | translate }}</small>
                 </div>
                 <div class="selected-files" *ngIf="selectedFiles.length > 0">
                   <div class="file-item" *ngFor="let file of selectedFiles; let i = index">
@@ -273,7 +275,7 @@ import { environment } from '../../../environments/environment';
                 </span>
               </div>
               <div class="meta-item">
-                <strong>Priorität:</strong> 
+                <strong>{{ 'support.priority_label' | translate }}</strong> 
                 <span class="priority-badge" [class]="'priority-badge priority-' + selectedTicket.priority">
                   {{ getPriorityLabel(selectedTicket.priority) }}
                 </span>
@@ -306,7 +308,7 @@ import { environment } from '../../../environments/environment';
 
             <!-- Ticket Attachments -->
             <div class="attachments-section" *ngIf="ticketAttachments.length > 0">
-              <h4>Angehängte Dateien ({{ ticketAttachments.length }})</h4>
+              <h4>{{ 'support.attached_files' | translate }} ({{ ticketAttachments.length }})</h4>
               <div class="attachments-grid">
                 <div *ngFor="let attachment of ticketAttachments" class="attachment-item">
                   <!-- Debug: Show all attachment data -->
@@ -381,7 +383,7 @@ import { environment } from '../../../environments/environment';
             </div>
 
             <div class="reply-section" *ngIf="selectedTicket.status !== 'closed' && selectedTicket.status !== 'resolved'">
-              <h4>Antwort hinzufügen</h4>
+              <h4>{{ 'support.add_response' | translate }}</h4>
               <form (ngSubmit)="sendMessage()" #messageForm="ngForm">
                 <textarea 
                   [(ngModel)]="newMessage.message" 
@@ -393,12 +395,12 @@ import { environment } from '../../../environments/environment';
                 ></textarea>
                 
                 <div class="form-group">
-                  <label class="form-label">Dateien anhängen (optional)</label>
+                  <label class="form-label">{{ 'support.attach_files_response' | translate }}</label>
                   <div class="file-upload-area small" (click)="messageFileInput.click()" (dragover)="onMessageDragOver($event)" (drop)="onMessageDrop($event)">
                     <input #messageFileInput type="file" multiple accept="image/*,.pdf" (change)="onMessageFileSelected($event)" style="display: none;">
                     <div class="upload-content" *ngIf="messageFiles.length === 0">
                       <i class="fa-solid fa-paperclip"></i>
-                      <p>Dateien anhängen</p>
+                      <p>{{ 'support.attach_files_btn' | translate }}</p>
                     </div>
                     <div class="selected-files" *ngIf="messageFiles.length > 0">
                       <div class="file-item" *ngFor="let file of messageFiles; let i = index">
@@ -1306,6 +1308,7 @@ export class RestaurantManagerSupportComponent implements OnInit {
   private restaurantManagerService = inject(RestaurantManagerService);
   private loadingService = inject(LoadingService);
   private toastService = inject(ToastService);
+  private i18nService = inject(I18nService);
 
   tickets: SupportTicket[] = [];
   filteredTickets: SupportTicket[] = [];
@@ -1383,7 +1386,7 @@ export class RestaurantManagerSupportComponent implements OnInit {
 
   async createTicket() {
     if (!this.newTicket.subject || !this.newTicket.description || !this.newTicket.category) {
-      this.toastService.error('Ticket erstellen', 'Bitte füllen Sie alle Pflichtfelder aus');
+      this.toastService.error(this.i18nService.translate('support.ticket_create_error'), this.i18nService.translate('support.fill_required_fields'));
       return;
     }
 
@@ -1609,12 +1612,12 @@ export class RestaurantManagerSupportComponent implements OnInit {
     
     for (const file of files) {
       if (file.size > maxSize) {
-        this.toastService.error('Datei zu groß', `${file.name} ist größer als 5MB`);
+        this.toastService.error(this.i18nService.translate('support.file_too_large'), `${file.name} ${this.i18nService.translate('support.file_larger_than_5mb')}`);
         continue;
       }
       
       if (!allowedTypes.includes(file.type)) {
-        this.toastService.error('Dateityp nicht unterstützt', `${file.name} hat einen nicht unterstützten Dateityp`);
+        this.toastService.error(this.i18nService.translate('support.file_type_not_supported'), `${file.name} ${this.i18nService.translate('support.file_type_unsupported')}`);
         continue;
       }
       

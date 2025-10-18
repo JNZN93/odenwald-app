@@ -103,6 +103,11 @@
         </div>
 
         <div class="user-section">
+          <!-- Language Switcher -->
+          <div class="language-switcher-container">
+            <app-language-switcher></app-language-switcher>
+          </div>
+
           <ng-container *ngIf="isAuthenticated; else guestSection">
             <div class="user-info">
               <svg class="user-avatar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -248,6 +253,11 @@
         </div>
 
         <ng-container *ngIf="isAuthenticated; else mobileGuestSection">
+          <!-- Language Switcher for Mobile -->
+          <div class="mobile-language-switcher">
+            <app-language-switcher></app-language-switcher>
+          </div>
+
           <div class="mobile-user-info">
             <svg class="user-avatar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>

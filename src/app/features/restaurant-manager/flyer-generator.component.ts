@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RestaurantsService } from '../../core/services/restaurants.service';
 import { RestaurantManagerService } from '../../core/services/restaurant-manager.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { I18nService } from '../../core/services/i18n.service';
 
 interface FlyerTemplate {
   id: string;
@@ -40,7 +42,7 @@ interface PaperFormat {
 @Component({
   selector: 'app-flyer-generator',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
     <div class="flyer-generator-container">
       <!-- Header -->
@@ -51,7 +53,7 @@ interface PaperFormat {
 
       <!-- Format Selection -->
       <div class="format-section">
-        <h2>Papierformat wählen</h2>
+        <h2>{{ 'flyer.paper_format' | translate }}</h2>
         <div class="format-grid">
           <div 
             *ngFor="let format of paperFormats" 
@@ -78,7 +80,7 @@ interface PaperFormat {
 
       <!-- Template Selection -->
       <div class="template-section" *ngIf="selectedFormat">
-        <h2>Flyer-Vorlage wählen</h2>
+        <h2>{{ 'flyer.template_choose' | translate }}</h2>
         <div class="template-grid">
           <div 
             *ngFor="let template of templates" 
@@ -104,7 +106,7 @@ interface PaperFormat {
 
       <!-- Product Selection -->
       <div class="product-selection-section" *ngIf="selectedTemplate && selectedFormat">
-        <h2>Produkte auswählen</h2>
+        <h2>{{ 'flyer.products_select' | translate }}</h2>
         <div class="selection-controls">
           <button class="btn-secondary" (click)="selectAllProducts()">
             <i class="fas fa-check-double"></i> Alle auswählen
@@ -185,7 +187,7 @@ interface PaperFormat {
                 id="restaurantAddress" 
                 type="text" 
                 [(ngModel)]="flyerData.restaurantAddress"
-                placeholder="Straße, PLZ Ort">
+                [placeholder]="'flyer.street_placeholder' | translate">
             </div>
             <div class="form-group">
               <label for="restaurantPhone">Telefon</label>
@@ -205,7 +207,7 @@ interface PaperFormat {
                 id="flyerTitle" 
                 type="text" 
                 [(ngModel)]="flyerData.title"
-                placeholder="z.B. Unsere Spezialitäten">
+                [placeholder]="'flyer.specialties_placeholder' | translate">
             </div>
             <div class="form-group">
               <label for="flyerSubtitle">Untertitel</label>
@@ -233,7 +235,7 @@ interface PaperFormat {
         <div class="preview-header">
           <h2>Vorschau</h2>
           <div class="preview-info">
-            <span class="product-count">{{ selectedProducts.length }} Produkt{{ selectedProducts.length !== 1 ? 'e' : '' }} ausgewählt</span>
+            <span class="product-count">{{ selectedProducts.length }} {{ selectedProducts.length !== 1 ? ('flyer.products_selected_plural' | translate) : ('flyer.products_selected' | translate) }}</span>
             <span class="template-info">{{ selectedTemplate.name }}</span>
             <span class="format-info">{{ selectedFormat.name }}</span>
             <span class="margin-info">Sichere Zone: {{ selectedFormat.safeArea.top }}mm</span>
@@ -246,7 +248,7 @@ interface PaperFormat {
                [style.height.mm]="selectedFormat.height">
             <!-- Flyer Header -->
             <div class="flyer-header">
-              <h1 class="flyer-title">{{ flyerData.title || 'Unsere Spezialitäten' }}</h1>
+              <h1 class="flyer-title">{{ flyerData.title || ('flyer.specialties_title' | translate) }}</h1>
               <p class="flyer-subtitle" *ngIf="flyerData.subtitle">{{ flyerData.subtitle }}</p>
               <div class="restaurant-info">
                 <h2>{{ flyerData.restaurantName || 'Restaurant Name' }}</h2>
@@ -283,7 +285,7 @@ interface PaperFormat {
 
             <!-- Footer -->
             <div class="flyer-footer">
-              <p>Besuchen Sie uns für eine unvergessliche kulinarische Erfahrung!</p>
+              <p>{{ 'flyer.visit_message' | translate }}</p>
             </div>
           </div>
         </div>
@@ -1119,6 +1121,7 @@ interface PaperFormat {
 export class FlyerGeneratorComponent implements OnInit {
   private restaurantsService = inject(RestaurantsService);
   private restaurantManagerService = inject(RestaurantManagerService);
+  private i18nService = inject(I18nService);
 
   menuItems: any[] = [];
   categories: any[] = [];

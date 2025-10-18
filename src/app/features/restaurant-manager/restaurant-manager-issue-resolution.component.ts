@@ -24,7 +24,7 @@ interface ResolutionOption {
     <div class="resolution-container" *ngIf="issue">
       <!-- Issue Header -->
       <div class="issue-header">
-        <h2>Reklamation lösen - #{{ issue.id.slice(-8) }}</h2>
+        <h2>{{ 'issues.resolve_complaint' | translate }} - #{{ issue.id.slice(-8) }}</h2>
         <div class="issue-meta">
           <span class="issue-reason">{{ getReasonLabel(issue.reason) }}</span>
           <span class="issue-priority" [class]="'priority-' + issue.priority">
@@ -44,7 +44,7 @@ interface ResolutionOption {
 
       <!-- Resolution Options -->
       <div class="resolution-section" *ngIf="!isResolved">
-        <h3>Lösungsvorschlag</h3>
+        <h3>{{ 'issues.solution_proposal' | translate }}</h3>
         
         <div class="resolution-types">
           <!-- Replacement Option -->
@@ -68,15 +68,15 @@ interface ResolutionOption {
               <div class="option-content">
                 <div class="option-icon">💰</div>
                 <div class="option-text">
-                  <strong>Geld zurück</strong>
-                  <p>Vollständige oder teilweise Rückerstattung</p>
+                  <strong>{{ 'issues.money_back' | translate }}</strong>
+                  <p>{{ 'issues.full_partial_refund' | translate }}</p>
                 </div>
               </div>
             </label>
             
             <!-- Refund Amount Input -->
             <div class="refund-input" *ngIf="selectedResolutionType === 'refund'">
-              <label>Rückerstattungsbetrag (€)</label>
+              <label>{{ 'issues.refund_amount' | translate }}</label>
               <div class="amount-input-group">
                 <input 
                   type="number" 
@@ -104,7 +104,7 @@ interface ResolutionOption {
                 <div class="option-icon">🎫</div>
                 <div class="option-text">
                   <strong>Guthaben</strong>
-                  <p>Guthaben für zukünftige Bestellungen</p>
+                  <p>{{ 'issues.credit_future_orders' | translate }}</p>
                 </div>
               </div>
             </label>
@@ -134,7 +134,7 @@ interface ResolutionOption {
                 <div class="option-icon">🏷️</div>
                 <div class="option-text">
                   <strong>Rabatt</strong>
-                  <p>Prozentualer Rabatt auf zukünftige Bestellungen</p>
+                  <p>{{ 'issues.percentage_discount' | translate }}</p>
                 </div>
               </div>
             </label>
@@ -162,7 +162,7 @@ interface ResolutionOption {
           <label>Interne Notizen</label>
           <textarea 
             [(ngModel)]="resolutionNotes"
-            placeholder="Interne Notizen zur Lösung..."
+            [placeholder]="'issues.internal_notes' | translate"
             rows="3"
           ></textarea>
         </div>
@@ -201,7 +201,7 @@ interface ResolutionOption {
             [disabled]="!canProposeResolution() || isSubmitting"
           >
             <i class="fa-solid fa-spinner fa-spin" *ngIf="isSubmitting"></i>
-            {{ isSubmitting ? 'Wird gesendet...' : 'Lösung vorschlagen' }}
+            {{ isSubmitting ? ('issues.submitting' | translate) : ('issues.propose_solution' | translate) }}
           </button>
         </div>
       </div>
@@ -619,10 +619,10 @@ export class RestaurantManagerIssueResolutionComponent implements OnInit {
     setTimeout(() => {
       this.isSubmitting = false;
       this.requiresApproval = this.refundAmount > 50; // Mock approval logic
-      this.toastService.success('Lösung vorgeschlagen', 'Ihr Lösungsvorschlag wurde erfolgreich eingereicht.');
+      this.toastService.success(this.i18nService.translate('issues.solution_proposed'), this.i18nService.translate('issues.solution_submitted'));
       
       if (this.requiresApproval) {
-        this.toastService.info('Admin-Genehmigung', 'Diese Lösung erfordert eine Genehmigung durch das Admin-Team.');
+        this.toastService.info(this.i18nService.translate('issues.admin_approval'), this.i18nService.translate('issues.admin_approval_required'));
       }
     }, 2000);
   }
