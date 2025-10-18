@@ -2,12 +2,14 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { Observable, BehaviorSubject, combineLatest } from 'rxjs';
 import { map, startWith } from 'rxjs/operators';
 import { RestaurantTablesService, RestaurantTable, CreateTableData, UpdateTableData } from '../../core/services/restaurant-tables.service';
 import { RestaurantManagerService } from '../../core/services/restaurant-manager.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { ToastService } from '../../core/services/toast.service';
+import { I18nService } from '../../core/services/i18n.service';
 import * as QRCode from 'qrcode';
 
 // QR Code Generation (Browser-native)
@@ -23,7 +25,7 @@ interface QRCodeOptions {
 @Component({
   selector: 'app-restaurant-tables',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, TranslatePipe],
   template: `
     <div class="tables-container">
       <!-- Header -->
@@ -31,18 +33,18 @@ interface QRCodeOptions {
         <div class="header-content">
           <h1>
             <i class="fa-solid fa-chair"></i>
-            Tischverwaltung
+            {{ 'tables.title' | translate }}
           </h1>
-          <p>Verwalten Sie die Tische in Ihrem Restaurant</p>
+          <p>{{ 'tables.description' | translate }}</p>
         </div>
         <div class="header-actions">
           <button class="btn-secondary btn-grid" routerLink="/restaurant-manager/tables/grid">
             <i class="fa-solid fa-th-large"></i>
-            Tisch-Plan
+            {{ 'tables.table_plan' | translate }}
           </button>
           <button class="btn-primary" (click)="openCreateModal()" [disabled]="isLoading">
             <i class="fa-solid fa-plus"></i>
-            Neuer Tisch
+            {{ 'tables.new_table' | translate }}
           </button>
         </div>
       </div>
@@ -56,41 +58,41 @@ interface QRCodeOptions {
             [class.inactive]="!table.is_active"
           >
             <div class="table-header">
-              <h3>Tisch {{ table.table_number }}</h3>
+              <h3>{{ 'tables.table' | translate }} {{ table.table_number }}</h3>
               <span class="table-status" [class.active]="table.is_active">
                 <i class="fa-solid" [class.fa-circle-check]="table.is_active" [class.fa-circle-xmark]="!table.is_active"></i>
-                {{ table.is_active ? 'Aktiv' : 'Inaktiv' }}
+                {{ table.is_active ? ('tables.active' | translate) : ('tables.inactive' | translate) }}
               </span>
             </div>
 
             <div class="table-info">
               <div class="info-item">
-                <span class="label">Kapazität:</span>
-                <span class="value">{{ table.capacity }} Personen</span>
+                <span class="label">{{ 'tables.capacity' | translate }}</span>
+                <span class="value">{{ table.capacity }} {{ 'tables.persons' | translate }}</span>
               </div>
               <div class="info-item">
-                <span class="label">Standort:</span>
+                <span class="label">{{ 'tables.location' | translate }}</span>
                 <span class="value">{{ getLocationText(table.location) }}</span>
               </div>
             </div>
 
             <div class="table-actions">
-              <button class="btn-secondary btn-edit" (click)="editTable(table)" title="Bearbeiten">
+              <button class="btn-secondary btn-edit" (click)="editTable(table)" [title]="'tables.edit' | translate">
                 <i class="fa-solid fa-edit"></i>
-                Bearbeiten
+                {{ 'tables.edit' | translate }}
               </button>
               <button
                 class="btn-secondary btn-toggle"
                 [class.activate]="!table.is_active"
                 (click)="toggleTable(table)"
-                [title]="table.is_active ? 'Deaktivieren' : 'Aktivieren'"
+                [title]="table.is_active ? ('tables.deactivate' | translate) : ('tables.activate' | translate)"
               >
                 <i class="fa-solid" [class.fa-check-circle]="table.is_active" [class.fa-times-circle]="!table.is_active"></i>
-                {{ table.is_active ? 'Deaktivieren' : 'Aktivieren' }}
+                {{ table.is_active ? ('tables.deactivate' | translate) : ('tables.activate' | translate) }}
               </button>
-              <button class="btn-secondary btn-qr" (click)="showQRCode(table)" title="QR-Code anzeigen">
+              <button class="btn-secondary btn-qr" (click)="showQRCode(table)" [title]="'tables.show_qr_code' | translate">
                 <i class="fa-solid fa-qrcode"></i>
-                QR-Code
+                {{ 'tables.qr_code' | translate }}
               </button>
             </div>
           </div>
@@ -100,11 +102,11 @@ interface QRCodeOptions {
             <div class="empty-icon">
               <i class="fa-solid fa-chair"></i>
             </div>
-            <h3>Keine Tische vorhanden</h3>
-            <p>Erstellen Sie Ihren ersten Tisch, um Tischangebote zu ermöglichen.</p>
+            <h3>{{ 'tables.no_tables' | translate }}</h3>
+            <p>{{ 'tables.create_first_table' | translate }}</p>
             <button class="btn-primary" (click)="openCreateModal()">
               <i class="fa-solid fa-plus"></i>
-              Ersten Tisch erstellen
+              {{ 'tables.create_first' | translate }}
             </button>
           </div>
         </div>
@@ -114,7 +116,7 @@ interface QRCodeOptions {
       <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
         <div class="modal" (click)="$event.stopPropagation()">
           <div class="modal-header">
-            <h3>{{ editingTable ? 'Tisch bearbeiten' : 'Neuer Tisch' }}</h3>
+            <h3>{{ editingTable ? ('tables.edit_table' | translate) : ('tables.new_table_modal' | translate) }}</h3>
             <button class="close-btn" (click)="closeModal()">
               <i class="fa-solid fa-times"></i>
             </button>
@@ -122,19 +124,19 @@ interface QRCodeOptions {
 
           <form class="modal-body" (ngSubmit)="saveTable()" #tableForm="ngForm">
             <div class="form-group">
-              <label for="table_number">Tischnummer *</label>
+              <label for="table_number">{{ 'tables.table_number' | translate }} *</label>
               <input
                 id="table_number"
                 type="text"
                 [(ngModel)]="tableFormData.table_number"
                 name="table_number"
                 required
-                placeholder="z.B. 1, A5, Bar-3"
+                [placeholder]="'tables.table_number_placeholder' | translate"
               >
             </div>
 
             <div class="form-group">
-              <label for="capacity">Kapazität *</label>
+              <label for="capacity">{{ 'tables.capacity_label' | translate }} *</label>
               <input
                 id="capacity"
                 type="number"
@@ -143,31 +145,31 @@ interface QRCodeOptions {
                 required
                 min="1"
                 max="20"
-                placeholder="Anzahl Personen"
+                [placeholder]="'tables.capacity_placeholder' | translate"
               >
             </div>
 
             <div class="form-group">
-              <label for="location">Standort *</label>
+              <label for="location">{{ 'tables.location_label' | translate }} *</label>
               <select
                 id="location"
                 [(ngModel)]="tableFormData.location"
                 name="location"
                 required
               >
-                <option value="indoor">Drinnen</option>
-                <option value="outdoor">Draußen</option>
-                <option value="bar">Bar</option>
-                <option value="vip">VIP-Bereich</option>
+                <option value="indoor">{{ 'tables.location_indoor' | translate }}</option>
+                <option value="outdoor">{{ 'tables.location_outdoor' | translate }}</option>
+                <option value="bar">{{ 'tables.location_bar' | translate }}</option>
+                <option value="vip">{{ 'tables.location_vip' | translate }}</option>
               </select>
             </div>
 
             <div class="form-actions">
               <button type="button" class="btn-secondary" (click)="closeModal()">
-                Abbrechen
+                {{ 'common.cancel' | translate }}
               </button>
               <button type="submit" class="btn-primary" [disabled]="!tableForm.valid || isSaving">
-                {{ isSaving ? 'Speichere...' : (editingTable ? 'Aktualisieren' : 'Erstellen') }}
+                {{ isSaving ? ('tables.saving' | translate) : (editingTable ? ('tables.update' | translate) : ('tables.create' | translate)) }}
               </button>
             </div>
           </form>
@@ -178,7 +180,7 @@ interface QRCodeOptions {
       <div class="modal-overlay" *ngIf="showQRModal" (click)="closeQRModal()">
         <div class="modal qr-modal" (click)="$event.stopPropagation()">
           <div class="modal-header">
-            <h3>QR-Code für Tisch {{ selectedTable?.table_number }}</h3>
+            <h3>{{ 'tables.qr_code_for_table' | translate }} {{ selectedTable?.table_number }}</h3>
             <button class="close-btn" (click)="closeQRModal()">
               <i class="fa-solid fa-times"></i>
             </button>
@@ -193,19 +195,19 @@ interface QRCodeOptions {
                   alt="QR Code"
                   class="qr-image"
                 />
-                <div class="qr-text">{{ selectedTable.qr_code || 'QR-Code wird generiert...' }}</div>
-                <p class="qr-hint">Scannen für Tischangebot</p>
+                <div class="qr-text">{{ selectedTable.qr_code || ('tables.qr_generating' | translate) }}</div>
+                <p class="qr-hint">{{ 'tables.scan_for_table_order' | translate }}</p>
               </div>
             </div>
 
             <div class="qr-actions">
               <button class="btn-secondary" (click)="downloadQR()">
                 <i class="fa-solid fa-download"></i>
-                Herunterladen
+                {{ 'tables.download' | translate }}
               </button>
               <button class="btn-secondary" (click)="printQR()">
                 <i class="fa-solid fa-print"></i>
-                Drucken
+                {{ 'tables.print' | translate }}
               </button>
             </div>
           </div>
@@ -774,6 +776,7 @@ export class RestaurantTablesComponent implements OnInit {
   private restaurantManagerService = inject(RestaurantManagerService);
   private loadingService = inject(LoadingService);
   private toastService = inject(ToastService);
+  private i18nService = inject(I18nService);
 
   // State
   tables$!: Observable<RestaurantTable[]>;
@@ -815,7 +818,7 @@ export class RestaurantTablesComponent implements OnInit {
       this.isLoading = false;
     } catch (error) {
       console.error('Error loading tables:', error);
-      this.toastService.error('Fehler', 'Tische konnten nicht geladen werden');
+      this.toastService.error(this.i18nService.translate('common.error'), this.i18nService.translate('tables.error_loading'));
       this.loadingService.stop('tables');
       this.isLoading = false;
     }
@@ -853,7 +856,7 @@ export class RestaurantTablesComponent implements OnInit {
 
   async saveTable() {
     if (!this.tableFormData.table_number || !this.tableFormData.capacity) {
-      this.toastService.error('Fehler', 'Bitte füllen Sie alle erforderlichen Felder aus');
+      this.toastService.error(this.i18nService.translate('common.error'), this.i18nService.translate('tables.error_fill_fields'));
       return;
     }
 
@@ -863,7 +866,7 @@ export class RestaurantTablesComponent implements OnInit {
     try {
       const restaurants = await this.restaurantManagerService.getManagedRestaurants().toPromise();
       if (!restaurants?.length) {
-        throw new Error('Kein Restaurant gefunden');
+        throw new Error(this.i18nService.translate('tables.error_no_restaurant'));
       }
 
       const restaurantId = Number(restaurants[0].restaurant_id);
@@ -871,11 +874,11 @@ export class RestaurantTablesComponent implements OnInit {
       if (this.editingTable) {
         // Update existing table
         await this.tablesService.updateTable(this.editingTable.id, this.tableFormData).toPromise();
-        this.toastService.success('Erfolg', 'Tisch wurde aktualisiert');
+        this.toastService.success(this.i18nService.translate('common.success'), this.i18nService.translate('tables.success_updated'));
       } else {
         // Create new table
         await this.tablesService.createTable(restaurantId, this.tableFormData).toPromise();
-        this.toastService.success('Erfolg', 'Tisch wurde erstellt');
+        this.toastService.success(this.i18nService.translate('common.success'), this.i18nService.translate('tables.success_created'));
       }
 
       this.closeModal();
@@ -883,7 +886,7 @@ export class RestaurantTablesComponent implements OnInit {
 
     } catch (error: any) {
       console.error('Error saving table:', error);
-      this.toastService.error('Fehler', error.error?.error || 'Tisch konnte nicht gespeichert werden');
+      this.toastService.error(this.i18nService.translate('common.error'), error.error?.error || this.i18nService.translate('tables.error_save'));
     } finally {
       this.isSaving = false;
       this.loadingService.stop('save-table');
@@ -893,11 +896,14 @@ export class RestaurantTablesComponent implements OnInit {
   async toggleTable(table: RestaurantTable) {
     try {
       await this.tablesService.toggleActive(table.id).toPromise();
-      this.toastService.success('Erfolg', `Tisch ${table.table_number} wurde ${table.is_active ? 'deaktiviert' : 'aktiviert'}`);
+      this.toastService.success(this.i18nService.translate('common.success'), 
+        `${this.i18nService.translate('tables.table')} ${table.table_number} ${table.is_active ? 
+          this.i18nService.translate('tables.success_toggled_deactivated') : 
+          this.i18nService.translate('tables.success_toggled')}`);
       this.loadTables(); // Reload tables
     } catch (error: any) {
       console.error('Error toggling table:', error);
-      this.toastService.error('Fehler', 'Tisch-Status konnte nicht geändert werden');
+      this.toastService.error(this.i18nService.translate('common.error'), this.i18nService.translate('tables.error_toggle'));
     }
   }
 
@@ -913,7 +919,7 @@ export class RestaurantTablesComponent implements OnInit {
 
   downloadQR() {
     if (!this.selectedTable?.qr_code) {
-      this.toastService.error('Fehler', 'QR-Code nicht verfügbar');
+      this.toastService.error(this.i18nService.translate('common.error'), this.i18nService.translate('tables.error_qr_unavailable'));
       return;
     }
 
@@ -929,16 +935,16 @@ export class RestaurantTablesComponent implements OnInit {
       link.click();
       document.body.removeChild(link);
 
-      this.toastService.success('Erfolg', 'QR-Code heruntergeladen');
+      this.toastService.success(this.i18nService.translate('common.success'), this.i18nService.translate('tables.success_qr_downloaded'));
     } catch (error) {
       console.error('QR download failed:', error);
-      this.toastService.error('Fehler', 'QR-Code Download fehlgeschlagen');
+      this.toastService.error(this.i18nService.translate('common.error'), this.i18nService.translate('tables.error_qr_download'));
     }
   }
 
   printQR() {
     if (!this.selectedTable?.qr_code) {
-      this.toastService.error('Fehler', 'QR-Code nicht verfügbar');
+      this.toastService.error(this.i18nService.translate('common.error'), this.i18nService.translate('tables.error_qr_unavailable'));
       return;
     }
 
@@ -975,10 +981,10 @@ export class RestaurantTablesComponent implements OnInit {
         printWindow.print();
       }
 
-      this.toastService.success('Info', 'Druckdialog geöffnet');
+      this.toastService.success(this.i18nService.translate('common.info'), this.i18nService.translate('tables.info_print_dialog'));
     } catch (error) {
       console.error('QR print failed:', error);
-      this.toastService.error('Fehler', 'QR-Code Druck fehlgeschlagen');
+      this.toastService.error(this.i18nService.translate('common.error'), this.i18nService.translate('tables.error_qr_print'));
     }
   }
 
@@ -1089,10 +1095,10 @@ export class RestaurantTablesComponent implements OnInit {
 
   getLocationText(location: string): string {
     const locationMap: { [key: string]: string } = {
-      'indoor': 'Drinnen',
-      'outdoor': 'Draußen',
-      'bar': 'Bar',
-      'vip': 'VIP-Bereich'
+      'indoor': this.i18nService.translate('tables.location_indoor'),
+      'outdoor': this.i18nService.translate('tables.location_outdoor'),
+      'bar': this.i18nService.translate('tables.location_bar'),
+      'vip': this.i18nService.translate('tables.location_vip')
     };
     return locationMap[location] || location;
   }

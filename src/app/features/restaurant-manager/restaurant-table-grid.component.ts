@@ -8,6 +8,7 @@ import { RestaurantManagerService } from '../../core/services/restaurant-manager
 import { LoadingService } from '../../core/services/loading.service';
 import { ToastService } from '../../core/services/toast.service';
 import { OrdersService, Order } from '../../core/services/orders.service';
+import { I18nService } from '../../core/services/i18n.service';
 
 interface GridCell {
   row: number;
@@ -24,15 +25,15 @@ interface GridCell {
       <!-- Header -->
       <div class="header">
         <div class="header-content">
-          <h1>Tisch-Plan</h1>
-          <p>Klicken Sie auf Tische zum Verschieben oder Doppelklick für Bestellungen</p>
+          <h1>{{ translate('table_grid.title') }}</h1>
+          <p>{{ translate('table_grid.subtitle') }}</p>
         </div>
         <div class="header-actions">
           <button class="btn-secondary" (click)="goBack()">
-            ← Zurück zur Tischverwaltung
+            {{ translate('table_grid.back_to_tables') }}
           </button>
           <button class="btn-primary" (click)="saveGridLayout()" [disabled]="isSaving || !hasChanges">
-            💾 Plan speichern
+            {{ translate('table_grid.save_layout') }}
           </button>
         </div>
       </div>
@@ -41,23 +42,23 @@ interface GridCell {
       <div class="instructions">
         <div class="instruction-item">
           <span class="instruction-icon">👆</span>
-          <span>Einfacher Klick: Tisch für Verschieben auswählen</span>
+          <span>{{ translate('table_grid.instruction_single_click') }}</span>
         </div>
         <div class="instruction-item">
           <span class="instruction-icon">👆👆</span>
-          <span>Doppelklick: Bestellungen anzeigen</span>
+          <span>{{ translate('table_grid.instruction_double_click') }}</span>
         </div>
         <div class="instruction-item">
           <span class="instruction-icon">➕</span>
-          <span>Klick auf leere Zelle: Tisch platzieren</span>
+          <span>{{ translate('table_grid.instruction_empty_cell') }}</span>
         </div>
       </div>
 
       <div class="grid-layout">
         <!-- Table Selection Panel -->
         <div class="table-selection-panel">
-          <h3>Verfügbare Tische</h3>
-          <p>Wählen Sie einen Tisch aus und klicken Sie auf eine leere Zelle zum Platzieren</p>
+          <h3>{{ translate('table_grid.available_tables') }}</h3>
+          <p>{{ translate('table_grid.select_table_instruction') }}</p>
           
           <div class="table-palette">
             <!-- Available tables for placement -->
@@ -69,16 +70,16 @@ interface GridCell {
             >
               <div class="table-info">
                 <span class="table-number">{{ table.table_number }}</span>
-                <span class="table-capacity">{{ table.capacity }} Plätze</span>
+                <span class="table-capacity">{{ table.capacity }} {{ translate('table_grid.seats') }}</span>
               </div>
             </div>
           </div>
 
           <div class="grid-info">
-            <h4>Grid-Info</h4>
-            <p>Grid-Größe: {{ gridSize }}x{{ gridSize }}</p>
-            <p>Platziert: {{ getPlacedTablesCount() }}</p>
-            <p>Verfügbar: {{ (availableTables$ | async)?.length || 0 }}</p>
+            <h4>{{ translate('table_grid.grid_info') }}</h4>
+            <p>{{ translate('table_grid.grid_size') }}: {{ gridSize }}x{{ gridSize }}</p>
+            <p>{{ translate('table_grid.placed') }}: {{ getPlacedTablesCount() }}</p>
+            <p>{{ translate('table_grid.available') }}: {{ (availableTables$ | async)?.length || 0 }}</p>
           </div>
         </div>
 
@@ -115,7 +116,7 @@ interface GridCell {
                     class="action-btn orders" 
                     *ngIf="selectedTable?.id === cell.table.id"
                     (click)="showTableOrders(cell.table!)" 
-                    title="Bestellungen anzeigen">
+                    [title]="translate('table_grid.show_orders')">
                     <i class="fa-solid fa-receipt"></i>
                   </button>
                 </div>
@@ -129,41 +130,41 @@ interface GridCell {
       <div class="modal-overlay" *ngIf="showOrdersModal" (click)="closeOrdersModal()">
         <div class="modal-content" (click)="$event.stopPropagation()">
           <div class="modal-header">
-            <h2>Tisch {{ selectedTableForOrders?.table_number }} - Bestellungen</h2>
+            <h2>{{ translate('table_grid.table_orders', {tableNumber: selectedTableForOrders?.table_number}) }}</h2>
             <button class="close-btn" (click)="closeOrdersModal()">✕</button>
           </div>
           
           <div class="modal-body">
             <div *ngIf="tableOrdersLoading" class="loading">
-              <p>Lade Bestellungen...</p>
+              <p>{{ translate('table_grid.loading_orders') }}</p>
             </div>
             
             <div *ngIf="!tableOrdersLoading && tableOrders.length === 0" class="no-orders">
-              <p>Keine Bestellungen für diesen Tisch vorhanden.</p>
+              <p>{{ translate('table_grid.no_orders') }}</p>
             </div>
             
             <div *ngIf="!tableOrdersLoading && tableOrders.length > 0" class="orders-list">
               <div *ngFor="let order of tableOrders" class="order-item">
                 <div class="order-header">
-                  <span class="order-id">Bestellung #{{ order.id }}</span>
+                  <span class="order-id">{{ translate('table_grid.order_id', {orderId: order.id}) }}</span>
                   <span class="order-status" [class]="'status-' + order.status">
                     {{ getStatusText(order.status) }}
                   </span>
                 </div>
                 <div class="order-details">
-                  <p><strong>Erstellt:</strong> {{ formatDate(order.created_at) }}</p>
-                  <p><strong>Gesamtpreis:</strong> {{ order.total_price | currency:'EUR':'symbol':'1.2-2' }}</p>
-                  <p><strong>Zahlungsstatus:</strong> 
+                  <p><strong>{{ translate('table_grid.created') }}:</strong> {{ formatDate(order.created_at) }}</p>
+                  <p><strong>{{ translate('table_grid.total_price') }}:</strong> {{ order.total_price | currency:'EUR':'symbol':'1.2-2' }}</p>
+                  <p><strong>{{ translate('table_grid.payment_status') }}:</strong> 
                     <span [class]="'payment-status-' + order.payment_status">
                       {{ getPaymentStatusText(order.payment_status) }}
                     </span>
                   </p>
                   <div *ngIf="order.notes" class="order-notes">
-                    <strong>Notizen:</strong> {{ order.notes }}
+                    <strong>{{ translate('table_grid.notes') }}:</strong> {{ order.notes }}
                   </div>
                 </div>
                 <div class="order-items">
-                  <h4>Bestellte Artikel:</h4>
+                  <h4>{{ translate('table_grid.ordered_items') }}:</h4>
                   <ul>
                     <li *ngFor="let item of order.items">
                       {{ item.quantity }}x {{ item.name }} - {{ item.total_price | currency:'EUR':'symbol':'1.2-2' }}
@@ -173,7 +174,7 @@ interface GridCell {
                 
                 <!-- Status Update Controls -->
                 <div class="order-actions">
-                  <h4>Status ändern:</h4>
+                  <h4>{{ translate('table_grid.change_status') }}:</h4>
                   <div class="status-buttons">
                     <button 
                       *ngFor="let status of getAvailableStatuses(order.status)"
@@ -191,7 +192,7 @@ interface GridCell {
                       class="payment-btn"
                       [disabled]="updatingOrderId === order.id"
                       (click)="markOrderAsPaid(order.id)">
-                      Als bezahlt markieren
+                      {{ translate('table_grid.mark_as_paid') }}
                     </button>
                   </div>
                   
@@ -199,7 +200,7 @@ interface GridCell {
                   <div class="payment-status-display" *ngIf="order.payment_status === 'paid'">
                     <span class="payment-status-paid">
                       <i class="fa-solid fa-check-circle"></i>
-                      Bezahlt
+                      {{ translate('table_grid.paid') }}
                     </span>
                   </div>
                 </div>
@@ -988,6 +989,7 @@ export class RestaurantTableGridComponent implements OnInit {
   private toastService = inject(ToastService);
   private ordersService = inject(OrdersService);
   private router = inject(Router);
+  private i18nService = inject(I18nService);
 
   // Grid configuration
   gridSize = 10;
@@ -1015,6 +1017,10 @@ export class RestaurantTableGridComponent implements OnInit {
   ngOnInit() {
     this.initializeGrid();
     this.loadTables();
+  }
+
+  translate(key: string, params?: { [key: string]: string | number }): string {
+    return this.i18nService.translate(key, params);
   }
 
 
@@ -1285,26 +1291,26 @@ export class RestaurantTableGridComponent implements OnInit {
 
   getStatusText(status: string): string {
     const statusMap: Record<string, string> = {
-      'pending': 'Ausstehend',
-      'confirmed': 'Bestätigt',
-      'preparing': 'In Vorbereitung',
-      'ready': 'Bereit',
-      'served': 'Serviert',
-      'paid': 'Bezahlt',
-      'open': 'Offen',
-      'in_progress': 'In Bearbeitung',
-      'out_for_delivery': 'Unterwegs',
-      'delivered': 'Geliefert',
-      'cancelled': 'Storniert'
+      'pending': this.translate('table_grid.status_pending'),
+      'confirmed': this.translate('table_grid.status_confirmed'),
+      'preparing': this.translate('table_grid.status_preparing'),
+      'ready': this.translate('table_grid.status_ready'),
+      'served': this.translate('table_grid.status_served'),
+      'paid': this.translate('table_grid.status_paid'),
+      'open': this.translate('table_grid.status_pending'),
+      'in_progress': this.translate('table_grid.status_preparing'),
+      'out_for_delivery': this.translate('table_grid.status_preparing'),
+      'delivered': this.translate('table_grid.status_served'),
+      'cancelled': this.translate('table_grid.status_pending')
     };
     return statusMap[status] || status;
   }
 
   getPaymentStatusText(status: string): string {
     const statusMap: Record<string, string> = {
-      'pending': 'Ausstehend',
-      'paid': 'Bezahlt',
-      'failed': 'Fehlgeschlagen'
+      'pending': this.translate('table_grid.payment_pending'),
+      'paid': this.translate('table_grid.payment_paid'),
+      'failed': this.translate('table_grid.payment_failed')
     };
     return statusMap[status] || status;
   }
