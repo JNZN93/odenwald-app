@@ -62,9 +62,8 @@ interface CartItem {
           >
             <div class="item-image">
               <img 
-                [src]="item.image_url || '/assets/images/default-food.jpg'" 
+                [src]="getItemImageUrl(item)" 
                 [alt]="item.name"
-                (error)="onImageError($event)"
                 loading="lazy"
               />
             </div>
@@ -1107,7 +1106,7 @@ export class TableOrderComponent implements OnInit {
 
       const orderData = {
         restaurant_id: tableData.restaurantId.toString(),
-        table_id: `${tableData.restaurantId}-${tableData.tableNumber}`,
+        table_id: tableData.tableNumber, // Vereinfacht: nur die Tischnummer
         items: this.cartItems.map(item => ({
           menu_item_id: item.menu_item_id,
           quantity: item.quantity,
@@ -1162,9 +1161,32 @@ export class TableOrderComponent implements OnInit {
     // Optionally redirect to order status page
   }
 
-  onImageError(event: Event) {
-    const target = event.target as HTMLImageElement;
-    target.src = '/assets/images/default-food.jpg';
+  getItemImageUrl(item: any): string {
+    console.log('Getting image for:', item.name, 'image_url:', item.image_url);
+    
+    // If item has a valid image_url, use it
+    if (item.image_url && item.image_url !== '' && item.image_url !== null) {
+      return item.image_url;
+    }
+    
+    // Fallback to placeholders based on item name/category
+    const name = item.name?.toLowerCase() || '';
+    
+    if (name.includes('burger')) {
+      return '/assets/images/food-placeholder-1.jpg';
+    } else if (name.includes('pizza') || name.includes('spaghetti') || name.includes('penne')) {
+      return '/assets/images/food-placeholder-2.jpg';
+    } else if (name.includes('wrap')) {
+      return '/assets/images/food-placeholder-3.jpg';
+    } else if (name.includes('salat') || name.includes('salad')) {
+      return '/assets/images/food-placeholder-1.jpg';
+    } else if (name.includes('dessert') || name.includes('brownie') || name.includes('tiramisu') || name.includes('cheesecake') || name.includes('ice cream')) {
+      return '/assets/images/food-placeholder-2.jpg';
+    } else if (name.includes('cola') || name.includes('fanta') || name.includes('wasser') || name.includes('lemonade') || name.includes('tea') || name.includes('coffee')) {
+      return '/assets/images/food-placeholder-3.jpg';
+    } else {
+      return '/assets/images/food-placeholder.jpg';
+    }
   }
 
   getItemPrice(item: any): string {

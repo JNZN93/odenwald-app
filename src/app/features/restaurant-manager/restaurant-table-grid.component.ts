@@ -1275,9 +1275,20 @@ export class RestaurantTableGridComponent implements OnInit {
     // Try with table_number first, as this is how orders are typically linked
     const tableNumber = this.selectedTableForOrders?.table_number?.toString();
     
+    // Debug: Also log the table object to see what data we have
+    console.log('Selected table for orders:', this.selectedTableForOrders);
+    
     this.ordersService.getTableOrders(this.currentRestaurantId, tableNumber).subscribe({
       next: (orders) => {
         console.log('Loaded orders for table:', tableNumber, orders);
+        console.log('Orders count:', orders.length);
+        console.log('Order details:', orders.map(o => ({
+          id: o.id,
+          table_id: o.table_id,
+          table_number: o.table_number,
+          status: o.status,
+          order_type: o.order_type
+        })));
         this.tableOrders = orders;
         this.tableOrdersLoading = false;
       },
