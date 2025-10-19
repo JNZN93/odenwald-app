@@ -3120,34 +3120,21 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
     return isOrderStatusComplete && isPaymentPending;
   }
 
-  getVariantSummary(variants: Array<{id: string, name: string, group_name: string, price_modifier_cents: number}>): string {
+  getVariantSummary(variants: Array<{variant_group_id: string, variant_option_id: string, price_modifier_cents: number}>): string {
     if (!variants || variants.length === 0) return '';
 
-    // Group variants by group_name
-    const groupedVariants = variants.reduce((groups, variant) => {
-      const groupName = variant.group_name;
-      if (!groups[groupName]) {
-        groups[groupName] = [];
-      }
-      groups[groupName].push(variant);
-      return groups;
-    }, {} as Record<string, typeof variants>);
-
-    // Create summary strings for each group
-    const summaries: string[] = [];
-
-    for (const [groupName, groupVariants] of Object.entries(groupedVariants)) {
-      if (groupVariants.length === 1) {
-        // Single variant in group - just show the name
-        summaries.push(groupVariants[0].name);
-      } else {
-        // Multiple variants in group - show group name and variant names
-        const variantNames = groupVariants.map(v => v.name).join(', ');
-        summaries.push(`${groupName}: ${variantNames}`);
-      }
+    // Since we only have IDs, we'll show a generic message indicating variants were selected
+    const variantCount = variants.length;
+    const totalPriceModifier = variants.reduce((sum, variant) => sum + variant.price_modifier_cents, 0);
+    
+    let summary = `${variantCount} Variante${variantCount > 1 ? 'n' : ''} ausgewählt`;
+    
+    if (totalPriceModifier !== 0) {
+      const modifierText = totalPriceModifier > 0 ? `+${(totalPriceModifier / 100).toFixed(2)}€` : `${(totalPriceModifier / 100).toFixed(2)}€`;
+      summary += ` (${modifierText})`;
     }
-
-    return summaries.join(', ');
+    
+    return summary;
   }
 
   getUserTypeText(userId: string): string {
