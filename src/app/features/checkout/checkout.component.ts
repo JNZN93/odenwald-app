@@ -980,7 +980,7 @@ interface MenuItemVariantOption {
 
     .item-actions-group {
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       gap: var(--space-2);
       margin-top: var(--space-2);
     }
