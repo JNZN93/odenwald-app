@@ -14,9 +14,8 @@ export interface OrderItem {
   image_url?: string;
   special_instructions?: string;
   selected_variant_options?: Array<{
-    id: string;
-    name: string;
-    group_name: string;
+    variant_group_id: string;
+    variant_option_id: string;
     price_modifier_cents: number;
   }>;
 }

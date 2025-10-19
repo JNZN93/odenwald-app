@@ -17,9 +17,8 @@ export const OrderItemSchema = z.object({
   image_url: z.string().optional(),
   special_instructions: z.string().optional(),
   selected_variant_options: z.array(z.object({
-    id: z.string(),
-    name: z.string(),
-    group_name: z.string(),
+    variant_group_id: z.string(),
+    variant_option_id: z.string(),
     price_modifier_cents: z.number()
   })).optional()
 });

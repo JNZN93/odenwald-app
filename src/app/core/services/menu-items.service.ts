@@ -9,7 +9,8 @@ export interface MenuItem {
   category_id: string;
   name: string;
   description?: string;
-  price: number;
+  price_cents: number;
+  price?: number; // Optional for backward compatibility
   image_url?: string;
   is_available: boolean;
   is_vegetarian: boolean;

@@ -42,11 +42,11 @@ import { LoadingService } from '../../core/services/loading.service';
                 </div>
                 <div class="item-controls">
                   <div class="quantity-controls">
-                    <button (click)="updateItemQuantity(i, item.quantity - 1)" class="qty-btn" [disabled]="item.quantity <= 1">-</button>
-                    <span class="quantity">{{ item.quantity }}</span>
-                    <button (click)="updateItemQuantity(i, item.quantity + 1)" class="qty-btn">+</button>
+                    <button (click)="updateItemQuantity(i, itemQuantities[i] - 1)" class="qty-btn" [disabled]="itemQuantities[i] <= 1">-</button>
+                    <span class="quantity">{{ itemQuantities[i] }}</span>
+                    <button (click)="updateItemQuantity(i, itemQuantities[i] + 1)" class="qty-btn">+</button>
                   </div>
-                  <span class="item-total">{{ (item.quantity * item.unit_price) | currency:'EUR':'symbol':'1.2-2' }}</span>
+                  <span class="item-total">{{ (itemQuantities[i] * item.unit_price) | currency:'EUR':'symbol':'1.2-2' }}</span>
                   <button (click)="removeItem(i)" class="remove-btn">🗑️</button>
                 </div>
               </div>
@@ -83,7 +83,7 @@ import { LoadingService } from '../../core/services/loading.service';
               <div *ngFor="let menuItem of getFilteredMenuItems()" class="menu-item-compact">
                 <div class="menu-item-main">
                   <span class="menu-item-name">{{ menuItem.name }}</span>
-                  <span class="menu-item-price">{{ menuItem.price | currency:'EUR':'symbol':'1.2-2' }}</span>
+                  <span class="menu-item-price">{{ (menuItem.price_cents / 100) | currency:'EUR':'symbol':'1.2-2' }}</span>
                 </div>
                 
                 <!-- Variants Section -->
@@ -592,6 +592,7 @@ export class OrderEditModalComponent implements OnInit, OnChanges {
     try {
       this.availableMenuItems = await this.menuItemsService.getMenuItemsByRestaurant(this.order.restaurant_id).toPromise() || [];
       console.log('Loaded menu items:', this.availableMenuItems);
+      console.log('First menu item structure:', this.availableMenuItems[0]);
       
       // Load variants for each menu item
       for (const menuItem of this.availableMenuItems) {
@@ -602,8 +603,11 @@ export class OrderEditModalComponent implements OnInit, OnChanges {
           // Initialize selected variants
           this.selectedVariants[menuItem.id] = {};
           variants.forEach(variantGroup => {
-            this.selectedVariants[menuItem.id][variantGroup.id] = [];
+            this.selectedVariants[menuItem.id][String(variantGroup.id)] = [];
           });
+          
+          console.log(`Loaded variants for menu item ${menuItem.id}:`, variants);
+          console.log(`Initialized selectedVariants for menu item ${menuItem.id}:`, this.selectedVariants[menuItem.id]);
         } catch (error) {
           console.error(`Error loading variants for menu item ${menuItem.id}:`, error);
           this.menuItemVariants[menuItem.id] = [];
@@ -653,14 +657,45 @@ export class OrderEditModalComponent implements OnInit, OnChanges {
   }
 
   updateItemQuantity(index: number, newQuantity: number) {
-    if (newQuantity < 0) return;
+    if (newQuantity < 1) return;
     this.itemQuantities[index] = newQuantity;
   }
 
-  removeItem(index: number) {
-    if (this.order) {
+  async removeItem(index: number) {
+    if (!this.order) return;
+    
+    const item = this.order.items[index];
+    if (!item) return;
+
+    // Bestätigungsdialog anzeigen
+    const confirmed = confirm(`Möchten Sie "${item.name}" wirklich aus der Bestellung entfernen?`);
+    if (!confirmed) return;
+
+    // Nur für Items mit echten IDs (nicht temp-IDs) die Datenbank aktualisieren
+    if (!item.id.startsWith('temp-')) {
+      try {
+        // Item aus der Datenbank entfernen
+        await this.ordersService.removeItemsFromOrder(this.order.id, [item.id]).toPromise();
+        
+        // Item aus dem lokalen Array entfernen
+        this.order.items.splice(index, 1);
+        this.initializeQuantities();
+        
+        // Toast-Nachricht anzeigen
+        this.toastService.success('Erfolg', `"${item.name}" wurde aus der Bestellung entfernt`);
+        
+      } catch (error) {
+        console.error('Error removing item from database:', error);
+        this.toastService.error('Fehler', 'Item konnte nicht aus der Datenbank entfernt werden');
+        return; // Nicht fortfahren wenn DB-Update fehlschlägt
+      }
+    } else {
+      // Für temp-Items nur aus dem lokalen Array entfernen
       this.order.items.splice(index, 1);
       this.initializeQuantities();
+      
+      // Toast-Nachricht anzeigen
+      this.toastService.success('Erfolg', `"${item.name}" wurde aus der Bestellung entfernt`);
     }
   }
 
@@ -683,39 +718,71 @@ export class OrderEditModalComponent implements OnInit, OnChanges {
     const quantity = this.getAddQuantity(menuItem.id);
     if (quantity === 0 || !this.order) return;
 
+    console.log('Adding menu item:', menuItem);
+    console.log('Menu item price_cents:', menuItem.price_cents);
+    console.log('Menu item price:', menuItem.price);
+    console.log('Current selectedVariants:', this.selectedVariants);
+
     // Calculate final price including variants
-    let finalPrice = menuItem.price;
+    // Backend stores price in cents, so we need to convert it
+    let finalPrice = (menuItem.price_cents || 0) / 100;
     let variantDescription = '';
+    const selectedVariantOptions: Array<{
+      variant_group_id: string;
+      variant_option_id: string;
+      price_modifier_cents: number;
+    }> = [];
     
     const variants = this.menuItemVariants[menuItem.id] || [];
+    console.log('Variants for menu item:', variants);
+    console.log('Selected variants for this menu item:', this.selectedVariants[menuItem.id]);
+    
     for (const variantGroup of variants) {
-      const selectedOptions = this.selectedVariants[menuItem.id][variantGroup.id] || [];
+      const selectedOptions = this.selectedVariants[menuItem.id]?.[String(variantGroup.id)] || [];
+      console.log('Selected options for variant group', variantGroup.id, ':', selectedOptions);
+      
       for (const optionId of selectedOptions) {
-        const option = variantGroup.options.find(opt => opt.id === optionId);
+        const option = variantGroup.options.find(opt => String(opt.id) === String(optionId));
         if (option) {
+          console.log('Adding variant option:', option);
           finalPrice += option.price_modifier_cents / 100; // Convert cents to euros
           variantDescription += `, ${option.name}`;
+          
+          // Store variant option data for backend
+          selectedVariantOptions.push({
+            variant_group_id: String(variantGroup.id),
+            variant_option_id: String(option.id),
+            price_modifier_cents: option.price_modifier_cents
+          });
         }
       }
     }
 
+    console.log('Final calculated price:', finalPrice);
+    console.log('Variant description:', variantDescription);
+    console.log('Selected variant options:', selectedVariantOptions);
+
     const newItem: OrderItem = {
       id: `temp-${Date.now()}`,
-      menu_item_id: menuItem.id,
+      menu_item_id: String(menuItem.id), // Ensure menu_item_id is a string
       name: menuItem.name + (variantDescription ? variantDescription : ''),
       quantity: quantity,
       unit_price: finalPrice,
-      total_price: finalPrice * quantity
+      total_price: finalPrice * quantity,
+      selected_variant_options: selectedVariantOptions
     };
 
     this.order.items.push(newItem);
     this.addQuantities[menuItem.id] = 0;
-    this.initializeQuantities();
+    
+    // Update itemQuantities for the new item
+    const newIndex = this.order.items.length - 1;
+    this.itemQuantities[newIndex] = quantity;
     
     // Reset variant selections for this menu item
     if (this.selectedVariants[menuItem.id]) {
       Object.keys(this.selectedVariants[menuItem.id]).forEach(variantGroupId => {
-        this.selectedVariants[menuItem.id][variantGroupId] = [];
+        this.selectedVariants[menuItem.id][String(variantGroupId)] = [];
       });
     }
     
@@ -752,7 +819,16 @@ export class OrderEditModalComponent implements OnInit, OnChanges {
       // Update quantities
       const quantityUpdates: Array<{ item_id: string; quantity: number }> = [];
       const itemsToRemove: string[] = [];
-      const newItemsToAdd: Array<{ menu_item_id: string; quantity: number; unit_price: number }> = [];
+      const newItemsToAdd: Array<{ 
+        menu_item_id: string; 
+        quantity: number; 
+        unit_price: number;
+        selected_variant_options?: Array<{
+          variant_group_id: string;
+          variant_option_id: string;
+          price_modifier_cents: number;
+        }>;
+      }> = [];
 
       for (let i = 0; i < this.order.items.length; i++) {
         const item = this.order.items[i];
@@ -761,10 +837,17 @@ export class OrderEditModalComponent implements OnInit, OnChanges {
 
         if (item.id.startsWith('temp-')) {
           // This is a new item
-          newItemsToAdd.push({
-            menu_item_id: item.menu_item_id,
+          console.log('Adding new item to save:', {
+            menu_item_id: String(item.menu_item_id),
             quantity: newQuantity,
-            unit_price: item.unit_price
+            unit_price: item.unit_price,
+            selected_variant_options: item.selected_variant_options
+          });
+          newItemsToAdd.push({
+            menu_item_id: String(item.menu_item_id), // Ensure menu_item_id is a string
+            quantity: newQuantity,
+            unit_price: item.unit_price,
+            selected_variant_options: item.selected_variant_options
           });
         } else {
           // This is an existing item
@@ -781,6 +864,11 @@ export class OrderEditModalComponent implements OnInit, OnChanges {
 
       // Add new items
       if (newItemsToAdd.length > 0) {
+        console.log('Adding new items:', newItemsToAdd);
+        console.log('New items with variants:', newItemsToAdd.map(item => ({
+          ...item,
+          selected_variant_options: item.selected_variant_options
+        })));
         await this.ordersService.addItemsToOrder(this.order.id, newItemsToAdd).toPromise();
       }
 
@@ -825,16 +913,16 @@ export class OrderEditModalComponent implements OnInit, OnChanges {
     if (!this.selectedVariants[menuItemId]) {
       this.selectedVariants[menuItemId] = {};
     }
-    if (!this.selectedVariants[menuItemId][variantGroupId]) {
-      this.selectedVariants[menuItemId][variantGroupId] = [];
+    if (!this.selectedVariants[menuItemId][String(variantGroupId)]) {
+      this.selectedVariants[menuItemId][String(variantGroupId)] = [];
     }
 
-    const selectedOptions = this.selectedVariants[menuItemId][variantGroupId];
-    const variantGroup = this.getVariantsForMenuItem(menuItemId).find(vg => vg.id === variantGroupId);
+    const selectedOptions = this.selectedVariants[menuItemId][String(variantGroupId)];
+    const variantGroup = this.getVariantsForMenuItem(menuItemId).find(vg => String(vg.id) === String(variantGroupId));
     
     if (!variantGroup) return;
 
-    const optionIndex = selectedOptions.indexOf(optionId);
+    const optionIndex = selectedOptions.indexOf(String(optionId));
     
     if (optionIndex > -1) {
       // Remove option
@@ -844,34 +932,42 @@ export class OrderEditModalComponent implements OnInit, OnChanges {
       if (variantGroup.max_selections === 1) {
         // Radio button behavior - replace selection
         selectedOptions.length = 0;
-        selectedOptions.push(optionId);
+        selectedOptions.push(String(optionId));
       } else {
         // Checkbox behavior - add if under limit
         if (selectedOptions.length < variantGroup.max_selections) {
-          selectedOptions.push(optionId);
+          selectedOptions.push(String(optionId));
         }
       }
     }
+    
+    console.log('Toggled variant option:', {
+      menuItemId,
+      variantGroupId,
+      optionId,
+      selectedOptions,
+      allSelectedVariants: this.selectedVariants
+    });
   }
 
   isVariantOptionSelected(menuItemId: string, variantGroupId: string, optionId: string): boolean {
-    const selectedOptions = this.selectedVariants[menuItemId]?.[variantGroupId] || [];
-    return selectedOptions.includes(optionId);
+    const selectedOptions = this.selectedVariants[menuItemId]?.[String(variantGroupId)] || [];
+    return selectedOptions.includes(String(optionId));
   }
 
   canSelectVariantOption(menuItemId: string, variantGroupId: string): boolean {
-    const variantGroup = this.getVariantsForMenuItem(menuItemId).find(vg => vg.id === variantGroupId);
+    const variantGroup = this.getVariantsForMenuItem(menuItemId).find(vg => String(vg.id) === String(variantGroupId));
     if (!variantGroup) return false;
 
-    const selectedOptions = this.selectedVariants[menuItemId]?.[variantGroupId] || [];
+    const selectedOptions = this.selectedVariants[menuItemId]?.[String(variantGroupId)] || [];
     return selectedOptions.length < variantGroup.max_selections;
   }
 
   getVariantValidationError(menuItemId: string, variantGroupId: string): string | null {
-    const variantGroup = this.getVariantsForMenuItem(menuItemId).find(vg => vg.id === variantGroupId);
+    const variantGroup = this.getVariantsForMenuItem(menuItemId).find(vg => String(vg.id) === String(variantGroupId));
     if (!variantGroup) return null;
 
-    const selectedOptions = this.selectedVariants[menuItemId]?.[variantGroupId] || [];
+    const selectedOptions = this.selectedVariants[menuItemId]?.[String(variantGroupId)] || [];
     
     if (variantGroup.is_required && selectedOptions.length === 0) {
       return `${variantGroup.name} ist erforderlich`;
@@ -890,7 +986,7 @@ export class OrderEditModalComponent implements OnInit, OnChanges {
 
     const variants = this.getVariantsForMenuItem(menuItemId);
     for (const variantGroup of variants) {
-      const error = this.getVariantValidationError(menuItemId, variantGroup.id);
+      const error = this.getVariantValidationError(menuItemId, String(variantGroup.id));
       if (error) return false;
     }
 
@@ -899,12 +995,19 @@ export class OrderEditModalComponent implements OnInit, OnChanges {
 
   onVariantChange(menuItemId: string, variantGroupId: string, event: any) {
     const select = event.target as HTMLSelectElement;
-    const selectedOptions = Array.from(select.selectedOptions).map(option => option.value);
+    const selectedOptions = Array.from(select.selectedOptions).map(option => option.value).filter(value => value !== '');
     
     if (!this.selectedVariants[menuItemId]) {
       this.selectedVariants[menuItemId] = {};
     }
-    this.selectedVariants[menuItemId][variantGroupId] = selectedOptions;
+    this.selectedVariants[menuItemId][String(variantGroupId)] = selectedOptions;
+    
+    console.log('Variant change:', {
+      menuItemId,
+      variantGroupId,
+      selectedOptions,
+      allSelectedVariants: this.selectedVariants
+    });
   }
 
   getFilteredMenuItems() {
