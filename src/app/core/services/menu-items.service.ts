@@ -32,6 +32,26 @@ export interface MenuCategory {
   updated_at: Date;
 }
 
+export interface VariantGroup {
+  id: string;
+  menu_item_id: string;
+  name: string;
+  is_required: boolean;
+  min_selections: number;
+  max_selections: number;
+  position: number;
+  options: VariantOption[];
+}
+
+export interface VariantOption {
+  id: string;
+  variant_group_id: string;
+  name: string;
+  price_modifier_cents: number;
+  is_available: boolean;
+  position: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class MenuItemsService {
   private http = inject(HttpClient);
@@ -131,6 +151,16 @@ export class MenuItemsService {
       catchError(error => {
         console.error('Error deleting menu category:', error);
         throw error;
+      })
+    );
+  }
+
+  getVariantsForMenuItem(restaurantId: string, itemId: string): Observable<VariantGroup[]> {
+    return this.http.get<{ variant_groups: VariantGroup[] }>(`${environment.apiUrl}/restaurants/${restaurantId}/menu-items/${itemId}/variants`).pipe(
+      map(response => response.variant_groups || []),
+      catchError(error => {
+        console.error('Error fetching menu item variants:', error);
+        return of([]);
       })
     );
   }
