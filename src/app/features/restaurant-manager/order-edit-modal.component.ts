@@ -158,8 +158,10 @@ import { LoadingService } from '../../core/services/loading.service';
       max-width: 1000px;
       width: 100%;
       max-height: 90vh;
-      overflow-y: auto;
+      overflow: hidden;
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      display: flex;
+      flex-direction: column;
     }
 
     .modal-header {
@@ -233,12 +235,17 @@ import { LoadingService } from '../../core/services/loading.service';
       grid-template-columns: 1fr 1fr;
       gap: 20px;
       padding: 20px;
+      flex: 1;
+      overflow: hidden;
     }
 
     .current-items-section, .add-items-section {
       border: 1px solid #e5e7eb;
       border-radius: 8px;
       padding: 16px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
 
     .current-items-section h3, .add-items-section h3 {
@@ -252,6 +259,9 @@ import { LoadingService } from '../../core/services/loading.service';
       display: flex;
       flex-direction: column;
       gap: 8px;
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0; /* This allows flex to work properly */
     }
 
     .item-row-compact, .menu-item-compact {
@@ -421,6 +431,10 @@ import { LoadingService } from '../../core/services/loading.service';
       background: #f9fafb;
       border-radius: 6px;
       border: 1px solid #e5e7eb;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
 
     .loading-message p, .no-items-message p {
