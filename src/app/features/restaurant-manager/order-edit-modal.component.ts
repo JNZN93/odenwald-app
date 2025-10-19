@@ -57,6 +57,16 @@ import { LoadingService } from '../../core/services/loading.service';
           <div class="add-items-section">
             <h3>Items hinzufügen</h3>
             
+            <!-- Search Input -->
+            <div class="search-container" *ngIf="availableMenuItems.length > 0">
+              <input 
+                type="text" 
+                [(ngModel)]="searchTerm"
+                placeholder="Artikel suchen..."
+                class="search-input"
+              />
+            </div>
+            
             <!-- Loading state -->
             <div *ngIf="availableMenuItems.length === 0 && !hasLoadedMenuItems" class="loading-message">
               <p>Menü wird geladen...</p>
@@ -70,7 +80,7 @@ import { LoadingService } from '../../core/services/loading.service';
             
             <!-- Menu items list -->
             <div class="menu-items-compact" *ngIf="availableMenuItems.length > 0">
-              <div *ngFor="let menuItem of availableMenuItems" class="menu-item-compact">
+              <div *ngFor="let menuItem of getFilteredMenuItems()" class="menu-item-compact">
                 <div class="menu-item-main">
                   <span class="menu-item-name">{{ menuItem.name }}</span>
                   <span class="menu-item-price">{{ menuItem.price | currency:'EUR':'symbol':'1.2-2' }}</span>
@@ -253,6 +263,30 @@ import { LoadingService } from '../../core/services/loading.service';
       font-size: 1rem;
       font-weight: 600;
       color: #111827;
+    }
+
+    .search-container {
+      margin-bottom: 12px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      background: white;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    }
+
+    .search-input::placeholder {
+      color: #9ca3af;
     }
 
     .items-list-compact, .menu-items-compact {
@@ -523,6 +557,7 @@ export class OrderEditModalComponent implements OnInit, OnChanges {
   hasLoadedMenuItems = false;
   menuItemVariants: { [key: string]: VariantGroup[] } = {};
   selectedVariants: { [key: string]: { [variantGroupId: string]: string[] } } = {};
+  searchTerm = '';
 
   ngOnInit() {
     if (this.order) {
@@ -546,6 +581,7 @@ export class OrderEditModalComponent implements OnInit, OnChanges {
     this.addQuantities = {};
     this.menuItemVariants = {};
     this.selectedVariants = {};
+    this.searchTerm = '';
   }
 
   private async loadMenuItems() {
@@ -869,5 +905,16 @@ export class OrderEditModalComponent implements OnInit, OnChanges {
       this.selectedVariants[menuItemId] = {};
     }
     this.selectedVariants[menuItemId][variantGroupId] = selectedOptions;
+  }
+
+  getFilteredMenuItems() {
+    if (!this.searchTerm.trim()) {
+      return this.availableMenuItems;
+    }
+    
+    const searchLower = this.searchTerm.toLowerCase();
+    return this.availableMenuItems.filter(menuItem => 
+      menuItem.name.toLowerCase().includes(searchLower)
+    );
   }
 }
