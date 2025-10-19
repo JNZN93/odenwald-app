@@ -406,4 +406,35 @@ export class OrdersService {
       { status }
     );
   }
+
+  // Order editing methods for staff/managers
+  addItemsToOrder(orderId: string, items: Array<{
+    menu_item_id: string;
+    quantity: number;
+    unit_price?: number;
+    special_instructions?: string;
+    selected_variant_options?: any[];
+  }>): Observable<{ message: string; order: Order }> {
+    return this.http.post<{ message: string; order: Order }>(
+      `${this.baseUrl}/${orderId}/add-items`,
+      { items }
+    );
+  }
+
+  removeItemsFromOrder(orderId: string, itemIds: string[]): Observable<{ message: string; order: Order }> {
+    return this.http.delete<{ message: string; order: Order }>(
+      `${this.baseUrl}/${orderId}/remove-items`,
+      { body: { item_ids: itemIds } }
+    );
+  }
+
+  updateItemQuantities(orderId: string, itemUpdates: Array<{
+    item_id: string;
+    quantity: number;
+  }>): Observable<{ message: string; order: Order }> {
+    return this.http.patch<{ message: string; order: Order }>(
+      `${this.baseUrl}/${orderId}/update-quantities`,
+      { item_updates: itemUpdates }
+    );
+  }
 }

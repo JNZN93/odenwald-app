@@ -9,13 +9,14 @@ import { LoadingService } from '../../core/services/loading.service';
 import { ToastService } from '../../core/services/toast.service';
 import { I18nService } from '../../core/services/i18n.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { OrderEditModalComponent } from './order-edit-modal.component';
 
 type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked_up' | 'delivered' | 'served' | 'paid' | 'cancelled';
 
 @Component({
   selector: 'app-restaurant-manager-orders',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, RouterModule, TranslatePipe, OrderEditModalComponent],
   template: `
     <div class="orders-container">
       <!-- Header -->
@@ -257,6 +258,17 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                       <i class="fa-solid fa-times"></i>
                     </button>
 
+                    <!-- Edit Button -->
+                    <button
+                      *ngIf="canEditOrder(order.status)"
+                      class="action-btn edit"
+                      (click)="openEditModal(order)"
+                      [disabled]="updatingOrderId === order.id"
+                      [title]="'orders.edit' | translate"
+                    >
+                      <i class="fa-solid fa-edit"></i>
+                    </button>
+
                   </div>
                   <div class="loading-indicator" *ngIf="updatingOrderId === order.id">
                     <i class="fa-solid fa-spinner fa-spin"></i>
@@ -471,6 +483,17 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                   <i class="fa-solid fa-times"></i>
                   {{ 'orders.cancel' | translate }}
                 </button>
+
+                <!-- Edit Button -->
+                <button
+                  *ngIf="canEditOrder(order.status)"
+                  class="action-btn edit"
+                  (click)="openEditModal(order)"
+                  [disabled]="updatingOrderId === order.id"
+                >
+                  <i class="fa-solid fa-edit"></i>
+                  Bearbeiten
+                </button>
               </div>
 
               <div class="loading-indicator" *ngIf="updatingOrderId === order.id">
@@ -676,6 +699,14 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
         </div>
       </div>
     </div>
+
+    <!-- Order Edit Modal -->
+    <app-order-edit-modal
+      [isOpen]="isEditModalOpen"
+      [order]="editSelectedOrder"
+      (closed)="closeEditModal()"
+      (orderUpdated)="onOrderUpdated($event)"
+    ></app-order-edit-modal>
   `,
   styles: [`
     .orders-container {
@@ -1206,6 +1237,16 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
 
     .action-btn.cancel:hover {
       background: var(--color-danger-50);
+    }
+
+    .action-btn.edit {
+      border-color: var(--color-primary-500);
+      color: var(--color-primary);
+      background: white;
+    }
+
+    .action-btn.edit:hover {
+      background: var(--color-primary-50);
     }
 
     .action-btn.payment {
@@ -2359,6 +2400,16 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
       background: var(--color-danger-50);
     }
 
+    .col-actions .action-btn.edit {
+      border-color: var(--color-primary-500);
+      color: var(--color-primary-600);
+      background: white;
+    }
+
+    .col-actions .action-btn.edit:hover:not(:disabled) {
+      background: var(--color-primary-50);
+    }
+
     .col-actions .action-btn.details {
       border-color: var(--color-info-500);
       color: var(--color-info-600);
@@ -3324,5 +3375,34 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
 
   getBadgeClass(tabId: string): string {
     return `badge-${tabId}`;
+  }
+
+  // Edit Modal Properties and Methods
+  isEditModalOpen = false;
+  editSelectedOrder: Order | null = null;
+
+  canEditOrder(status: string): boolean {
+    // Allow editing only for pending, confirmed, and preparing orders
+    return ['pending', 'confirmed', 'preparing'].includes(status);
+  }
+
+  openEditModal(order: Order): void {
+    this.editSelectedOrder = { ...order }; // Create a copy to avoid modifying the original
+    this.isEditModalOpen = true;
+  }
+
+  closeEditModal(): void {
+    this.isEditModalOpen = false;
+    this.editSelectedOrder = null;
+  }
+
+  onOrderUpdated(updatedOrder: Order): void {
+    // Find and update the order in the orders array
+    const index = this.orders.findIndex(order => order.id === updatedOrder.id);
+    if (index !== -1) {
+      this.orders[index] = updatedOrder;
+      this.updateTabCounts();
+    }
+    this.closeEditModal();
   }
 }
