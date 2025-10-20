@@ -136,7 +136,8 @@ interface MenuItem {
       border-radius: 12px;
       width: 100%;
       max-width: 500px;
-      max-height: 90vh;
+      height: 70vh;
+      max-height: 70vh;
       overflow-y: auto;
       box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
     }
