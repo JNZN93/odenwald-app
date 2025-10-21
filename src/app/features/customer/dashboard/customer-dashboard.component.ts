@@ -8,12 +8,17 @@ import { CartService } from '../../../core/services/supplier.service';
 import { ImageFallbackDirective } from '../../../core/image-fallback.directive';
 import { PasswordChangeComponent } from '../../../shared/components/password-change.component';
 import { LoyaltyCardsComponent } from '../../../shared/components/loyalty-cards.component';
+import { FavoritesSectionComponent } from '../../../shared/components/favorites-section.component';
+import { ChatListComponent } from '../../../shared/components/chat-list.component';
+import { ChatComponent } from '../../../shared/components/chat.component';
+import { FavoritesService } from '../../../core/services/favorites.service';
+import { ChatService } from '../../../core/services/chat.service';
 import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
 
 @Component({
   selector: 'app-customer-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, ImageFallbackDirective, PasswordChangeComponent, LoyaltyCardsComponent],
+  imports: [CommonModule, FormsModule, ImageFallbackDirective, PasswordChangeComponent, LoyaltyCardsComponent, FavoritesSectionComponent, ChatListComponent, ChatComponent],
   template: `
     <div class="customer-dashboard">
       <div class="dashboard-header">
@@ -130,6 +135,54 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
               <button class="btn-primary" (click)="orderFromRestaurant(restaurant)">Bestellen</button>
             </div>
           </div>
+        </div>
+
+        <!-- Favorites Section -->
+        <div class="dashboard-section">
+          <div class="section-header">
+            <h2>
+              <i class="fa-solid fa-heart"></i>
+              Meine Favoriten
+            </h2>
+            <p>Ihre häufig bestellten Gerichte</p>
+          </div>
+          
+          <app-favorites-section
+            [showFavorites]="true"
+            (favoriteSelected)="onFavoriteSelected($event)"
+            (addToCartClicked)="onAddToCartClicked($event)"
+            (removeFavoriteClicked)="onRemoveFavoriteClicked($event)"
+          ></app-favorites-section>
+        </div>
+
+        <!-- Chat Support Section -->
+        <div class="dashboard-section">
+          <div class="section-header">
+            <h2>
+              <i class="fa-solid fa-comments"></i>
+              Chat Support
+            </h2>
+            <p>Haben Sie Fragen? Chatten Sie direkt mit den Restaurants</p>
+          </div>
+          
+          <div class="chat-container" *ngIf="!showChatList && !showChat">
+            <button class="btn-start-chat" (click)="showChatList = true">
+              <i class="fa-solid fa-comments"></i>
+              Chats anzeigen
+            </button>
+          </div>
+
+          <app-chat-list
+            *ngIf="showChatList && !showChat"
+            (chatRoomSelected)="onChatRoomSelected($event)"
+            (newChatRequested)="onNewChatRequested()"
+          ></app-chat-list>
+
+          <app-chat
+            *ngIf="showChat && selectedChatRoom"
+            [chatRoom]="selectedChatRoom"
+            (chatClosed)="onChatClosed()"
+          ></app-chat>
         </div>
 
         <!-- Account Settings -->
@@ -1125,6 +1178,46 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
         gap: var(--space-2);
       }
     }
+
+    /* Chat Support Styles */
+    .chat-container {
+      text-align: center;
+      padding: var(--space-6) 0;
+    }
+
+    .btn-start-chat {
+      background: var(--gradient-primary);
+      color: white;
+      border: none;
+      padding: var(--space-3) var(--space-6);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: var(--text-base);
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin: 0 auto;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-start-chat:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-start-chat i {
+      font-size: var(--text-lg);
+    }
+
+    /* Responsive adjustments for chat */
+    @media (max-width: 768px) {
+      .btn-start-chat {
+        padding: var(--space-2) var(--space-4);
+        font-size: var(--text-sm);
+      }
+    }
   `]
 })
 export class CustomerDashboardComponent implements OnInit {
@@ -1132,6 +1225,8 @@ export class CustomerDashboardComponent implements OnInit {
   private ordersService = inject(OrdersService);
   private cartService = inject(CartService);
   private router = inject(Router);
+  private favoritesService = inject(FavoritesService);
+  private chatService = inject(ChatService);
 
   user$ = this.authService.currentUser$;
   recentOrders$: Observable<Order[]> = of([]);
@@ -1148,6 +1243,11 @@ export class CustomerDashboardComponent implements OnInit {
   reviewText = '';
   orderNotes = '';
   orderSpecialRequests = '';
+
+  // Chat properties
+  showChatList = false;
+  showChat = false;
+  selectedChatRoom: any = null;
 
   // Mock featured restaurants - using real restaurant IDs from backend
   featuredRestaurants = [
@@ -1434,5 +1534,52 @@ export class CustomerDashboardComponent implements OnInit {
   onPasswordChanged() {
     // Password was successfully changed, close modal
     this.closePasswordChangeModal();
+  }
+
+  // Favorites and Chat Methods
+  onFavoriteSelected(favorite: any) {
+    // Navigate to restaurant or show favorite details
+    console.log('Favorite selected:', favorite);
+    if (favorite.restaurant_id) {
+      this.router.navigate(['/restaurant', favorite.restaurant_id]);
+    }
+  }
+
+  onAddToCartClicked(favorite: any) {
+    // Add favorite item to cart
+    console.log('Add to cart clicked:', favorite);
+    // Implement cart functionality here
+  }
+
+  onRemoveFavoriteClicked(favorite: any) {
+    // Remove from favorites
+    console.log('Remove favorite clicked:', favorite);
+    this.favoritesService.removeFromFavorites(favorite.menu_item_id).subscribe({
+      next: () => {
+        console.log('Favorite removed successfully');
+        // Refresh favorites list
+      },
+      error: (error) => {
+        console.error('Error removing favorite:', error);
+      }
+    });
+  }
+
+  onChatRoomSelected(chatRoom: any) {
+    this.selectedChatRoom = chatRoom;
+    this.showChatList = false;
+    this.showChat = true;
+  }
+
+  onNewChatRequested() {
+    // Show restaurant selection for new chat
+    console.log('New chat requested');
+    // Implement restaurant selection modal
+  }
+
+  onChatClosed() {
+    this.showChat = false;
+    this.selectedChatRoom = null;
+    this.showChatList = true;
   }
 }

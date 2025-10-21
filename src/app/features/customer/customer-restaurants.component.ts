@@ -9,6 +9,8 @@ import { AuthService } from '../../core/auth/auth.service';
 import { GeocodingService, GeocodeResult } from '../../core/services/geocoding.service';
 import { ImageFallbackDirective } from '../../core/image-fallback.directive';
 import { RestaurantSkeletonComponent } from '../../shared/components/restaurant-skeleton.component';
+import { DeliverySlotsComponent } from '../../shared/components/delivery-slots.component';
+import { DeliverySlotsService } from '../../core/services/delivery-slots.service';
 import { Observable, Subscription, combineLatest, BehaviorSubject, of, forkJoin } from 'rxjs';
 import { from } from 'rxjs';
 import { map, startWith, debounceTime, distinctUntilChanged, catchError } from 'rxjs/operators';
@@ -16,7 +18,7 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
 @Component({
   selector: 'app-customer-restaurants',
   standalone: true,
-  imports: [NgForOf, AsyncPipe, NgIf, ImageFallbackDirective, FormsModule, DatePipe, RestaurantSkeletonComponent],
+  imports: [NgForOf, AsyncPipe, NgIf, ImageFallbackDirective, FormsModule, DatePipe, RestaurantSkeletonComponent, DeliverySlotsComponent],
   template: `
     <section class="customer-restaurants-section">
       <!-- Hero Header -->
@@ -627,6 +629,7 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
   private geocodingService = inject(GeocodingService);
   private customerFilters = inject(CustomerFiltersService);
   private router = inject(Router);
+  private deliverySlotsService = inject(DeliverySlotsService);
 
   // Address and location properties
   deliveryAddress = '';

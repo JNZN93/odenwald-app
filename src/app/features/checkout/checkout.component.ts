@@ -12,6 +12,8 @@ import { LoadingService } from '../../core/services/loading.service';
 import { UserDataService } from '../../core/services/user-data.service';
 import { ConfirmationService } from '../../core/services/confirmation.service';
 import { MenuItemVariantsModalComponent } from '../restaurants/menu-item-variants-modal.component';
+import { DeliverySlotsComponent } from '../../shared/components/delivery-slots.component';
+import { DeliverySlotsService, DeliverySlot } from '../../core/services/delivery-slots.service';
 import { Observable, map } from 'rxjs';
 
 interface DeliveryAddress {
@@ -64,7 +66,7 @@ interface MenuItemVariantOption {
 @Component({
   selector: 'app-checkout',
   standalone: true,
-  imports: [CommonModule, FormsModule, MenuItemVariantsModalComponent],
+  imports: [CommonModule, FormsModule, MenuItemVariantsModalComponent, DeliverySlotsComponent],
   animations: [
     trigger('fadeInOut', [
       state('in', style({ opacity: 1, transform: 'translateY(0)' })),
@@ -251,6 +253,17 @@ interface MenuItemVariantOption {
                 </label>
               </div>
             </div>
+          </div>
+
+          <!-- Delivery Time Slots (only shown for delivery orders) -->
+          <div class="delivery-slots-section" *ngIf="orderType === 'delivery' && getCurrentRestaurantId()">
+            <h2>Lieferzeit wählen</h2>
+            <p>Wählen Sie wann Sie Ihre Bestellung erhalten möchten</p>
+            
+            <app-delivery-slots
+              [restaurantId]="getCurrentRestaurantId()"
+              (slotSelected)="onDeliverySlotSelected($event)"
+            ></app-delivery-slots>
           </div>
 
           <!-- Delivery Address (only shown for delivery orders) -->
@@ -678,13 +691,26 @@ interface MenuItemVariantOption {
       padding: var(--space-6);
     }
 
-    .cart-section h2, .order-type-section h2, .delivery-section h2, .payment-section h2, .customer-info-section h2 {
+    .delivery-slots-section {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-2xl);
+      padding: var(--space-6);
+    }
+
+    .cart-section h2, .order-type-section h2, .delivery-section h2, .payment-section h2, .customer-info-section h2, .delivery-slots-section h2 {
       font-size: var(--text-2xl);
       font-weight: 600;
       color: var(--color-heading);
       margin-bottom: var(--space-6);
       padding-bottom: var(--space-3);
       border-bottom: 2px solid var(--color-primary);
+    }
+
+    .delivery-slots-section p {
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+      margin-bottom: var(--space-4);
     }
 
     .order-type-options {
@@ -2359,6 +2385,7 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
   private userDataService = inject(UserDataService);
   private loadingService = inject(LoadingService);
   private confirmationService = inject(ConfirmationService);
+  private deliverySlotsService = inject(DeliverySlotsService);
 
   cart$ = this.cartService.cart$;
   loading = false;
@@ -2412,6 +2439,9 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
   itemNotes: { [menuItemId: string]: string } = {};
   openNotesItems: { [menuItemId: string]: boolean } = {};
   tempNotes: { [menuItemId: string]: string } = {};
+
+  // Delivery slots properties
+  selectedDeliverySlot: DeliverySlot | null = null;
 
   ngOnInit() {
     // Lade gespeicherte Benutzerdaten beim Initialisieren
@@ -2968,6 +2998,22 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
   }
 
   /**
+   * Get current restaurant ID from cart
+   */
+  getCurrentRestaurantId(): string {
+    const cart = this.cartService.getCurrentCart();
+    return cart?.restaurant_id || '';
+  }
+
+  /**
+   * Handle delivery slot selection
+   */
+  onDeliverySlotSelected(slot: DeliverySlot): void {
+    this.selectedDeliverySlot = slot;
+    console.log('Delivery slot selected:', slot);
+  }
+
+  /**
    * Erweiterte isFormValid-Methode für Adressauswahl
    */
   isFormValid(): boolean {
@@ -3064,7 +3110,14 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
     };
 
     console.log('Creating order with orderType:', this.orderType);
-    this.cartService.createOrder(fullAddress, '', this.selectedPaymentMethod, customerInfo, this.useLoyaltyReward, this.orderNotes, this.orderType)
+    
+    // Prepare delivery slot data
+    const deliverySlotData = this.selectedDeliverySlot ? {
+      type: this.selectedDeliverySlot.type,
+      scheduled_delivery_time: this.selectedDeliverySlot.type === 'scheduled' ? this.selectedDeliverySlot.value : undefined
+    } : undefined;
+    
+    this.cartService.createOrder(fullAddress, '', this.selectedPaymentMethod, customerInfo, this.useLoyaltyReward, this.orderNotes, this.orderType, deliverySlotData)
       .subscribe({
         next: (response) => {
           console.log('Order placed successfully:', response);

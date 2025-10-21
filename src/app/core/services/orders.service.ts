@@ -64,6 +64,11 @@ export interface Order {
   party_size?: number;
   order_type?: 'delivery' | 'pickup' | 'dine_in';
   table_status?: 'ordered' | 'confirmed' | 'preparing' | 'ready' | 'served' | 'paid';
+  // Delivery slot fields
+  delivery_slot_type?: 'asap' | 'scheduled';
+  scheduled_delivery_time?: string;
+  estimated_delivery_time?: string;
+  actual_delivery_time?: string;
 }
 
 export interface OrderWithItems {
@@ -139,7 +144,12 @@ export class OrdersService {
     table_number: raw.table_number ?? undefined,
     party_size: raw.party_size != null ? Number(raw.party_size) : undefined,
     order_type: raw.order_type ?? undefined,
-    table_status: raw.table_status ?? undefined
+    table_status: raw.table_status ?? undefined,
+    // Delivery slot fields
+    delivery_slot_type: raw.delivery_slot_type ?? undefined,
+    scheduled_delivery_time: raw.scheduled_delivery_time ?? undefined,
+    estimated_delivery_time: raw.estimated_delivery_time ?? undefined,
+    actual_delivery_time: raw.actual_delivery_time ?? undefined
   });
 
   // Get all orders with optional filters
@@ -192,7 +202,10 @@ export class OrdersService {
     restaurant_id: string;
     delivery_address: string;
     delivery_instructions?: string;
+    notes?: string;
     payment_method?: string;
+    delivery_slot_type?: 'asap' | 'scheduled';
+    scheduled_delivery_time?: string;
     items: Array<{
       menu_item_id: string;
       quantity: number;

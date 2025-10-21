@@ -273,7 +273,7 @@ export class CartService {
   }
 
   // Order creation
-  createOrder(deliveryAddress: string, deliveryInstructions?: string, paymentMethod?: string, customerInfo?: any, useLoyaltyReward?: boolean, notes?: string, orderType?: 'delivery' | 'pickup'): Observable<any> {
+  createOrder(deliveryAddress: string, deliveryInstructions?: string, paymentMethod?: string, customerInfo?: any, useLoyaltyReward?: boolean, notes?: string, orderType?: 'delivery' | 'pickup', deliverySlot?: { type: 'asap' | 'scheduled', scheduled_delivery_time?: string }): Observable<any> {
     const cart = this.getCurrentCart();
     if (!cart || cart.items.length === 0) {
       throw new Error('Warenkorb ist leer');
@@ -296,6 +296,14 @@ export class CartService {
         special_instructions: item.special_instructions
       }))
     };
+
+    // Add delivery slot information if provided
+    if (deliverySlot) {
+      orderData.delivery_slot_type = deliverySlot.type;
+      if (deliverySlot.scheduled_delivery_time) {
+        orderData.scheduled_delivery_time = deliverySlot.scheduled_delivery_time;
+      }
+    }
 
     console.log('Sending orderData to backend:', orderData);
 

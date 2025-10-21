@@ -103,6 +103,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
               <tr>
                 <th class="col-order-id">{{ 'orders.order' | translate }}</th>
                 <th class="col-customer">{{ 'orders.customer' | translate }}</th>
+                <th class="col-delivery-time">Lieferzeit</th>
                 <th class="col-order-status">{{ 'orders.order_status' | translate }}</th>
                 <th class="col-payment-status">{{ 'orders.payment' | translate }}</th>
                 <th class="col-total">{{ 'orders.total' | translate }}</th>
@@ -126,6 +127,15 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                     {{ order.customer_name }}
                   </div>
                   <div class="customer-email">{{ order.customer_email }}</div>
+                </td>
+                <td class="col-delivery-time">
+                  <div class="delivery-time-cell" *ngIf="order.delivery_slot_type">
+                    <i class="fa-solid" [class.fa-bolt]="order.delivery_slot_type === 'asap'" [class.fa-clock]="order.delivery_slot_type === 'scheduled'"></i>
+                    <span class="delivery-time-text">{{ formatDeliveryTime(order) }}</span>
+                  </div>
+                  <div class="no-delivery-time" *ngIf="!order.delivery_slot_type">
+                    <span class="no-delivery-text">-</span>
+                  </div>
                 </td>
                 <td class="col-order-status">
                   <span [ngClass]="getOrderStatusClass(order.status)" class="status-badge">
@@ -296,6 +306,10 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
               <div class="order-info">
                 <div class="order-number">#{{ order.id.slice(-6) }}</div>
                 <div class="order-time">{{ formatOrderTime(order.created_at) }}</div>
+                <div class="delivery-time" *ngIf="order.delivery_slot_type">
+                  <i class="fa-solid" [class.fa-bolt]="order.delivery_slot_type === 'asap'" [class.fa-clock]="order.delivery_slot_type === 'scheduled'"></i>
+                  {{ formatDeliveryTime(order) }}
+                </div>
               </div>
               <div class="order-status">
                 <span [ngClass]="getOrderStatusClass(order.status)" class="status-badge">
@@ -535,6 +549,13 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                 <div class="summary-item">
                   <label>{{ 'orders.ordered_at' | translate }}</label>
                   <span>{{ formatOrderTime(selectedOrder.created_at) }}</span>
+                </div>
+                <div class="summary-item" *ngIf="selectedOrder.delivery_slot_type">
+                  <label>Lieferzeit:</label>
+                  <span>
+                    <i class="fa-solid" [class.fa-bolt]="selectedOrder.delivery_slot_type === 'asap'" [class.fa-clock]="selectedOrder.delivery_slot_type === 'scheduled'"></i>
+                    {{ formatDeliveryTime(selectedOrder) }}
+                  </span>
                 </div>
               </div>
             </div>
@@ -977,6 +998,20 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
     .order-info .order-time {
       font-size: var(--text-sm);
       color: var(--color-muted);
+    }
+
+    .order-info .delivery-time {
+      font-size: var(--text-xs);
+      color: var(--color-primary);
+      font-weight: 600;
+      margin-top: var(--space-1);
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+    }
+
+    .order-info .delivery-time i {
+      font-size: var(--text-xs);
     }
 
     .status-badge {
@@ -2091,7 +2126,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
     }
 
     .orders-table th {
-      padding: var(--space-2) var(--space-2);
+      padding: var(--space-1) var(--space-2);
       text-align: left;
       font-size: var(--text-xs);
       font-weight: 700;
@@ -2101,7 +2136,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
     }
 
     .orders-table td {
-      padding: var(--space-2) var(--space-2);
+      padding: var(--space-1) var(--space-2);
       border-bottom: 1px solid var(--color-border);
       vertical-align: top;
     }
@@ -2125,40 +2160,76 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
     }
 
     .col-customer {
-      width: 180px;
-      min-width: 180px;
+      width: 160px;
+      min-width: 160px;
+    }
+
+    .col-delivery-time {
+      width: 140px;
+      min-width: 140px;
+    }
+
+    .delivery-time-cell {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      font-size: var(--text-xs);
+      color: var(--color-primary);
+      font-weight: 600;
+    }
+
+    .delivery-time-cell i {
+      font-size: var(--text-xs);
+      flex-shrink: 0;
+    }
+
+    .delivery-time-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .no-delivery-time {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .no-delivery-text {
+      color: var(--color-muted);
+      font-size: var(--text-xs);
     }
 
     .col-order-status {
-      width: 120px;
-      min-width: 120px;
+      width: 100px;
+      min-width: 100px;
     }
 
     .col-payment-status {
-      width: 120px;
-      min-width: 120px;
+      width: 100px;
+      min-width: 100px;
     }
 
     .col-total {
-      width: 90px;
-      min-width: 90px;
+      width: 80px;
+      min-width: 80px;
       text-align: right;
     }
 
     .col-order-type {
-      width: 100px;
-      min-width: 100px;
+      width: 80px;
+      min-width: 80px;
       text-align: center;
     }
 
     .col-address {
-      width: 180px;
-      min-width: 180px;
+      width: 160px;
+      min-width: 160px;
     }
 
     .col-actions {
-      width: 120px;
-      min-width: 120px;
+      width: 100px;
+      min-width: 100px;
     }
 
     .col-details {
@@ -2178,6 +2249,20 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
     .order-time-mobile {
       font-size: var(--text-sm);
       color: var(--color-muted);
+    }
+
+    .delivery-time-mobile {
+      font-size: var(--text-xs);
+      color: var(--color-primary);
+      font-weight: 600;
+      margin-top: var(--space-1);
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+    }
+
+    .delivery-time-mobile i {
+      font-size: var(--text-xs);
     }
 
     .customer-name {
@@ -3052,6 +3137,39 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
         minute: '2-digit'
       });
     }
+  }
+
+  formatDeliveryTime(order: Order): string {
+    if (!order.delivery_slot_type) {
+      return '';
+    }
+
+    if (order.delivery_slot_type === 'asap') {
+      return 'Sofort liefern';
+    }
+
+    if (order.delivery_slot_type === 'scheduled' && order.scheduled_delivery_time) {
+      const scheduledDate = new Date(order.scheduled_delivery_time);
+      
+      if (isNaN(scheduledDate.getTime())) {
+        return 'Ungültige Lieferzeit';
+      }
+
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+      const scheduledDay = new Date(scheduledDate.getFullYear(), scheduledDate.getMonth(), scheduledDate.getDate());
+      
+      if (scheduledDay.getTime() === today.getTime()) {
+        return `Heute um ${scheduledDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
+      } else if (scheduledDay.getTime() === tomorrow.getTime()) {
+        return `Morgen um ${scheduledDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
+      } else {
+        return `${scheduledDate.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })} um ${scheduledDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
+      }
+    }
+
+    return 'Lieferzeit unbekannt';
   }
 
   getOrderStatusClass(status: Order['status'] | 'open' | 'in_progress' | 'out_for_delivery'): string {
