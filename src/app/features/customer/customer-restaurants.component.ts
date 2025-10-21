@@ -40,7 +40,7 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
             <input
               type="text"
               class="search-input"
-              placeholder="Suche nach Restaurants, Küchen, Preisen..."
+              placeholder="Suche nach Restaurants, Gerichten, Preisen..."
               [(ngModel)]="globalSearchTerm"
               (input)="onGlobalSearchChanged()"
             >
@@ -231,7 +231,7 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
                 <input
                   type="text"
                   class="search-input"
-                  placeholder="Suche nach Restaurants, Küchen, Adressen, Preisen... (z.B. Pizza, kostenlos, bar, 10€, schnell)"
+                  placeholder="Suche nach Restaurants, Gerichten, Kategorien, Preisen... (z.B. Margherita, Burger, kostenlos, bar, 10€)"
                   [(ngModel)]="globalSearchTerm"
                   (input)="onGlobalSearchChanged()"
                 >
@@ -673,6 +673,8 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
   isSearching = false;
   // Full list vs filtered list management
   private allNearbyRestaurants: RestaurantDTO[] = [];
+  // Menu data cache for search functionality
+  private restaurantMenuCache: Map<string, any[]> = new Map();
   // Filters similar to Lieferando
   filterOpenNow = false;
   filterFreeDelivery = false;
@@ -1003,12 +1005,15 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
       // Special search terms for common food categories
       const categoryMatch = this.searchFoodCategories(term, restaurant);
       
+      // Search through menu items and categories
+      const menuMatch = this.searchMenuItems(term, restaurant);
+      
       return nameMatch || slugMatch || cuisineMatch || descriptionMatch ||
              streetMatch || cityMatch || postalCodeMatch ||
              phoneMatch || emailMatch || websiteMatch ||
              deliveryFeeMatch || minOrderMatch || deliveryTimeMatch ||
              paymentMatch || ownerNameMatch || ownerEmailMatch ||
-             categoryMatch;
+             categoryMatch || menuMatch;
     });
   }
 
@@ -1118,6 +1123,98 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
           restaurant.cuisine_type?.toLowerCase().includes(cuisineType) ||
           restaurant.description?.toLowerCase().includes(cuisineType) ||
           restaurant.name?.toLowerCase().includes(cuisineType)
+        );
+      }
+    }
+
+    return false;
+  }
+
+  private searchMenuItems(term: string, restaurant: RestaurantDTO): boolean {
+    const restaurantId = String(restaurant.id);
+    const menuData = this.restaurantMenuCache.get(restaurantId);
+    
+    if (!menuData || menuData.length === 0) {
+      return false;
+    }
+    
+    // Search through all menu categories and their items
+    return menuData.some((category: any) => {
+      // Search category name
+      const categoryNameMatch = category.name?.toLowerCase().includes(term);
+      
+      // Search through items in this category
+      const itemMatch = category.items?.some((item: any) => {
+        const itemNameMatch = item.name?.toLowerCase().includes(term);
+        const itemDescriptionMatch = item.description?.toLowerCase().includes(term);
+        
+        // Search for specific food terms in item names/descriptions
+        const foodTermMatch = this.searchSpecificFoodTerms(term, item);
+        
+        return itemNameMatch || itemDescriptionMatch || foodTermMatch;
+      });
+      
+      return categoryNameMatch || itemMatch;
+    });
+  }
+
+  private searchSpecificFoodTerms(term: string, item: any): boolean {
+    // Map common search terms to specific food items
+    const foodTermMapping: { [key: string]: string[] } = {
+      'margherita': ['margherita', 'margarita', 'tomato', 'mozzarella', 'basil'],
+      'pepperoni': ['pepperoni', 'salami', 'wurst'],
+      'hawaii': ['hawaii', 'ananas', 'pineapple', 'schinken'],
+      'quattro': ['quattro', 'stagioni', '4', 'vier'],
+      'carbonara': ['carbonara', 'speck', 'ei', 'sahne'],
+      'bolognese': ['bolognese', 'ragu', 'hackfleisch'],
+      'calzone': ['calzone', 'gefüllt', 'umgeschlagen'],
+      'burger': ['burger', 'patty', 'bun', 'brötchen'],
+      'cheeseburger': ['cheeseburger', 'käse', 'cheese'],
+      'chicken': ['chicken', 'hähnchen', 'huhn', 'poulet'],
+      'fish': ['fish', 'fisch', 'lachs', 'salmon', 'tuna'],
+      'vegetarian': ['vegetarian', 'vegetarisch', 'veggie', 'vegan'],
+      'vegan': ['vegan', 'vegane', 'plant based'],
+      'salad': ['salad', 'salat', 'lettuce', 'tomato'],
+      'soup': ['soup', 'suppe', 'brühe'],
+      'pasta': ['pasta', 'spaghetti', 'penne', 'farfalle', 'nudeln'],
+      'rice': ['rice', 'reis', 'risotto'],
+      'curry': ['curry', 'indisch', 'thai', 'würzig'],
+      'sushi': ['sushi', 'maki', 'nigiri', 'sashimi', 'roll'],
+      'döner': ['döner', 'kebab', 'dürüm', 'dönerbox'],
+      'pizza': ['pizza', 'pizzeria'],
+      'dessert': ['dessert', 'kuchen', 'cake', 'eis', 'ice cream', 'tiramisu'],
+      'drink': ['drink', 'getränk', 'cola', 'fanta', 'sprite', 'bier', 'wein'],
+      'alcohol': ['alcohol', 'alkohol', 'bier', 'wein', 'cocktail'],
+      'coffee': ['coffee', 'kaffee', 'espresso', 'cappuccino', 'latte'],
+      'tea': ['tea', 'tee', 'chai', 'grün'],
+      'juice': ['juice', 'saft', 'orange', 'apfel'],
+      'water': ['water', 'wasser', 'sparkling', 'still'],
+      'hot': ['hot', 'heiß', 'scharf', 'spicy', 'würzig'],
+      'cold': ['cold', 'kalt', 'kühl'],
+      'fresh': ['fresh', 'frisch', 'freshly'],
+      'homemade': ['homemade', 'hausgemacht', 'selbstgemacht'],
+      'organic': ['organic', 'bio', 'biologisch'],
+      'gluten': ['gluten', 'glutenfrei', 'gluten free'],
+      'lactose': ['lactose', 'laktose', 'laktosefrei', 'lactose free'],
+      'nut': ['nut', 'nuss', 'nüsse', 'peanut', 'almond'],
+      'spicy': ['spicy', 'scharf', 'hot', 'würzig', 'pfeffer'],
+      'sweet': ['sweet', 'süß', 'sweet', 'zucker', 'honey'],
+      'sour': ['sour', 'sauer', 'lemon', 'zitrone'],
+      'bitter': ['bitter', 'bitter'],
+      'salty': ['salty', 'salzig', 'salt'],
+      'large': ['large', 'groß', 'big', 'xl', 'xxl'],
+      'small': ['small', 'klein', 'mini'],
+      'family': ['family', 'familie', 'familien'],
+      'kids': ['kids', 'kinder', 'children'],
+      'combo': ['combo', 'menü', 'set', 'paket']
+    };
+
+    // Check if the search term matches any food term mapping
+    for (const [searchTerm, foodTerms] of Object.entries(foodTermMapping)) {
+      if (term.includes(searchTerm)) {
+        return foodTerms.some(foodTerm => 
+          item.name?.toLowerCase().includes(foodTerm) ||
+          item.description?.toLowerCase().includes(foodTerm)
         );
       }
     }
@@ -1240,6 +1337,7 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
     if (ids.length === 0) {
       this.aggregatedCategories = [];
       this.filteredCategories = [];
+      this.restaurantMenuCache.clear();
       return;
     }
     this.categoriesLoading = true;
@@ -1247,18 +1345,29 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
     forkJoin(requests).subscribe({
       next: (results) => {
         const counts = new Map<string, number>();
-        results.forEach(list => {
+        const restaurantMenuData = new Map<string, any[]>();
+        
+        results.forEach((list, index) => {
+          const restaurantId = ids[index];
+          restaurantMenuData.set(restaurantId, list);
+          
           list.forEach((cat: any) => {
             const name = (cat.name || '').trim();
             if (!name) return;
             counts.set(name, (counts.get(name) || 0) + 1);
           });
         });
+        
+        // Cache menu data for search functionality
+        this.restaurantMenuCache = restaurantMenuData;
+        
         const arr = Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
         arr.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
         this.aggregatedCategories = arr.slice(0, 24);
         this.filteredCategories = [...this.aggregatedCategories];
         this.categoriesLoading = false;
+        
+        console.log('🍽️ Menu data cached for', this.restaurantMenuCache.size, 'restaurants');
       },
       error: () => {
         this.categoriesLoading = false;
