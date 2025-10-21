@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { RestaurantsService, RestaurantDTO } from '../../core/services/restaurants.service';
 import { CustomerFiltersService } from '../../core/services/customer-filters.service';
-import { AIService, ChatResponse } from '../../core/services/ai.service';
 import { ReviewsService } from '../../core/services/reviews.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { GeocodingService, GeocodeResult } from '../../core/services/geocoding.service';
@@ -28,13 +27,34 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
             <i class="fa-solid fa-map-marker-alt location-icon"></i>
             <span class="location-text">{{ formattedAddress || deliveryAddress }}</span>
           </div>
-          <button class="filter-btn" (click)="goToFilters()" type="button" title="Filter & Suche">
-            <i class="fa-solid fa-sliders"></i>
-            <span class="filter-text">Suche & Filter</span>
-          </button>
           <button class="change-address-btn" (click)="clearAddress()" type="button">
             <i class="fa-solid fa-edit"></i>
             Adresse ändern
+          </button>
+        </div>
+
+        <!-- Mobile Search Section -->
+        <div class="mobile-search-section" *ngIf="userCoordinates && isCompactMode">
+          <div class="search-input-wrapper">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input
+              type="text"
+              class="search-input"
+              placeholder="Suche nach Gerichten, Kategorien..."
+              [(ngModel)]="globalSearchTerm"
+              (input)="onGlobalSearchChanged()"
+            >
+            <button class="clear-search-btn" *ngIf="globalSearchTerm" (click)="clearGlobalSearch()" type="button">
+              <i class="fa-solid fa-times"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Mobile Filter Section -->
+        <div class="mobile-filter-section" *ngIf="userCoordinates && isCompactMode">
+          <button class="filter-btn" (click)="goToFilters()" type="button">
+            <i class="fa-solid fa-sliders"></i>
+            <span>Suche & Filter</span>
           </button>
         </div>
 
@@ -602,7 +622,6 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
 })
 export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
   private restaurantsService = inject(RestaurantsService);
-  private aiService = inject(AIService);
   private reviewsService = inject(ReviewsService);
   private authService = inject(AuthService);
   private geocodingService = inject(GeocodingService);
@@ -652,8 +671,6 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
   // Global search states
   globalSearchTerm = '';
   isSearching = false;
-  private lastSearchController: AbortController | null = null;
-  private searchDebounce?: any;
   // Full list vs filtered list management
   private allNearbyRestaurants: RestaurantDTO[] = [];
   // Filters similar to Lieferando
@@ -762,6 +779,11 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
 
   goToFilters() {
     this.router.navigate(['/customer/filters']);
+  }
+
+  onQuickSearchFocus() {
+    // Optional: Add focus behavior for quick search
+    console.log('Quick search focused');
   }
 
   onAddressSubmit() {
@@ -941,87 +963,33 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
     return restaurants;
   }
 
-  // Apply Lieferando-like search across menu items/categories to filter restaurants
+  // Apply simple search filter based on restaurant name, cuisine type, and description
   private applyGlobalSearchFilter(restaurants: RestaurantDTO[]): RestaurantDTO[] {
-    const term = (this.globalSearchTerm || '').trim();
+    const term = (this.globalSearchTerm || '').trim().toLowerCase();
     if (!term) {
       return restaurants;
     }
 
-    // If we already have latest matching restaurant IDs, filter synchronously
-    if (this.latestMatchingRestaurantIds.size > 0) {
-      return restaurants.filter(r => this.latestMatchingRestaurantIds.has(String(r.id)));
-    }
-
-    // Otherwise trigger background search; initially show unfiltered and refresh on result
-    this.triggerAiSearch(term);
-    return restaurants;
+    // Filter restaurants based on name, cuisine type, and description
+    return restaurants.filter(restaurant => {
+      const nameMatch = restaurant.name?.toLowerCase().includes(term);
+      const cuisineMatch = restaurant.cuisine_type?.toLowerCase().includes(term);
+      const descriptionMatch = restaurant.description?.toLowerCase().includes(term);
+      
+      return nameMatch || cuisineMatch || descriptionMatch;
+    });
   }
 
-  private latestMatchingRestaurantIds: Set<string> = new Set<string>();
-
   onGlobalSearchChanged() {
-    const term = (this.globalSearchTerm || '').trim();
     this.customerFilters.update({ searchTerm: this.globalSearchTerm });
-    if (!term) {
-      this.latestMatchingRestaurantIds.clear();
-      // Reload nearby to reset results immediately
-      this.loadNearbyRestaurants();
-      return;
-    }
-
-    // debounce search to avoid spamming backend
-    if (this.searchDebounce) {
-      clearTimeout(this.searchDebounce);
-    }
-    this.searchDebounce = setTimeout(() => {
-      this.triggerAiSearch(term);
-    }, 350);
+    // Apply filters immediately without AI search
+    this.applyAllFilters();
   }
 
   clearGlobalSearch() {
     this.globalSearchTerm = '';
-    this.latestMatchingRestaurantIds.clear();
     this.isSearching = false;
     this.applyAllFilters();
-  }
-
-  private triggerAiSearch(term: string) {
-    // Abort previous if any (note: HttpClient does not support AbortController directly; using flag only)
-    this.isSearching = true;
-
-    // We leverage AI chat intents: prefer product_search then menu_details for broader coverage
-    const userMessage = term; // AI will route to product_search/menu_details
-    this.aiService.chat(userMessage).subscribe({
-      next: (resp: ChatResponse) => {
-        const restaurantIds = new Set<string>();
-
-        // From product search
-        if (resp.products && resp.products.length > 0) {
-          resp.products.forEach(p => {
-            if (p.restaurant_id) restaurantIds.add(String(p.restaurant_id));
-          });
-        }
-
-        // From menu details
-        if (resp.menuItems && resp.menuItems.length > 0) {
-          // menuItems include restaurant_id optionally; if not, we cannot map directly
-          resp.menuItems.forEach(item => {
-            if ((item as any).restaurant_id) {
-              restaurantIds.add(String((item as any).restaurant_id));
-            }
-          });
-        }
-
-        this.latestMatchingRestaurantIds = restaurantIds;
-        this.applyAllFilters();
-        this.isSearching = false;
-      },
-      error: err => {
-        console.error('AI search failed:', err);
-        this.isSearching = false;
-      }
-    });
   }
 
   // Non-AI filters application
@@ -1039,10 +1007,8 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
   private applyAllFilters() {
     let base = [...this.allNearbyRestaurants];
 
-    // Apply AI search filter if any
-    if (this.globalSearchTerm && this.latestMatchingRestaurantIds.size > 0) {
-      base = base.filter(r => this.latestMatchingRestaurantIds.has(String(r.id)));
-    }
+    // Apply simple search filter
+    base = this.applyGlobalSearchFilter(base);
 
     // Open now filter
     if (this.filterOpenNow) {

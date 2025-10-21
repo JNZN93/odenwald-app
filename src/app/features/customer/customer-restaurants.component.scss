@@ -388,6 +388,151 @@
   box-shadow: var(--shadow-sm);
 }
 
+/* Mobile Search Section */
+.mobile-search-section {
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  margin: 0 auto;
+  max-width: 600px;
+}
+
+.mobile-search-section .search-input-wrapper {
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 2px solid var(--color-green-300);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2) var(--space-3);
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.15);
+  transition: all 0.3s ease;
+}
+
+.mobile-search-section .search-input-wrapper:focus-within {
+  border-color: var(--color-green-500);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
+}
+
+.mobile-search-section .search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: var(--text-base);
+  color: var(--color-text);
+  background: transparent;
+  padding: var(--space-1) 0;
+}
+
+.mobile-search-section .search-input::placeholder {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}
+
+.mobile-search-section .search-icon {
+  color: var(--color-green-600);
+  font-size: var(--text-lg);
+  margin-right: var(--space-2);
+}
+
+.mobile-search-section .clear-search-btn {
+  background: none;
+  border: none;
+  color: var(--color-muted);
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-full);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.mobile-search-section .clear-search-btn:hover {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+/* Mobile Filter Section */
+.mobile-filter-section {
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  margin: 0 auto;
+  max-width: 600px;
+}
+
+.mobile-filter-section .filter-btn {
+  width: 100%;
+  background: linear-gradient(135deg, var(--color-green-600) 0%, var(--color-green-700) 100%);
+  border: 2px solid var(--color-green-500);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-weight: 600;
+  font-size: var(--text-base);
+}
+
+.mobile-filter-section .filter-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(34, 197, 94, 0.35);
+  border-color: var(--color-green-400);
+}
+
+.mobile-filter-section .filter-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
+}
+
+.mobile-filter-section .filter-btn i {
+  font-size: var(--text-lg);
+}
+
+.btn-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 600;
+  font-size: var(--text-lg);
+}
+
+.search-icon {
+  font-size: var(--text-xl);
+  color: white;
+}
+
+.btn-text {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: white;
+}
+
+.filter-icon {
+  font-size: var(--text-lg);
+  color: white;
+}
+
+.btn-subtitle {
+  font-size: var(--text-sm);
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 400;
+  text-align: center;
+}
+
+/* Hide mobile sections on desktop */
+@media (min-width: 769px) {
+  .mobile-search-section,
+  .mobile-filter-section {
+    display: none !important;
+  }
+}
+
 /* Hide filter button on desktop */
 @media (min-width: 769px) {
   .filter-btn {
@@ -1480,33 +1625,39 @@
   .compact-location-bar {
     padding: var(--space-2) var(--space-3);
     margin: var(--space-1);
-    display: grid;
-    grid-template-columns: 1fr auto;
-    grid-template-areas:
-      "address filter"
-      "change .";
-    row-gap: var(--space-1);
-    column-gap: var(--space-2);
-    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    align-items: stretch;
+  }
+
+  .mobile-search-section,
+  .mobile-filter-section {
+    padding: var(--space-2) var(--space-3);
+    margin: var(--space-1);
+  }
+
+  .mobile-search-section .search-input-wrapper {
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-md);
+  }
+
+  .mobile-search-section .search-input {
+    font-size: var(--text-sm);
+  }
+
+  .mobile-filter-section .filter-btn {
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
   }
 
   .compact-location-bar .location-info {
-    grid-area: address;
     width: 100%;
-  }
-
-  .compact-location-bar .filter-btn {
-    grid-area: filter;
-    height: 32px;
-    width: auto;
-    justify-self: end;
-    justify-content: center;
-    text-align: center;
-    padding: 0 var(--space-2);
+    justify-content: flex-start;
   }
 
   .compact-location-bar .change-address-btn {
-    grid-area: change;
     width: auto;
     justify-self: start;
     justify-content: center;
