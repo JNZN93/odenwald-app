@@ -40,7 +40,7 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
             <input
               type="text"
               class="search-input"
-              placeholder="Suche nach Gerichten, Kategorien..."
+              placeholder="Suche nach Restaurants, Küchen, Preisen..."
               [(ngModel)]="globalSearchTerm"
               (input)="onGlobalSearchChanged()"
             >
@@ -231,7 +231,7 @@ import { map, startWith, debounceTime, distinctUntilChanged, catchError } from '
                 <input
                   type="text"
                   class="search-input"
-                  placeholder="Suche nach Gerichten, Kategorien oder Zutaten (z.B. Pizza, Sushi, vegan)"
+                  placeholder="Suche nach Restaurants, Küchen, Adressen, Preisen... (z.B. Pizza, kostenlos, bar, 10€, schnell)"
                   [(ngModel)]="globalSearchTerm"
                   (input)="onGlobalSearchChanged()"
                 >
@@ -963,32 +963,177 @@ export class CustomerRestaurantsComponent implements OnInit, OnDestroy {
     return restaurants;
   }
 
-  // Apply simple search filter based on restaurant name, cuisine type, and description
+  // Apply comprehensive search filter through the complete RestaurantDTO schema
   private applyGlobalSearchFilter(restaurants: RestaurantDTO[]): RestaurantDTO[] {
     const term = (this.globalSearchTerm || '').trim().toLowerCase();
     if (!term) {
       return restaurants;
     }
 
-    // Filter restaurants based on name, cuisine type, and description
+    // Search through all relevant fields of the RestaurantDTO schema
     return restaurants.filter(restaurant => {
+      // Basic restaurant information
       const nameMatch = restaurant.name?.toLowerCase().includes(term);
+      const slugMatch = restaurant.slug?.toLowerCase().includes(term);
       const cuisineMatch = restaurant.cuisine_type?.toLowerCase().includes(term);
       const descriptionMatch = restaurant.description?.toLowerCase().includes(term);
       
-      return nameMatch || cuisineMatch || descriptionMatch;
+      // Address information
+      const streetMatch = restaurant.address?.street?.toLowerCase().includes(term);
+      const cityMatch = restaurant.address?.city?.toLowerCase().includes(term);
+      const postalCodeMatch = restaurant.address?.postal_code?.toLowerCase().includes(term);
+      
+      // Contact information
+      const phoneMatch = restaurant.contact_info?.phone?.toLowerCase().includes(term);
+      const emailMatch = restaurant.contact_info?.email?.toLowerCase().includes(term);
+      const websiteMatch = restaurant.contact_info?.website?.toLowerCase().includes(term);
+      
+      // Delivery information - search for specific terms
+      const deliveryFeeMatch = this.searchDeliveryFee(term, restaurant.delivery_info?.delivery_fee);
+      const minOrderMatch = this.searchMinOrder(term, restaurant.delivery_info?.minimum_order_amount);
+      const deliveryTimeMatch = this.searchDeliveryTime(term, restaurant.delivery_info?.estimated_delivery_time_minutes);
+      
+      // Payment methods
+      const paymentMatch = this.searchPaymentMethods(term, restaurant.payment_methods);
+      
+      // Owner information
+      const ownerNameMatch = restaurant.owner_name?.toLowerCase().includes(term);
+      const ownerEmailMatch = restaurant.owner_email?.toLowerCase().includes(term);
+      
+      // Special search terms for common food categories
+      const categoryMatch = this.searchFoodCategories(term, restaurant);
+      
+      return nameMatch || slugMatch || cuisineMatch || descriptionMatch ||
+             streetMatch || cityMatch || postalCodeMatch ||
+             phoneMatch || emailMatch || websiteMatch ||
+             deliveryFeeMatch || minOrderMatch || deliveryTimeMatch ||
+             paymentMatch || ownerNameMatch || ownerEmailMatch ||
+             categoryMatch;
     });
+  }
+
+  // Helper methods for specific search functionality
+  private searchDeliveryFee(term: string, deliveryFee?: number): boolean {
+    if (!deliveryFee) return false;
+    
+    const freeTerms = ['kostenlos', 'free', 'gratis', '0€', '0 euro'];
+    const lowCostTerms = ['günstig', 'billig', 'preiswert', 'günstige lieferung'];
+    
+    if (deliveryFee === 0 && freeTerms.some(freeTerm => term.includes(freeTerm))) {
+      return true;
+    }
+    
+    if (deliveryFee <= 2 && lowCostTerms.some(lowTerm => term.includes(lowTerm))) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  private searchMinOrder(term: string, minOrder?: number): boolean {
+    if (!minOrder) return false;
+    
+    const budgetTerms = ['günstig', 'billig', 'preiswert', 'budget', 'kleine bestellung'];
+    const numberMatch = term.match(/\d+/);
+    
+    if (numberMatch) {
+      const searchNumber = parseInt(numberMatch[0]);
+      return Math.abs(minOrder - searchNumber) <= 2; // Allow 2€ tolerance
+    }
+    
+    if (minOrder <= 10 && budgetTerms.some(budgetTerm => term.includes(budgetTerm))) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  private searchDeliveryTime(term: string, deliveryTime?: number): boolean {
+    if (!deliveryTime) return false;
+    
+    const fastTerms = ['schnell', 'fast', 'quick', 'schnelle lieferung'];
+    const numberMatch = term.match(/\d+/);
+    
+    if (numberMatch) {
+      const searchNumber = parseInt(numberMatch[0]);
+      return Math.abs(deliveryTime - searchNumber) <= 5; // Allow 5 min tolerance
+    }
+    
+    if (deliveryTime <= 25 && fastTerms.some(fastTerm => term.includes(fastTerm))) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  private searchPaymentMethods(term: string, paymentMethods?: any): boolean {
+    if (!paymentMethods) return false;
+    
+    const cashTerms = ['bar', 'cash', 'bargeld'];
+    const cardTerms = ['karte', 'card', 'kreditkarte', 'debitkarte'];
+    const paypalTerms = ['paypal', 'pay pal'];
+    
+    if (cashTerms.some(cashTerm => term.includes(cashTerm)) && paymentMethods.cash) {
+      return true;
+    }
+    
+    if (cardTerms.some(cardTerm => term.includes(cardTerm)) && paymentMethods.card) {
+      return true;
+    }
+    
+    if (paypalTerms.some(paypalTerm => term.includes(paypalTerm)) && paymentMethods.paypal) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  private searchFoodCategories(term: string, restaurant: RestaurantDTO): boolean {
+    // Map common search terms to cuisine types
+    const cuisineMapping: { [key: string]: string[] } = {
+      'pizza': ['pizza', 'italienisch', 'italienische', 'italy', 'italy'],
+      'burger': ['burger', 'amerikanisch', 'amerikanische', 'american', 'fast food'],
+      'sushi': ['sushi', 'japanisch', 'japanische', 'japanese', 'asiatisch', 'asiatische'],
+      'döner': ['döner', 'kebab', 'türkisch', 'türkische', 'turkish', 'doner'],
+      'pasta': ['pasta', 'nudeln', 'spaghetti', 'italienisch', 'italienische'],
+      'salat': ['salat', 'salate', 'salads', 'healthy', 'gesund', 'grün'],
+      'vegetarisch': ['vegetarisch', 'vegetarische', 'vegetarian', 'veggie'],
+      'vegan': ['vegan', 'vegane', 'veganer', 'plant based'],
+      'chinesisch': ['chinesisch', 'chinesische', 'chinese', 'china'],
+      'thailändisch': ['thailändisch', 'thailändische', 'thai', 'thailand'],
+      'indisch': ['indisch', 'indische', 'indian', 'curry', 'curries'],
+      'mexikanisch': ['mexikanisch', 'mexikanische', 'mexican', 'mexiko', 'taco', 'burrito'],
+      'griechisch': ['griechisch', 'griechische', 'greek', 'griechenland'],
+      'deutsch': ['deutsch', 'deutsche', 'german', 'deutschland', 'schnitzel', 'bratwurst'],
+      'fisch': ['fisch', 'fish', 'seafood', 'meeresfrüchte', 'lachs', 'salmon'],
+      'steak': ['steak', 'fleisch', 'meat', 'rind', 'beef', 'schwein', 'pork'],
+      'dessert': ['dessert', 'desserts', 'kuchen', 'cake', 'eis', 'ice cream', 'süß'],
+      'getränk': ['getränk', 'getränke', 'drinks', 'cola', 'bier', 'beer', 'wein', 'wine']
+    };
+
+    // Check if the search term matches any cuisine mapping
+    for (const [searchTerm, cuisineTypes] of Object.entries(cuisineMapping)) {
+      if (term.includes(searchTerm)) {
+        return cuisineTypes.some(cuisineType => 
+          restaurant.cuisine_type?.toLowerCase().includes(cuisineType) ||
+          restaurant.description?.toLowerCase().includes(cuisineType) ||
+          restaurant.name?.toLowerCase().includes(cuisineType)
+        );
+      }
+    }
+
+    return false;
   }
 
   onGlobalSearchChanged() {
     this.customerFilters.update({ searchTerm: this.globalSearchTerm });
     // Apply filters immediately without AI search
-    this.applyAllFilters();
+        this.applyAllFilters();
   }
 
   clearGlobalSearch() {
     this.globalSearchTerm = '';
-    this.isSearching = false;
+        this.isSearching = false;
     this.applyAllFilters();
   }
 
