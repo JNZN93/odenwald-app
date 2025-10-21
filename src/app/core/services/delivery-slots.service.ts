@@ -21,7 +21,7 @@ export interface DeliverySlotsResponse {
   providedIn: 'root'
 })
 export class DeliverySlotsService {
-  private apiUrl = `${environment.apiUrl}/api/v1/orders`;
+  private apiUrl = `${environment.apiUrl}/orders`;
 
   constructor(private http: HttpClient) {}
 

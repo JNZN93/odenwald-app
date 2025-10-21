@@ -64,7 +64,7 @@ export interface SendMessageRequest {
 })
 export class ChatService {
   private http = inject(HttpClient);
-  private baseUrl = `${environment.apiUrl}/api/v1/chat`;
+  private baseUrl = `${environment.apiUrl}/chat`;
   
   private chatRoomsSubject = new BehaviorSubject<ChatRoom[]>([]);
   private messagesSubject = new BehaviorSubject<{ [roomId: string]: ChatMessage[] }>({});

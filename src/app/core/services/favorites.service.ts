@@ -34,7 +34,7 @@ export interface FavoriteStats {
   providedIn: 'root'
 })
 export class FavoritesService {
-  private apiUrl = `${environment.apiUrl}/api/v1/favorites`;
+  private apiUrl = `${environment.apiUrl}/favorites`;
   private favoritesSubject = new BehaviorSubject<FavoriteItem[]>([]);
   public favorites$ = this.favoritesSubject.asObservable();
 
