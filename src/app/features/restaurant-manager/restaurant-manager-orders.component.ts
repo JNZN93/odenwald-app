@@ -103,7 +103,7 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
               <tr>
                 <th class="col-order-id">{{ 'orders.order' | translate }}</th>
                 <th class="col-customer">{{ 'orders.customer' | translate }}</th>
-                <th class="col-delivery-time">Lieferzeit</th>
+                <th class="col-delivery-time">{{ 'orders.time' | translate }}</th>
                 <th class="col-order-status">{{ 'orders.order_status' | translate }}</th>
                 <th class="col-payment-status">{{ 'orders.payment' | translate }}</th>
                 <th class="col-total">{{ 'orders.total' | translate }}</th>
@@ -129,11 +129,13 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                   <div class="customer-email">{{ order.customer_email }}</div>
                 </td>
                 <td class="col-delivery-time">
-                  <div class="delivery-time-cell" *ngIf="order.delivery_slot_type">
-                    <i class="fa-solid" [class.fa-bolt]="order.delivery_slot_type === 'asap'" [class.fa-clock]="order.delivery_slot_type === 'scheduled'"></i>
-                    <span class="delivery-time-text">{{ formatDeliveryTime(order) }}</span>
+                  <div class="delivery-time-cell" *ngIf="order.delivery_slot_type || order.pickup_slot_type">
+                    <i class="fa-solid" 
+                       [class.fa-bolt]="(order.delivery_slot_type === 'asap') || (order.pickup_slot_type === 'asap')" 
+                       [class.fa-clock]="(order.delivery_slot_type === 'scheduled') || (order.pickup_slot_type === 'scheduled')"></i>
+                    <span class="delivery-time-text">{{ formatOrderSlotTime(order) }}</span>
                   </div>
-                  <div class="no-delivery-time" *ngIf="!order.delivery_slot_type">
+                  <div class="no-delivery-time" *ngIf="!order.delivery_slot_type && !order.pickup_slot_type">
                     <span class="no-delivery-text">-</span>
                   </div>
                 </td>
@@ -306,9 +308,11 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
               <div class="order-info">
                 <div class="order-number">#{{ order.id.slice(-6) }}</div>
                 <div class="order-time">{{ formatOrderTime(order.created_at) }}</div>
-                <div class="delivery-time" *ngIf="order.delivery_slot_type">
-                  <i class="fa-solid" [class.fa-bolt]="order.delivery_slot_type === 'asap'" [class.fa-clock]="order.delivery_slot_type === 'scheduled'"></i>
-                  {{ formatDeliveryTime(order) }}
+                <div class="delivery-time" *ngIf="order.delivery_slot_type || order.pickup_slot_type">
+                  <i class="fa-solid" 
+                     [class.fa-bolt]="(order.delivery_slot_type === 'asap') || (order.pickup_slot_type === 'asap')" 
+                     [class.fa-clock]="(order.delivery_slot_type === 'scheduled') || (order.pickup_slot_type === 'scheduled')"></i>
+                  {{ formatOrderSlotTime(order) }}
                 </div>
               </div>
               <div class="order-status">
@@ -550,11 +554,13 @@ type CanonicalStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked
                   <label>{{ 'orders.ordered_at' | translate }}</label>
                   <span>{{ formatOrderTime(selectedOrder.created_at) }}</span>
                 </div>
-                <div class="summary-item" *ngIf="selectedOrder.delivery_slot_type">
-                  <label>Lieferzeit:</label>
+                <div class="summary-item" *ngIf="selectedOrder.delivery_slot_type || selectedOrder.pickup_slot_type">
+                  <label>{{ selectedOrder.order_type === 'pickup' ? 'Abholzeit:' : 'Lieferzeit:' }}</label>
                   <span>
-                    <i class="fa-solid" [class.fa-bolt]="selectedOrder.delivery_slot_type === 'asap'" [class.fa-clock]="selectedOrder.delivery_slot_type === 'scheduled'"></i>
-                    {{ formatDeliveryTime(selectedOrder) }}
+                    <i class="fa-solid" 
+                       [class.fa-bolt]="(selectedOrder.delivery_slot_type === 'asap') || (selectedOrder.pickup_slot_type === 'asap')" 
+                       [class.fa-clock]="(selectedOrder.delivery_slot_type === 'scheduled') || (selectedOrder.pickup_slot_type === 'scheduled')"></i>
+                    {{ formatOrderSlotTime(selectedOrder) }}
                   </span>
                 </div>
               </div>
@@ -3139,37 +3145,72 @@ export class RestaurantManagerOrdersComponent implements OnInit, OnDestroy {
     }
   }
 
+  formatOrderSlotTime(order: Order): string {
+    // Check for pickup orders first
+    if (order.order_type === 'pickup' && order.pickup_slot_type) {
+      if (order.pickup_slot_type === 'asap') {
+        return 'Sofort abholen';
+      }
+      
+      if (order.pickup_slot_type === 'scheduled' && order.scheduled_pickup_time) {
+        const scheduledDate = new Date(order.scheduled_pickup_time);
+        
+        if (isNaN(scheduledDate.getTime())) {
+          return 'Ungültige Abholzeit';
+        }
+
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+        const scheduledDay = new Date(scheduledDate.getFullYear(), scheduledDate.getMonth(), scheduledDate.getDate());
+        
+        if (scheduledDay.getTime() === today.getTime()) {
+          return `Heute um ${scheduledDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
+        } else if (scheduledDay.getTime() === tomorrow.getTime()) {
+          return `Morgen um ${scheduledDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
+        } else {
+          return `${scheduledDate.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })} um ${scheduledDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
+        }
+      }
+      
+      return 'Abholzeit unbekannt';
+    }
+    
+    // Check for delivery orders
+    if (order.delivery_slot_type) {
+      if (order.delivery_slot_type === 'asap') {
+        return 'Sofort liefern';
+      }
+
+      if (order.delivery_slot_type === 'scheduled' && order.scheduled_delivery_time) {
+        const scheduledDate = new Date(order.scheduled_delivery_time);
+        
+        if (isNaN(scheduledDate.getTime())) {
+          return 'Ungültige Lieferzeit';
+        }
+
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+        const scheduledDay = new Date(scheduledDate.getFullYear(), scheduledDate.getMonth(), scheduledDate.getDate());
+        
+        if (scheduledDay.getTime() === today.getTime()) {
+          return `Heute um ${scheduledDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
+        } else if (scheduledDay.getTime() === tomorrow.getTime()) {
+          return `Morgen um ${scheduledDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
+        } else {
+          return `${scheduledDate.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })} um ${scheduledDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
+        }
+      }
+
+      return 'Lieferzeit unbekannt';
+    }
+
+    return '';
+  }
+
   formatDeliveryTime(order: Order): string {
-    if (!order.delivery_slot_type) {
-      return '';
-    }
-
-    if (order.delivery_slot_type === 'asap') {
-      return 'Sofort liefern';
-    }
-
-    if (order.delivery_slot_type === 'scheduled' && order.scheduled_delivery_time) {
-      const scheduledDate = new Date(order.scheduled_delivery_time);
-      
-      if (isNaN(scheduledDate.getTime())) {
-        return 'Ungültige Lieferzeit';
-      }
-
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-      const scheduledDay = new Date(scheduledDate.getFullYear(), scheduledDate.getMonth(), scheduledDate.getDate());
-      
-      if (scheduledDay.getTime() === today.getTime()) {
-        return `Heute um ${scheduledDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
-      } else if (scheduledDay.getTime() === tomorrow.getTime()) {
-        return `Morgen um ${scheduledDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
-      } else {
-        return `${scheduledDate.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })} um ${scheduledDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
-      }
-    }
-
-    return 'Lieferzeit unbekannt';
+    return this.formatOrderSlotTime(order);
   }
 
   getOrderStatusClass(status: Order['status'] | 'open' | 'in_progress' | 'out_for_delivery'): string {

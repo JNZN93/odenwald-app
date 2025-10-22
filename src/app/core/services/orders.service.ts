@@ -69,6 +69,11 @@ export interface Order {
   scheduled_delivery_time?: string;
   estimated_delivery_time?: string;
   actual_delivery_time?: string;
+  // Pickup slot fields
+  pickup_slot_type?: 'asap' | 'scheduled';
+  scheduled_pickup_time?: string;
+  estimated_pickup_time?: string;
+  actual_pickup_time?: string;
 }
 
 export interface OrderWithItems {

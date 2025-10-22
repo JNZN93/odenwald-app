@@ -14,6 +14,7 @@ import { ConfirmationService } from '../../core/services/confirmation.service';
 import { MenuItemVariantsModalComponent } from '../restaurants/menu-item-variants-modal.component';
 import { DeliverySlotsComponent } from '../../shared/components/delivery-slots.component';
 import { DeliverySlotsService, DeliverySlot } from '../../core/services/delivery-slots.service';
+import { PickupSlotsComponent, PickupSlot } from '../../shared/components/pickup-slots.component';
 import { Observable, map } from 'rxjs';
 
 interface DeliveryAddress {
@@ -66,7 +67,7 @@ interface MenuItemVariantOption {
 @Component({
   selector: 'app-checkout',
   standalone: true,
-  imports: [CommonModule, FormsModule, MenuItemVariantsModalComponent, DeliverySlotsComponent],
+  imports: [CommonModule, FormsModule, MenuItemVariantsModalComponent, DeliverySlotsComponent, PickupSlotsComponent],
   animations: [
     trigger('fadeInOut', [
       state('in', style({ opacity: 1, transform: 'translateY(0)' })),
@@ -264,6 +265,17 @@ interface MenuItemVariantOption {
               [restaurantId]="getCurrentRestaurantId()"
               (slotSelected)="onDeliverySlotSelected($event)"
             ></app-delivery-slots>
+          </div>
+
+          <!-- Pickup Time Slots (only shown for pickup orders) -->
+          <div class="pickup-slots-section" *ngIf="orderType === 'pickup' && getCurrentRestaurantId()">
+            <h2>Abholzeit wählen</h2>
+            <p>Wählen Sie wann Sie Ihre Bestellung abholen möchten</p>
+            
+            <app-pickup-slots
+              [restaurantId]="getCurrentRestaurantId()"
+              (slotSelected)="onPickupSlotSelected($event)"
+            ></app-pickup-slots>
           </div>
 
           <!-- Delivery Address (only shown for delivery orders) -->
@@ -598,7 +610,7 @@ interface MenuItemVariantOption {
             </button>
 
             <div class="order-info">
-              <p><i class="fa-solid fa-clock"></i> Geschätzte {{ orderType === 'pickup' ? 'Abholzeit' : 'Lieferzeit' }}: {{ orderType === 'pickup' ? '15-30 Min' : '30-45 Min' }}</p>
+              <p><i class="fa-solid fa-clock"></i> {{ getEstimatedTimeLabel() }}</p>
               <p><i class="fa-solid fa-shield-alt"></i> Ihre Daten sind sicher</p>
             </div>
           </div>
@@ -691,14 +703,14 @@ interface MenuItemVariantOption {
       padding: var(--space-6);
     }
 
-    .delivery-slots-section {
+    .delivery-slots-section, .pickup-slots-section {
       background: var(--color-surface);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-2xl);
       padding: var(--space-6);
     }
 
-    .cart-section h2, .order-type-section h2, .delivery-section h2, .payment-section h2, .customer-info-section h2, .delivery-slots-section h2 {
+    .cart-section h2, .order-type-section h2, .delivery-section h2, .payment-section h2, .customer-info-section h2, .delivery-slots-section h2, .pickup-slots-section h2 {
       font-size: var(--text-2xl);
       font-weight: 600;
       color: var(--color-heading);
@@ -707,7 +719,7 @@ interface MenuItemVariantOption {
       border-bottom: 2px solid var(--color-primary);
     }
 
-    .delivery-slots-section p {
+    .delivery-slots-section p, .pickup-slots-section p {
       color: var(--color-muted);
       font-size: var(--text-sm);
       margin-bottom: var(--space-4);
@@ -2443,6 +2455,9 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
   // Delivery slots properties
   selectedDeliverySlot: DeliverySlot | null = null;
 
+  // Pickup slots properties
+  selectedPickupSlot: PickupSlot | null = null;
+
   ngOnInit() {
     // Lade gespeicherte Benutzerdaten beim Initialisieren
     this.loadSavedUserData();
@@ -3014,6 +3029,39 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
   }
 
   /**
+   * Handle pickup slot selection
+   */
+  onPickupSlotSelected(slot: PickupSlot): void {
+    this.selectedPickupSlot = slot;
+    console.log('Pickup slot selected:', slot);
+  }
+
+  /**
+   * Get estimated time label based on order type and selected slot
+   */
+  getEstimatedTimeLabel(): string {
+    if (this.orderType === 'pickup') {
+      if (this.selectedPickupSlot) {
+        if (this.selectedPickupSlot.type === 'asap') {
+          return 'Geschätzte Abholzeit: 15-30 Min';
+        } else {
+          return `Geplante Abholung: ${this.selectedPickupSlot.label}`;
+        }
+      }
+      return 'Geschätzte Abholzeit: 15-30 Min';
+    } else {
+      if (this.selectedDeliverySlot) {
+        if (this.selectedDeliverySlot.type === 'asap') {
+          return 'Geschätzte Lieferzeit: 30-45 Min';
+        } else {
+          return `Geplante Lieferung: ${this.selectedDeliverySlot.label}`;
+        }
+      }
+      return 'Geschätzte Lieferzeit: 30-45 Min';
+    }
+  }
+
+  /**
    * Erweiterte isFormValid-Methode für Adressauswahl
    */
   isFormValid(): boolean {
@@ -3111,13 +3159,18 @@ export class CheckoutComponent implements OnInit, AfterViewInit {
 
     console.log('Creating order with orderType:', this.orderType);
     
-    // Prepare delivery slot data
-    const deliverySlotData = this.selectedDeliverySlot ? {
-      type: this.selectedDeliverySlot.type,
-      scheduled_delivery_time: this.selectedDeliverySlot.type === 'scheduled' ? this.selectedDeliverySlot.value : undefined
-    } : undefined;
+    // Prepare delivery/pickup slot data
+    const slotData = this.orderType === 'delivery' ? 
+      (this.selectedDeliverySlot ? {
+        type: this.selectedDeliverySlot.type,
+        scheduled_delivery_time: this.selectedDeliverySlot.type === 'scheduled' ? this.selectedDeliverySlot.value : undefined
+      } : undefined) :
+      (this.selectedPickupSlot ? {
+        type: this.selectedPickupSlot.type,
+        scheduled_pickup_time: this.selectedPickupSlot.type === 'scheduled' ? this.selectedPickupSlot.value : undefined
+      } : undefined);
     
-    this.cartService.createOrder(fullAddress, '', this.selectedPaymentMethod, customerInfo, this.useLoyaltyReward, this.orderNotes, this.orderType, deliverySlotData)
+    this.cartService.createOrder(fullAddress, '', this.selectedPaymentMethod, customerInfo, this.useLoyaltyReward, this.orderNotes, this.orderType, slotData)
       .subscribe({
         next: (response) => {
           console.log('Order placed successfully:', response);
