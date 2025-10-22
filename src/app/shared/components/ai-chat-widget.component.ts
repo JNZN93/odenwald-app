@@ -854,8 +854,27 @@ export class AIChatWidgetComponent implements OnInit {
         break;
 
       case 'support_escalation':
-        // Backend sendet die komplette Nachricht - einfach anzeigen
-        this.addMessage('ai', response.text || 'Ihr Anliegen wurde an unseren Support weitergeleitet.');
+        // Neue Behandlung: Zeige Hinweis auf "Probleme melden" statt automatische Escalation
+        if ((response as any).action === 'redirect_to_report') {
+          let message = response.message || 'Um eine Reklamation einzureichen, gehen Sie bitte zu Ihren Bestellungen.';
+          
+          // Füge zusätzliche Informationen hinzu, falls verfügbar
+          if ((response as any).helpText) {
+            message += '\n\n' + (response as any).helpText;
+          }
+          
+          this.addMessage('ai', message);
+          
+          // Zeige zusätzliche Aktionen als Buttons oder Links
+          if ((response as any).suggestedActions && (response as any).suggestedActions.length > 0) {
+            setTimeout(() => {
+              this.showSuggestedActions((response as any).suggestedActions);
+            }, 1000);
+          }
+        } else {
+          // Fallback für alte Antworten
+          this.addMessage('ai', response.text || 'Ihr Anliegen wurde an unseren Support weitergeleitet.');
+        }
         break;
 
       case 'smalltalk':
@@ -863,7 +882,38 @@ export class AIChatWidgetComponent implements OnInit {
         break;
 
       default:
-        this.addMessage('ai', response.text || 'Das habe ich nicht verstanden. Versuchen Sie Fragen wie "Was kann ich für 15€ bestellen?", "Wo ist meine Bestellung?" oder "Zeig mir italienische Restaurants".');
+        // Prüfe auf action-basierte Antworten (z.B. von Smart Support)
+        if ((response as any).action === 'redirect_to_report') {
+          let message = response.message || 'Um eine Reklamation einzureichen, gehen Sie bitte zu Ihren Bestellungen.';
+          
+          if ((response as any).helpText) {
+            message += '\n\n' + (response as any).helpText;
+          }
+          
+          this.addMessage('ai', message);
+          
+          if ((response as any).suggestedActions && (response as any).suggestedActions.length > 0) {
+            setTimeout(() => {
+              this.showSuggestedActions((response as any).suggestedActions);
+            }, 1000);
+          }
+        } else if ((response as any).action === 'ai_with_redirect') {
+          let message = response.message || 'Ich kann Ihnen dabei helfen.';
+          
+          if ((response as any).redirectOption && (response as any).redirectOption.available) {
+            message += '\n\n' + (response as any).redirectOption.message;
+          }
+          
+          this.addMessage('ai', message);
+          
+          if ((response as any).suggestedActions && (response as any).suggestedActions.length > 0) {
+            setTimeout(() => {
+              this.showSuggestedActions((response as any).suggestedActions);
+            }, 1000);
+          }
+        } else {
+          this.addMessage('ai', response.text || 'Das habe ich nicht verstanden. Versuchen Sie Fragen wie "Was kann ich für 15€ bestellen?", "Wo ist meine Bestellung?" oder "Zeig mir italienische Restaurants".');
+        }
     }
   }
 
@@ -927,6 +977,17 @@ export class AIChatWidgetComponent implements OnInit {
         container.scrollTop = container.scrollHeight;
       }
     }, 100);
+  }
+
+  private showSuggestedActions(actions: string[]) {
+    // Füge eine Nachricht mit vorgeschlagenen Aktionen hinzu
+    let actionMessage = '\n\n**Vorgeschlagene Aktionen:**\n';
+    actions.forEach((action, index) => {
+      actionMessage += `${index + 1}. ${action}\n`;
+    });
+    
+    // Füge die Aktionen als separate Nachricht hinzu
+    this.addMessage('ai', actionMessage);
   }
 
   setMessage(message: string) {

@@ -156,6 +156,16 @@ export interface ChatResponse {
   totalFound?: number; // Neue Eigenschaft für Gesamtanzahl
   restaurantName?: string; // Neue Eigenschaft für Restaurant-Name
   drinkType?: string; // Neue Eigenschaft für Getränke-Typ
+  // Neue Eigenschaften für Redirect-basierte Antworten
+  action?: 'redirect_to_report' | 'ai_with_redirect' | 'escalated' | 'ai_response';
+  helpText?: string;
+  suggestedActions?: string[];
+  redirectAction?: string;
+  redirectOption?: {
+    available: boolean;
+    message: string;
+    buttonText: string;
+  };
   debug?: {
     restaurantStats?: any;
     searchParams?: any;

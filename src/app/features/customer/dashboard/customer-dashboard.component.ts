@@ -9,16 +9,13 @@ import { ImageFallbackDirective } from '../../../core/image-fallback.directive';
 import { PasswordChangeComponent } from '../../../shared/components/password-change.component';
 import { LoyaltyCardsComponent } from '../../../shared/components/loyalty-cards.component';
 import { FavoritesSectionComponent } from '../../../shared/components/favorites-section.component';
-import { ChatListComponent } from '../../../shared/components/chat-list.component';
-import { ChatComponent } from '../../../shared/components/chat.component';
 import { FavoritesService } from '../../../core/services/favorites.service';
-import { ChatService } from '../../../core/services/chat.service';
 import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
 
 @Component({
   selector: 'app-customer-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, ImageFallbackDirective, PasswordChangeComponent, LoyaltyCardsComponent, FavoritesSectionComponent, ChatListComponent, ChatComponent],
+  imports: [CommonModule, FormsModule, ImageFallbackDirective, PasswordChangeComponent, LoyaltyCardsComponent, FavoritesSectionComponent],
   template: `
     <div class="customer-dashboard">
       <div class="dashboard-header">
@@ -155,7 +152,8 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
           ></app-favorites-section>
         </div>
 
-        <!-- Chat Support Section -->
+        <!-- Chat Support Section - TEMPORARILY DISABLED -->
+        <!--
         <div class="dashboard-section">
           <div class="section-header">
             <h2>
@@ -189,6 +187,7 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
             ></app-chat>
           </div>
         </div>
+        -->
 
         <!-- Account Settings -->
         <div class="dashboard-section">
@@ -544,21 +543,6 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
 
     .view-all-btn:hover {
       color: var(--color-primary-700);
-    }
-
-    .toggle-chat-btn {
-      background: var(--color-primary);
-      border: none;
-      color: white;
-      padding: var(--space-2);
-      border-radius: var(--radius-md);
-      cursor: pointer;
-      transition: all var(--transition);
-      flex-shrink: 0;
-    }
-
-    .toggle-chat-btn:hover {
-      background: var(--color-primary-700);
     }
 
     .orders-list {
@@ -1129,20 +1113,6 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
       transform: translateY(-1px);
     }
 
-    /* AI Chat Section Styles */
-    .dashboard-section .section-header h2 {
-      font-size: var(--text-xl);
-      font-weight: 600;
-      color: var(--color-heading);
-      margin: 0;
-    }
-
-    .dashboard-section .section-header p {
-      color: var(--color-muted);
-      font-size: var(--text-sm);
-      margin: var(--space-1) 0 0 0;
-    }
-
     /* Responsive */
     @media (max-width: 768px) {
       .customer-dashboard {
@@ -1199,46 +1169,6 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
         gap: var(--space-2);
       }
     }
-
-    /* Chat Support Styles */
-    .chat-container {
-      text-align: center;
-      padding: var(--space-6) 0;
-    }
-
-    .btn-start-chat {
-      background: var(--gradient-primary);
-      color: white;
-      border: none;
-      padding: var(--space-3) var(--space-6);
-      border-radius: var(--radius-lg);
-      cursor: pointer;
-      font-weight: 600;
-      font-size: var(--text-base);
-      transition: all var(--transition);
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-      margin: 0 auto;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    .btn-start-chat:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-
-    .btn-start-chat i {
-      font-size: var(--text-lg);
-    }
-
-    /* Responsive adjustments for chat */
-    @media (max-width: 768px) {
-      .btn-start-chat {
-        padding: var(--space-2) var(--space-4);
-        font-size: var(--text-sm);
-      }
-    }
   `]
 })
 export class CustomerDashboardComponent implements OnInit {
@@ -1247,7 +1177,6 @@ export class CustomerDashboardComponent implements OnInit {
   private cartService = inject(CartService);
   private router = inject(Router);
   private favoritesService = inject(FavoritesService);
-  private chatService = inject(ChatService);
 
   user$ = this.authService.currentUser$;
   recentOrders$: Observable<Order[]> = of([]);
@@ -1264,12 +1193,6 @@ export class CustomerDashboardComponent implements OnInit {
   reviewText = '';
   orderNotes = '';
   orderSpecialRequests = '';
-
-  // Chat properties
-  showChatList = false;
-  showChat = false;
-  selectedChatRoom: any = null;
-  isChatExpanded = true;
 
   // Mock featured restaurants - using real restaurant IDs from backend
   featuredRestaurants = [
@@ -1558,7 +1481,7 @@ export class CustomerDashboardComponent implements OnInit {
     this.closePasswordChangeModal();
   }
 
-  // Favorites and Chat Methods
+  // Favorites Methods
   onFavoriteSelected(favorite: any) {
     // Navigate to restaurant or show favorite details
     console.log('Favorite selected:', favorite);
@@ -1585,27 +1508,5 @@ export class CustomerDashboardComponent implements OnInit {
         console.error('Error removing favorite:', error);
       }
     });
-  }
-
-  onChatRoomSelected(chatRoom: any) {
-    this.selectedChatRoom = chatRoom;
-    this.showChatList = false;
-    this.showChat = true;
-  }
-
-  onNewChatRequested() {
-    // Show restaurant selection for new chat
-    console.log('New chat requested');
-    // Implement restaurant selection modal
-  }
-
-  onChatClosed() {
-    this.showChat = false;
-    this.selectedChatRoom = null;
-    this.showChatList = true;
-  }
-
-  toggleChatSupport() {
-    this.isChatExpanded = !this.isChatExpanded;
   }
 }
