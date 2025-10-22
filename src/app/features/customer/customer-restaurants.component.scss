@@ -593,7 +593,7 @@
   z-index: 2;
   max-width: 800px;
   margin: 0 auto;
-  padding: 0 var(--space-6);
+  padding: var(--space-8) var(--space-6);
 }
 
 .hero-title {
@@ -1479,7 +1479,7 @@
   }
 
   .hero-content {
-    padding: 0 var(--space-3);
+    padding: var(--space-6) var(--space-3);
   }
 
   .hero-title {
@@ -1585,7 +1585,7 @@
   }
 
   .hero-content {
-    padding: 0 var(--space-2);
+    padding: var(--space-4) var(--space-2);
   }
 
   .hero-title {
