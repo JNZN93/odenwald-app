@@ -50,20 +50,15 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
         </div>
       </div>
 
-      <!-- Date and Time Selection for Scheduled Delivery -->
+      <!-- Time Selection for Scheduled Delivery -->
       <div class="scheduled-selection" *ngIf="selectedOption === 'scheduled'">
         <div class="date-time-inputs">
           <div class="input-group">
             <label for="delivery-date">Datum:</label>
-            <input
-              type="date"
-              id="delivery-date"
-              [(ngModel)]="selectedDate"
-              (ngModelChange)="onDateChange()"
-              [min]="minDate"
-              [max]="maxDate"
-              class="date-input"
-            >
+            <div class="date-display">
+              <i class="fa-solid fa-calendar"></i>
+              <span>{{ getCurrentDateLabel() }}</span>
+            </div>
           </div>
           <div class="input-group">
             <label for="delivery-time">Uhrzeit:</label>
@@ -242,6 +237,23 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
       box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-primary) 15%, transparent);
     }
 
+    .date-display {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+      background: color-mix(in oklab, var(--color-primary) 5%, white);
+      color: var(--color-primary);
+      font-weight: 500;
+    }
+
+    .date-display i {
+      color: var(--color-primary);
+    }
+
     .time-note {
       display: flex;
       align-items: center;
@@ -345,7 +357,7 @@ export class DeliverySlotsComponent implements OnInit, OnDestroy {
   constructor(private deliverySlotsService: DeliverySlotsService) {}
 
   ngOnInit() {
-    // Set default values
+    // Set default values - always use current date
     this.selectedDate = this.minDate;
     this.selectedTime = this.getDefaultTime();
   }
@@ -362,16 +374,35 @@ export class DeliverySlotsComponent implements OnInit, OnDestroy {
 
   clearSelection() {
     this.selectedOption = null;
-    this.selectedDate = this.minDate;
+    this.selectedDate = this.minDate; // Always reset to current date
     this.selectedTime = this.getDefaultTime();
-  }
-
-  onDateChange() {
-    this.emitSelectedSlot();
   }
 
   onTimeChange() {
     this.emitSelectedSlot();
+  }
+
+  getCurrentDateLabel(): string {
+    const today = new Date();
+    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+    
+    // Check if selected date is today or tomorrow
+    const selectedDateObj = new Date(this.selectedDate!);
+    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const tomorrowDate = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate());
+    const selectedDateOnly = new Date(selectedDateObj.getFullYear(), selectedDateObj.getMonth(), selectedDateObj.getDate());
+    
+    if (selectedDateOnly.getTime() === todayDate.getTime()) {
+      return 'Heute';
+    } else if (selectedDateOnly.getTime() === tomorrowDate.getTime()) {
+      return 'Morgen';
+    } else {
+      return selectedDateObj.toLocaleDateString('de-DE', { 
+        weekday: 'short', 
+        day: '2-digit', 
+        month: '2-digit' 
+      });
+    }
   }
 
   private emitSelectedSlot() {
@@ -387,10 +418,10 @@ export class DeliverySlotsComponent implements OnInit, OnDestroy {
         available: true
       };
     } else {
-      // Validate scheduled time
-      if (!this.selectedDate || !this.selectedTime) return;
+      // Validate scheduled time - always use current date
+      if (!this.selectedTime) return;
 
-      const scheduledDateTime = new Date(`${this.selectedDate}T${this.selectedTime}`);
+      const scheduledDateTime = new Date(`${this.minDate}T${this.selectedTime}`);
       const now = new Date();
       const minTime = new Date(now.getTime() + 30 * 60 * 1000); // 30 minutes from now
 
@@ -417,8 +448,8 @@ export class DeliverySlotsComponent implements OnInit, OnDestroy {
     if (this.selectedOption === 'asap') {
       return 'Sofort liefern';
     } else {
-      if (!this.selectedDate || !this.selectedTime) return '';
-      const scheduledDateTime = new Date(`${this.selectedDate}T${this.selectedTime}`);
+      if (!this.selectedTime) return '';
+      const scheduledDateTime = new Date(`${this.minDate}T${this.selectedTime}`);
       return this.formatScheduledLabel(scheduledDateTime);
     }
   }
