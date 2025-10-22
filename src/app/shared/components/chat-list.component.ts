@@ -204,9 +204,7 @@ import { Subject, takeUntil } from 'rxjs';
     }
 
     .empty-state i {
-      font-size: 4rem;
       color: var(--color-border);
-      margin-bottom: var(--space-4);
     }
 
     .empty-state h4 {
@@ -221,24 +219,28 @@ import { Subject, takeUntil } from 'rxjs';
     }
 
     .btn-start-chat {
-      background: var(--color-primary);
+      background: var(--gradient-primary);
       color: white;
       border: none;
-      padding: var(--space-1) var(--space-2);
-      border-radius: var(--radius-sm);
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-md);
       cursor: pointer;
-      font-weight: 400;
-      font-size: var(--text-xs);
+      font-weight: 600;
+      font-size: var(--text-sm);
       transition: all var(--transition);
-      display: flex;
+      display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: var(--space-1);
       margin: 0 auto;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      max-width: 200px;
     }
 
     .btn-start-chat:hover {
       background: var(--color-primary-700);
       transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     }
 
     .chat-rooms-list {
