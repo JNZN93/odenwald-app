@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, ViewChild, ElementRef, HostListener, OnDestroy } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AIService, ChatResponse, BudgetMenuItem } from '../../core/services/ai.service';
@@ -31,7 +31,7 @@ interface ChatMessage {
     </div>
 
     <!-- Chat Widget Window -->
-    <div class="chat-widget-window" [class.open]="isOpen" [class.minimized]="isMinimized" [style.height.px]="chatWindowHeight">
+    <div class="chat-widget-window" [class.open]="isOpen" [class.minimized]="isMinimized">
       <!-- Header -->
       <div class="chat-header">
         <div class="chat-title">
@@ -224,6 +224,7 @@ interface ChatMessage {
       bottom: 90px;
       right: 20px;
       width: 380px;
+      height: 600px;
       background: white;
       border-radius: 12px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
@@ -244,7 +245,7 @@ interface ChatMessage {
     }
 
     .chat-widget-window.minimized {
-      height: 60px !important;
+      height: 60px;
     }
 
     /* Header */
@@ -520,23 +521,13 @@ interface ChatMessage {
       transform: translateY(-1px);
     }
 
-    /* Mobile Keyboard Handling */
-    @supports (height: 100dvh) {
-      .chat-widget-window {
-        /* Use dynamic viewport height on supported browsers */
-        max-height: calc(100dvh - 140px);
-      }
-    }
-
     /* Responsive */
     @media (max-width: 480px) {
       .chat-widget-window {
         width: calc(100vw - 40px);
-        max-height: calc(100vh - 140px);
+        height: calc(100vh - 140px);
         bottom: 80px;
         right: 20px;
-        /* Ensure smooth transitions */
-        transition: height 0.2s ease, transform 0.3s ease, opacity 0.3s ease;
       }
 
       .chat-widget-button {
@@ -547,55 +538,14 @@ interface ChatMessage {
       .menu-items-grid {
         grid-template-columns: 1fr;
       }
-
-      /* Mobile input focus handling */
-      .chat-input-container {
-        position: relative;
-        z-index: 10;
-      }
-
-      .input-group input {
-        font-size: 16px; /* Prevent zoom on iOS */
-      }
-    }
-
-    /* iOS Safari specific fixes */
-    @media screen and (-webkit-min-device-pixel-ratio: 2) {
-      .chat-widget-window {
-        /* Prevent layout shifts on iOS */
-        -webkit-transform: translateZ(0);
-        transform: translateZ(0);
-      }
-    }
-
-    /* Additional mobile optimizations */
-    @media (max-width: 768px) {
-      .chat-widget-window {
-        /* Smooth transitions for mobile */
-        transition: height 0.2s ease, bottom 0.2s ease, transform 0.3s ease, opacity 0.3s ease;
-        /* Prevent text selection issues */
-        -webkit-user-select: none;
-        user-select: none;
-        /* Better touch handling */
-        touch-action: manipulation;
-      }
-      
-      .chat-widget-window.open {
-        /* Ensure proper positioning when open */
-        position: fixed;
-      }
     }
   `]
 })
-export class AIChatWidgetComponent implements OnInit, OnDestroy {
+export class AIChatWidgetComponent implements OnInit {
   private aiService = inject(AIService);
   private authService = inject(AuthService);
   private toastService = inject(ToastService);
   private router = inject(Router);
-
-  // Mobile keyboard handling
-  chatWindowHeight = 600;
-  private visualViewportListener?: () => void;
 
   messages: ChatMessage[] = [];
   currentMessage = '';
@@ -611,84 +561,6 @@ export class AIChatWidgetComponent implements OnInit, OnDestroy {
         this.hasNewMessage = true;
       }
     }, 3000);
-    
-    this.setupMobileKeyboardHandling();
-  }
-
-  ngOnDestroy() {
-    this.cleanupMobileKeyboardHandling();
-  }
-
-  private setupMobileKeyboardHandling() {
-    // Use visualViewport API for modern browsers
-    if (window.visualViewport) {
-      this.visualViewportListener = () => {
-        this.updateChatWindowHeight();
-      };
-      
-      window.visualViewport.addEventListener('resize', this.visualViewportListener);
-      this.updateChatWindowHeight();
-    } else {
-      // Fallback for older browsers
-      window.addEventListener('resize', () => {
-        this.updateChatWindowHeight();
-      });
-    }
-  }
-
-  private cleanupMobileKeyboardHandling() {
-    if (window.visualViewport && this.visualViewportListener) {
-      window.visualViewport.removeEventListener('resize', this.visualViewportListener);
-    }
-  }
-
-  private updateChatWindowHeight() {
-    if (window.visualViewport) {
-      // Use visualViewport height (excludes keyboard)
-      const viewportHeight = window.visualViewport.height;
-      const isMobile = window.innerWidth <= 768;
-      
-      if (isMobile) {
-        // On mobile, adjust height based on viewport
-        this.chatWindowHeight = Math.min(viewportHeight - 100, 600);
-        
-        // Adjust bottom position when keyboard is open
-        const chatWindow = document.querySelector('.chat-widget-window') as HTMLElement;
-        if (chatWindow) {
-          if (viewportHeight < window.innerHeight * 0.7) {
-            // Keyboard is likely open, move chat window up
-            chatWindow.style.bottom = '20px';
-            chatWindow.style.top = 'auto';
-          } else {
-            // Keyboard is closed, restore normal position
-            chatWindow.style.bottom = '90px';
-            chatWindow.style.top = 'auto';
-          }
-        }
-      } else {
-        // Desktop: use fixed height
-        this.chatWindowHeight = 600;
-      }
-    } else {
-      // Fallback: use window height
-      const isMobile = window.innerWidth <= 768;
-      if (isMobile) {
-        this.chatWindowHeight = Math.min(window.innerHeight - 100, 600);
-      } else {
-        this.chatWindowHeight = 600;
-      }
-    }
-  }
-
-  @HostListener('focusin', ['$event'])
-  onFocusIn(event: FocusEvent) {
-    const target = event.target as HTMLElement;
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-      // Scroll input into view when keyboard appears
-      setTimeout(() => {
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 300);
-    }
   }
 
   toggleChat() {
