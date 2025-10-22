@@ -5,7 +5,7 @@ import { Directive, ElementRef, Input, OnInit } from '@angular/core';
   standalone: true
 })
 export class ImageFallbackDirective implements OnInit {
-  @Input() fallbackSrc: string = '/assets/images/placeholder-food.jpg';
+  @Input() fallbackSrc: string = '/assets/images/food-placeholder.jpg';
 
   constructor(private el: ElementRef<HTMLImageElement>) {}
 

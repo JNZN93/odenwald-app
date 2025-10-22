@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { OrdersService, Order } from '../../../core/services/orders.service';
 import { CartService } from '../../../core/services/supplier.service';
+import { ToastService } from '../../../core/services/toast.service';
 import { ImageFallbackDirective } from '../../../core/image-fallback.directive';
 import { PasswordChangeComponent } from '../../../shared/components/password-change.component';
 import { LoyaltyCardsComponent } from '../../../shared/components/loyalty-cards.component';
@@ -1175,6 +1176,7 @@ export class CustomerDashboardComponent implements OnInit {
   private authService = inject(AuthService);
   private ordersService = inject(OrdersService);
   private cartService = inject(CartService);
+  private toastService = inject(ToastService);
   private router = inject(Router);
   private favoritesService = inject(FavoritesService);
 
@@ -1491,9 +1493,39 @@ export class CustomerDashboardComponent implements OnInit {
   }
 
   onAddToCartClicked(favorite: any) {
-    // Add favorite item to cart
-    console.log('Add to cart clicked:', favorite);
-    // Implement cart functionality here
+    // Check if all favorites are from the same restaurant
+    const currentCart = this.cartService.getCurrentCart();
+    
+    if (currentCart && currentCart.restaurant_id !== favorite.restaurant_id) {
+      // Show error message if trying to add from different restaurant
+      this.toastService.error(
+        'Restaurant-Konflikt',
+        'Sie können nur Produkte vom gleichen Restaurant in den Warenkorb legen. Bitte leeren Sie zuerst Ihren Warenkorb oder bestellen Sie nur von ' + currentCart.restaurant_name + '.',
+        5000
+      );
+      return;
+    }
+
+    // Create restaurant object for cart service
+    const restaurant = {
+      id: favorite.restaurant_id,
+      name: favorite.restaurant_name,
+      delivery_info: {
+        delivery_fee: 0, // Default delivery fee, should be fetched from restaurant data
+        minimum_order_amount: 0 // Default minimum order, should be fetched from restaurant data
+      }
+    };
+
+    // Create menu item object for cart service
+    const menuItem = {
+      id: favorite.menu_item_id,
+      name: favorite.menu_item_name,
+      price_cents: favorite.menu_item_price_cents,
+      image_url: favorite.menu_item_image_url
+    };
+
+    // Add to cart using the cart service
+    this.cartService.addToCart(menuItem, restaurant);
   }
 
   onRemoveFavoriteClicked(favorite: any) {
