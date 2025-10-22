@@ -853,6 +853,11 @@ export class AIChatWidgetComponent implements OnInit {
         }
         break;
 
+      case 'support_escalation':
+        // Backend sendet die komplette Nachricht - einfach anzeigen
+        this.addMessage('ai', response.text || 'Ihr Anliegen wurde an unseren Support weitergeleitet.');
+        break;
+
       case 'smalltalk':
         this.addMessage('ai', response.text || displayMessage);
         break;

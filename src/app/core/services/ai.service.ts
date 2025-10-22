@@ -137,7 +137,7 @@ export interface DrinkResult {
 }
 
 export interface ChatResponse {
-  intent: 'budget_menu_search' | 'order_status' | 'restaurant_info' | 'menu_details' | 'product_search' | 'drinks_menu' | 'faq' | 'review_info' | 'loyalty_status' | 'payment_history' | 'driver_info' | 'payout_info' | 'smalltalk' | 'unknown';
+  intent: 'budget_menu_search' | 'order_status' | 'restaurant_info' | 'menu_details' | 'product_search' | 'drinks_menu' | 'faq' | 'review_info' | 'loyalty_status' | 'payment_history' | 'driver_info' | 'payout_info' | 'smalltalk' | 'support_escalation' | 'unknown';
   items?: BudgetMenuItem[];
   orders?: OrderResult[];
   restaurants?: RestaurantResult[];
