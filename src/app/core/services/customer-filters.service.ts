@@ -53,7 +53,8 @@ export class CustomerFiltersService {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return { ...this.defaultState };
       const parsed = JSON.parse(raw);
-      return { ...this.defaultState, ...parsed } as CustomerFiltersState;
+      // Always ensure searchTerm is empty when loading from storage
+      return { ...this.defaultState, ...parsed, searchTerm: '' } as CustomerFiltersState;
     } catch {
       return { ...this.defaultState };
     }
@@ -61,7 +62,9 @@ export class CustomerFiltersService {
 
   private saveToStorage(state: CustomerFiltersState): void {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      // Don't save searchTerm to localStorage - it should be cleared on refresh
+      const stateToSave = { ...state, searchTerm: '' };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
     } catch {
       // ignore
     }
