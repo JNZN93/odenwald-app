@@ -163,26 +163,31 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
               Chat Support
             </h2>
             <p>Haben Sie Fragen? Chatten Sie direkt mit den Restaurants</p>
-          </div>
-          
-          <div class="chat-container" *ngIf="!showChatList && !showChat">
-            <button class="btn-start-chat" (click)="showChatList = true">
-              <i class="fa-solid fa-comments"></i>
-              Chats anzeigen
+            <button class="toggle-chat-btn" (click)="toggleChatSupport()">
+              <i class="fa-solid" [class.fa-chevron-up]="isChatExpanded" [class.fa-chevron-down]="!isChatExpanded"></i>
             </button>
           </div>
+          
+          <div class="chat-content" *ngIf="isChatExpanded">
+            <div class="chat-container" *ngIf="!showChatList && !showChat">
+              <button class="btn-start-chat" (click)="showChatList = true">
+                <i class="fa-solid fa-comments"></i>
+                Chats anzeigen
+              </button>
+            </div>
 
-          <app-chat-list
-            *ngIf="showChatList && !showChat"
-            (chatRoomSelected)="onChatRoomSelected($event)"
-            (newChatRequested)="onNewChatRequested()"
-          ></app-chat-list>
+            <app-chat-list
+              *ngIf="showChatList && !showChat"
+              (chatRoomSelected)="onChatRoomSelected($event)"
+              (newChatRequested)="onNewChatRequested()"
+            ></app-chat-list>
 
-          <app-chat
-            *ngIf="showChat && selectedChatRoom"
-            [chatRoom]="selectedChatRoom"
-            (chatClosed)="onChatClosed()"
-          ></app-chat>
+            <app-chat
+              *ngIf="showChat && selectedChatRoom"
+              [chatRoom]="selectedChatRoom"
+              (chatClosed)="onChatClosed()"
+            ></app-chat>
+          </div>
         </div>
 
         <!-- Account Settings -->
@@ -514,10 +519,11 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
     .section-header {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
       margin-bottom: var(--space-3);
       padding-bottom: var(--space-2);
       border-bottom: 1px solid var(--color-border);
+      gap: var(--space-3);
     }
 
     .section-header h2 {
@@ -538,6 +544,21 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
 
     .view-all-btn:hover {
       color: var(--color-primary-700);
+    }
+
+    .toggle-chat-btn {
+      background: var(--color-primary);
+      border: none;
+      color: white;
+      padding: var(--space-2);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition);
+      flex-shrink: 0;
+    }
+
+    .toggle-chat-btn:hover {
+      background: var(--color-primary-700);
     }
 
     .orders-list {
@@ -1248,6 +1269,7 @@ export class CustomerDashboardComponent implements OnInit {
   showChatList = false;
   showChat = false;
   selectedChatRoom: any = null;
+  isChatExpanded = true;
 
   // Mock featured restaurants - using real restaurant IDs from backend
   featuredRestaurants = [
@@ -1581,5 +1603,9 @@ export class CustomerDashboardComponent implements OnInit {
     this.showChat = false;
     this.selectedChatRoom = null;
     this.showChatList = true;
+  }
+
+  toggleChatSupport() {
+    this.isChatExpanded = !this.isChatExpanded;
   }
 }

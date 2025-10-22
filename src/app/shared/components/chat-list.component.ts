@@ -11,10 +11,6 @@ import { Subject, takeUntil } from 'rxjs';
   template: `
     <div class="chat-list-container">
       <div class="chat-list-header">
-        <h2>
-          <i class="fa-solid fa-comments"></i>
-          Chat Support
-        </h2>
         <button class="btn-new-chat" (click)="createNewChat()">
           <i class="fa-solid fa-plus"></i>
           Neuer Chat
@@ -121,30 +117,22 @@ import { Subject, takeUntil } from 'rxjs';
     .chat-list-header {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding: var(--space-4);
-      background: var(--gradient-primary);
-      color: white;
+      justify-content: flex-end;
+      padding: var(--space-2);
+      background: transparent;
       border-bottom: 1px solid var(--color-border);
     }
 
-    .chat-list-header h2 {
-      margin: 0;
-      font-size: var(--text-lg);
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-    }
 
     .btn-new-chat {
-      background: rgba(255, 255, 255, 0.2);
+      background: var(--color-primary);
       border: none;
       color: white;
       padding: var(--space-2) var(--space-3);
       border-radius: var(--radius-md);
       cursor: pointer;
       font-weight: 600;
+      font-size: var(--text-sm);
       transition: all var(--transition);
       display: flex;
       align-items: center;
@@ -152,7 +140,7 @@ import { Subject, takeUntil } from 'rxjs';
     }
 
     .btn-new-chat:hover {
-      background: rgba(255, 255, 255, 0.3);
+      background: var(--color-primary-700);
       transform: translateY(-1px);
     }
 
@@ -236,10 +224,11 @@ import { Subject, takeUntil } from 'rxjs';
       background: var(--color-primary);
       color: white;
       border: none;
-      padding: var(--space-2) var(--space-4);
-      border-radius: var(--radius-md);
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-sm);
       cursor: pointer;
-      font-weight: 600;
+      font-weight: 400;
+      font-size: var(--text-xs);
       transition: all var(--transition);
       display: flex;
       align-items: center;

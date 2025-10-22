@@ -11,10 +11,6 @@ import { Subject, takeUntil } from 'rxjs';
   template: `
     <div class="favorites-section" *ngIf="showFavorites">
       <div class="section-header">
-        <h2>
-          <i class="fa-solid fa-heart"></i>
-          Meine Favoriten
-        </h2>
         <button class="toggle-favorites-btn" (click)="toggleFavorites()">
           <i class="fa-solid" [class.fa-chevron-up]="isExpanded" [class.fa-chevron-down]="!isExpanded"></i>
         </button>
@@ -112,24 +108,15 @@ import { Subject, takeUntil } from 'rxjs';
     .section-header {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding: var(--space-4);
-      background: var(--gradient-primary);
-      color: white;
-      cursor: pointer;
+      justify-content: flex-end;
+      padding: var(--space-2);
+      background: transparent;
+      border-bottom: 1px solid var(--color-border);
     }
 
-    .section-header h2 {
-      margin: 0;
-      font-size: var(--text-lg);
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-    }
 
     .toggle-favorites-btn {
-      background: rgba(255, 255, 255, 0.2);
+      background: var(--color-primary);
       border: none;
       color: white;
       padding: var(--space-2);
@@ -139,7 +126,7 @@ import { Subject, takeUntil } from 'rxjs';
     }
 
     .toggle-favorites-btn:hover {
-      background: rgba(255, 255, 255, 0.3);
+      background: var(--color-primary-700);
     }
 
     .favorites-content {
