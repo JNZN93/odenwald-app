@@ -18,17 +18,15 @@ export interface UserProfile {
   updated_at: string;
 }
 
-export interface CustomerSettings {
-  email_notifications: boolean;
-  sms_notifications: boolean;
-  push_notifications: boolean;
-  weekly_summary: boolean;
-  marketing_emails: boolean;
-}
 
 export interface PasswordChangeRequest {
   currentPassword: string;
   newPassword: string;
+}
+
+export interface AccountDeletionRequest {
+  password: string;
+  reason?: string;
 }
 
 @Injectable({
@@ -39,16 +37,13 @@ export class AccountSettingsService {
   private apiUrl = `${environment.apiUrl}/customers`;
 
   private userProfileSubject = new BehaviorSubject<UserProfile | null>(null);
-  private customerSettingsSubject = new BehaviorSubject<CustomerSettings | null>(null);
 
   // Observables for components to subscribe to
   userProfile$ = this.userProfileSubject.asObservable();
-  customerSettings$ = this.customerSettingsSubject.asObservable();
 
   constructor() {
     // Load initial data
     this.loadUserProfile();
-    this.loadCustomerSettings();
   }
 
   // User Profile Methods
@@ -84,35 +79,20 @@ export class AccountSettingsService {
     return this.http.post<{ message: string }>(`${this.apiUrl}/change-password`, passwordData);
   }
 
-  // Customer Settings Methods
-  loadCustomerSettings(): Observable<{ settings: CustomerSettings }> {
-    return this.http.get<{ settings: CustomerSettings }>(`${this.apiUrl}/settings`).pipe(
-      tap(response => {
-        this.customerSettingsSubject.next(response.settings);
-      })
-    );
+  deleteAccount(deletionData: AccountDeletionRequest): Observable<{ message: string; deleted_at: string }> {
+    return this.http.delete<{ message: string; deleted_at: string }>(`${this.apiUrl}/account`, {
+      body: deletionData
+    });
   }
 
-  updateCustomerSettings(settings: Partial<CustomerSettings>): Observable<{ message: string; settings: CustomerSettings }> {
-    return this.http.put<{ message: string; settings: CustomerSettings }>(`${this.apiUrl}/settings`, settings).pipe(
-      tap(response => {
-        this.customerSettingsSubject.next(response.settings);
-      })
-    );
-  }
 
   // Utility Methods
   getCurrentUserProfile(): UserProfile | null {
     return this.userProfileSubject.value;
   }
 
-  getCurrentCustomerSettings(): CustomerSettings | null {
-    return this.customerSettingsSubject.value;
-  }
-
   // Clear data on logout
   clearData(): void {
     this.userProfileSubject.next(null);
-    this.customerSettingsSubject.next(null);
   }
 }

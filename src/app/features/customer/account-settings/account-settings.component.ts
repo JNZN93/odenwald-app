@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { AccountSettingsService, UserProfile, CustomerSettings, PasswordChangeRequest } from '../../../core/services/account-settings.service';
+import { AccountSettingsService, UserProfile, PasswordChangeRequest, AccountDeletionRequest } from '../../../core/services/account-settings.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { PasswordChangeComponent } from '../../../shared/components/password-change.component';
@@ -202,106 +202,102 @@ import { UserDataService, DeliveryAddress } from '../../../core/services/user-da
           </button>
         </div>
 
-        <!-- Notifications -->
-        <div *ngIf="activeTab === 'notifications'" class="settings-section">
-          <h2>Benachrichtigungen</h2>
-          <form (ngSubmit)="saveNotificationSettings()" #notificationForm="ngForm">
-            <div class="notification-settings">
-              <div class="setting-item">
-                <div class="setting-info">
-                  <h4>E-Mail-Benachrichtigungen</h4>
-                  <p>Erhalten Sie E-Mails bei Bestellungen und wichtigen Updates</p>
-                </div>
-                <label class="toggle">
-                  <input 
-                    type="checkbox" 
-                    [(ngModel)]="customerSettings.email_notifications" 
-                    name="emailNotifications"
-                    [disabled]="isSaving"
-                  >
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
-
-              <div class="setting-item">
-                <div class="setting-info">
-                  <h4>SMS-Benachrichtigungen</h4>
-                  <p>Erhalten Sie SMS bei dringenden Bestellungen</p>
-                </div>
-                <label class="toggle">
-                  <input 
-                    type="checkbox" 
-                    [(ngModel)]="customerSettings.sms_notifications" 
-                    name="smsNotifications"
-                    [disabled]="isSaving"
-                  >
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
-
-              <div class="setting-item">
-                <div class="setting-info">
-                  <h4>Push-Benachrichtigungen</h4>
-                  <p>Browser-Benachrichtigungen für neue Bestellungen</p>
-                </div>
-                <label class="toggle">
-                  <input 
-                    type="checkbox" 
-                    [(ngModel)]="customerSettings.push_notifications" 
-                    name="pushNotifications"
-                    [disabled]="isSaving"
-                  >
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
-
-              <div class="setting-item">
-                <div class="setting-info">
-                  <h4>Wöchentliche Zusammenfassung</h4>
-                  <p>Wöchentliche Übersicht Ihrer Bestellungen</p>
-                </div>
-                <label class="toggle">
-                  <input 
-                    type="checkbox" 
-                    [(ngModel)]="customerSettings.weekly_summary" 
-                    name="weeklySummary"
-                    [disabled]="isSaving"
-                  >
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
-
-              <div class="setting-item">
-                <div class="setting-info">
-                  <h4>Marketing-E-Mails</h4>
-                  <p>Erhalten Sie Angebote und Neuigkeiten</p>
-                </div>
-                <label class="toggle">
-                  <input 
-                    type="checkbox" 
-                    [(ngModel)]="customerSettings.marketing_emails" 
-                    name="marketingEmails"
-                    [disabled]="isSaving"
-                  >
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
-            </div>
-
-            <div class="form-actions">
-              <button type="submit" class="btn-primary" [disabled]="isSaving">
-                <i class="fa-solid fa-spinner fa-spin" *ngIf="isSaving"></i>
-                <i class="fa-solid fa-save" *ngIf="!isSaving"></i>
-                {{ isSaving ? 'Wird gespeichert...' : 'Benachrichtigungen speichern' }}
-              </button>
-            </div>
-          </form>
-        </div>
-
         <!-- Password Settings -->
         <div *ngIf="activeTab === 'password'" class="settings-section">
           <h2>Passwort ändern</h2>
           <app-password-change (passwordChanged)="onPasswordChanged()"></app-password-change>
+        </div>
+
+        <!-- Account Deletion -->
+        <div *ngIf="activeTab === 'delete'" class="settings-section">
+          <h2>Account löschen</h2>
+          <div class="danger-zone">
+            <div class="danger-warning">
+              <i class="fa-solid fa-exclamation-triangle"></i>
+              <h3>Gefahrenbereich</h3>
+              <p>Die Löschung Ihres Accounts ist <strong>unwiderruflich</strong>. Alle Ihre Daten werden dauerhaft entfernt.</p>
+            </div>
+
+            <div class="deletion-info">
+              <h4>Was wird gelöscht:</h4>
+              <ul>
+                <li><i class="fa-solid fa-check"></i> Ihr Benutzerprofil und alle persönlichen Daten</li>
+                <li><i class="fa-solid fa-check"></i> Alle gespeicherten Lieferadressen</li>
+                <li><i class="fa-solid fa-check"></i> Ihre Bestellhistorie (für Compliance-Zwecke anonymisiert)</li>
+                <li><i class="fa-solid fa-check"></i> Alle Bewertungen und Kommentare</li>
+              </ul>
+            </div>
+
+
+            <form (ngSubmit)="deleteAccount()" #deletionForm="ngForm" class="deletion-form">
+              <div class="form-group">
+                <label for="deletionPassword">Passwort bestätigen *</label>
+                <input 
+                  id="deletionPassword" 
+                  type="password" 
+                  [(ngModel)]="deletionData.password" 
+                  name="password"
+                  required
+                  [disabled]="isDeleting"
+                  placeholder="Ihr aktuelles Passwort"
+                >
+                <small class="field-note">Geben Sie Ihr aktuelles Passwort ein, um die Löschung zu bestätigen</small>
+              </div>
+
+              <div class="form-group">
+                <label for="deletionReason">Grund für die Löschung (optional)</label>
+                <select 
+                  id="deletionReason" 
+                  [(ngModel)]="deletionData.reason" 
+                  name="reason"
+                  [disabled]="isDeleting"
+                >
+                  <option value="">Bitte wählen...</option>
+                  <option value="privacy_concerns">Datenschutzbedenken</option>
+                  <option value="no_longer_needed">Account wird nicht mehr benötigt</option>
+                  <option value="found_alternative">Alternative Lösung gefunden</option>
+                  <option value="technical_issues">Technische Probleme</option>
+                  <option value="other">Sonstiges</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    [(ngModel)]="confirmDeletion" 
+                    name="confirmDeletion"
+                    required
+                    [disabled]="isDeleting"
+                  >
+                  <span class="checkmark"></span>
+                  <strong>Ich verstehe, dass die Löschung unwiderruflich ist und alle meine Daten dauerhaft entfernt werden</strong>
+                </label>
+              </div>
+
+              <div class="form-group">
+                <label class="checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    [(ngModel)]="confirmDataLoss" 
+                    name="confirmDataLoss"
+                    required
+                    [disabled]="isDeleting"
+                  >
+                  <span class="checkmark"></span>
+                  <strong>Ich bestätige, dass ich alle wichtigen Daten gesichert habe</strong>
+                </label>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn-danger" [disabled]="!deletionForm.valid || !confirmDeletion || !confirmDataLoss || isDeleting">
+                  <i class="fa-solid fa-spinner fa-spin" *ngIf="isDeleting"></i>
+                  <i class="fa-solid fa-trash" *ngIf="!isDeleting"></i>
+                  {{ isDeleting ? 'Account wird gelöscht...' : 'Account unwiderruflich löschen' }}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
 
@@ -727,80 +723,6 @@ import { UserDataService, DeliveryAddress } from '../../../core/services/user-da
       margin-bottom: var(--space-2);
     }
 
-    /* Notification Settings */
-    .notification-settings {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-6);
-      margin-bottom: var(--space-6);
-    }
-
-    .setting-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: var(--space-4);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-lg);
-    }
-
-    .setting-info h4 {
-      margin: 0 0 var(--space-1) 0;
-      color: var(--color-text);
-    }
-
-    .setting-info p {
-      margin: 0;
-      color: var(--color-muted);
-      font-size: var(--text-sm);
-    }
-
-    .toggle {
-      position: relative;
-      display: inline-block;
-      width: 50px;
-      height: 24px;
-    }
-
-    .toggle input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-
-    .toggle-slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: #ccc;
-      border: 2px solid #999;
-      border-radius: 24px;
-      transition: 0.3s;
-    }
-
-    .toggle-slider:before {
-      position: absolute;
-      content: "";
-      height: 18px;
-      width: 18px;
-      left: 3px;
-      bottom: 3px;
-      background: white;
-      border-radius: 50%;
-      transition: 0.3s;
-    }
-
-    .toggle input:checked + .toggle-slider {
-      background: var(--color-primary);
-      border-color: var(--color-primary-700);
-    }
-
-    .toggle input:checked + .toggle-slider:before {
-      transform: translateX(26px);
-    }
 
     /* Loading States */
     .loading-container {
@@ -991,11 +913,6 @@ import { UserDataService, DeliveryAddress } from '../../../core/services/user-da
         grid-template-columns: 1fr;
       }
 
-      .setting-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: var(--space-3);
-      }
 
       .address-card,
       .payment-card {
@@ -1026,6 +943,146 @@ import { UserDataService, DeliveryAddress } from '../../../core/services/user-da
         justify-content: center;
       }
     }
+
+    /* Account Deletion Styles */
+    .danger-zone {
+      border: 2px solid var(--color-danger);
+      border-radius: var(--radius-xl);
+      padding: var(--space-8);
+      background: color-mix(in oklab, var(--color-danger) 5%, white);
+    }
+
+    .danger-warning {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-bottom: var(--space-6);
+      padding: var(--space-4);
+      background: color-mix(in oklab, var(--color-danger) 10%, white);
+      border-radius: var(--radius-lg);
+      border-left: 4px solid var(--color-danger);
+    }
+
+    .danger-warning i {
+      font-size: var(--text-xl);
+      color: var(--color-danger);
+    }
+
+    .danger-warning h3 {
+      margin: 0 0 var(--space-1) 0;
+      color: var(--color-danger);
+      font-size: var(--text-lg);
+      font-weight: 600;
+    }
+
+    .danger-warning p {
+      margin: 0;
+      color: var(--color-text);
+      font-size: var(--text-sm);
+    }
+
+    .deletion-info {
+      margin-bottom: var(--space-6);
+      padding: var(--space-4);
+      background: var(--bg-light);
+      border-radius: var(--radius-lg);
+    }
+
+    .deletion-info h4 {
+      margin: 0 0 var(--space-3) 0;
+      color: var(--color-text);
+      font-size: var(--text-base);
+      font-weight: 600;
+    }
+
+    .deletion-info ul {
+      margin: 0;
+      padding-left: var(--space-6);
+    }
+
+    .deletion-info li {
+      margin-bottom: var(--space-2);
+      color: var(--color-text);
+      font-size: var(--text-sm);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .deletion-info li i {
+      color: var(--color-danger);
+      font-size: var(--text-xs);
+      width: 12px;
+    }
+
+    .deletion-form {
+      margin-top: var(--space-6);
+    }
+
+    .deletion-form .form-group {
+      margin-bottom: var(--space-4);
+    }
+
+    .deletion-form select {
+      padding: var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--text-base);
+      background: white;
+      width: 100%;
+    }
+
+    .deletion-form select:focus {
+      outline: none;
+      border-color: var(--color-danger);
+      box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-danger) 15%, transparent);
+    }
+
+    .deletion-form .form-actions {
+      margin-top: var(--space-8);
+      padding-top: var(--space-6);
+      border-top: 2px solid var(--color-danger);
+    }
+
+    .deletion-form .btn-danger {
+      background: var(--color-danger);
+      color: white;
+      border: none;
+      padding: var(--space-4) var(--space-6);
+      font-size: var(--text-base);
+      font-weight: 600;
+      box-shadow: 0 2px 8px color-mix(in oklab, var(--color-danger) 25%, transparent);
+    }
+
+    .deletion-form .btn-danger:hover:not(:disabled) {
+      background: var(--color-danger-700);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px color-mix(in oklab, var(--color-danger) 35%, transparent);
+    }
+
+    .deletion-form .btn-danger:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Responsive Account Deletion */
+    @media (max-width: 768px) {
+      .danger-zone {
+        padding: var(--space-4);
+      }
+
+      .danger-warning {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-2);
+      }
+
+
+      .deletion-info {
+        padding: var(--space-3);
+      }
+    }
   `]
 })
 export class AccountSettingsComponent implements OnInit, OnDestroy {
@@ -1041,6 +1098,15 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
   isLoading: boolean = false;
   isSaving: boolean = false;
 
+  // Account deletion properties
+  isDeleting: boolean = false;
+  deletionData: AccountDeletionRequest = {
+    password: '',
+    reason: ''
+  };
+  confirmDeletion: boolean = false;
+  confirmDataLoss: boolean = false;
+
   userProfile: UserProfile = {
     id: '',
     name: '',
@@ -1053,14 +1119,6 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
     auth_provider: 'local',
     created_at: '',
     updated_at: ''
-  };
-
-  customerSettings: CustomerSettings = {
-    email_notifications: true,
-    sms_notifications: false,
-    push_notifications: true,
-    weekly_summary: true,
-    marketing_emails: false
   };
 
   savedAddresses: DeliveryAddress[] = [];
@@ -1082,8 +1140,8 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
     { id: 'personal', title: 'Persönliche Daten', icon: 'fa-solid fa-user' },
     { id: 'addresses', title: 'Lieferadressen', icon: 'fa-solid fa-map-marker-alt' },
     { id: 'payment', title: 'Zahlungsmethoden', icon: 'fa-solid fa-credit-card' },
-    { id: 'notifications', title: 'Benachrichtigungen', icon: 'fa-solid fa-bell' },
-    { id: 'password', title: 'Passwort', icon: 'fa-solid fa-lock' }
+    { id: 'password', title: 'Passwort', icon: 'fa-solid fa-lock' },
+    { id: 'delete', title: 'Account löschen', icon: 'fa-solid fa-trash' }
   ];
 
   ngOnInit() {
@@ -1102,7 +1160,7 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
       })
     );
     
-    this.loadData();
+    this.loadUserProfile();
     this.loadSavedAddresses();
   }
 
@@ -1120,7 +1178,7 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
     this.subscriptions.forEach(sub => sub.unsubscribe());
   }
 
-  loadData() {
+  loadUserProfile() {
     this.isLoading = true;
 
     // Load user profile
@@ -1136,18 +1194,7 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Load customer settings
-    const settingsSub = this.accountSettingsService.loadCustomerSettings().subscribe({
-      next: (response) => {
-        this.customerSettings = response.settings;
-      },
-      error: (error) => {
-        console.error('Error loading customer settings:', error);
-        // Don't show error for settings as they might not exist yet
-      }
-    });
-
-    this.subscriptions.push(profileSub, settingsSub);
+    this.subscriptions.push(profileSub);
   }
 
   goBack() {
@@ -1180,21 +1227,6 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
     });
   }
 
-  saveNotificationSettings() {
-    this.isSaving = true;
-
-    this.accountSettingsService.updateCustomerSettings(this.customerSettings).subscribe({
-      next: (response) => {
-        this.toastService.show('success', 'Benachrichtigungseinstellungen erfolgreich aktualisiert', 'Ihre Einstellungen wurden gespeichert.');
-        this.isSaving = false;
-      },
-      error: (error) => {
-        console.error('Error updating settings:', error);
-        this.toastService.show('error', 'Fehler beim Aktualisieren der Einstellungen', 'Die Einstellungen konnten nicht gespeichert werden.');
-        this.isSaving = false;
-      }
-    });
-  }
 
   onPasswordChanged() {
     this.toastService.show('success', 'Passwort erfolgreich geändert', 'Ihr Passwort wurde erfolgreich aktualisiert.');
@@ -1336,5 +1368,50 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
       case 'sepa': return 'SEPA-Lastschrift';
       default: return 'Unbekannt';
     }
+  }
+
+  // Account Deletion Methods
+  deleteAccount(): void {
+    if (!this.deletionData.password.trim()) {
+      this.toastService.show('error', 'Passwort erforderlich', 'Bitte geben Sie Ihr aktuelles Passwort ein.');
+      return;
+    }
+
+    if (!this.confirmDeletion || !this.confirmDataLoss) {
+      this.toastService.show('error', 'Bestätigung erforderlich', 'Bitte bestätigen Sie alle Checkboxen.');
+      return;
+    }
+
+    // Final confirmation dialog
+    const confirmMessage = `Sind Sie sicher, dass Sie Ihren Account unwiderruflich löschen möchten?\n\nDiese Aktion kann nicht rückgängig gemacht werden und alle Ihre Daten werden dauerhaft entfernt.`;
+    
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    this.isDeleting = true;
+
+    this.accountSettingsService.deleteAccount(this.deletionData).subscribe({
+      next: (response) => {
+        this.toastService.show('success', 'Account erfolgreich gelöscht', 'Ihr Account wurde erfolgreich gelöscht.');
+        
+        // Clear local storage
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // Logout and redirect to login
+        setTimeout(() => {
+          this.authService.logout();
+          this.router.navigate(['/auth/login'], { 
+            queryParams: { message: 'account_deleted' } 
+          });
+        }, 2000);
+      },
+      error: (error) => {
+        console.error('Error deleting account:', error);
+        this.toastService.show('error', 'Fehler beim Löschen des Accounts', 'Der Account konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.');
+        this.isDeleting = false;
+      }
+    });
   }
 }
