@@ -7,6 +7,7 @@ import { RestaurantManagerService, RestaurantStats } from '../../core/services/r
 import { AuthService } from '../../core/auth/auth.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { ToastService } from '../../core/services/toast.service';
+import { I18nService } from '../../core/services/i18n.service';
 import { NgChartsModule } from 'ng2-charts';
 import { ChartConfiguration, ChartOptions } from 'chart.js';
 
@@ -18,7 +19,7 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
     <div class="analytics-container">
       <!-- Header -->
       <div class="analytics-header">
-        <h1>Analytics & Berichte</h1>
+        <h1>{{ i18n.translate('analytics.title') }}</h1>
         <div class="header-actions">
           <select *ngIf="managedRestaurants.length > 1" [(ngModel)]="selectedRestaurantId" (change)="loadAnalytics()" class="period-select">
             <option *ngFor="let restaurant of managedRestaurants" [value]="restaurant.restaurant_id">
@@ -26,24 +27,24 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
             </option>
           </select>
           <select [(ngModel)]="selectedPeriod" (change)="loadAnalytics()" class="period-select">
-            <option value="today">Heute</option>
-            <option value="week">Diese Woche</option>
-            <option value="month">Dieser Monat</option>
+            <option value="today">{{ i18n.translate('analytics.today') }}</option>
+            <option value="week">{{ i18n.translate('analytics.this_week') }}</option>
+            <option value="month">{{ i18n.translate('analytics.this_month') }}</option>
           </select>
           
           <!-- Custom Date Range -->
           <div class="custom-range-inline">
-            <input type="date" [(ngModel)]="startDate" class="date-input-inline" placeholder="Von">
-            <input type="date" [(ngModel)]="endDate" class="date-input-inline" placeholder="Bis">
+            <input type="date" [(ngModel)]="startDate" class="date-input-inline" [placeholder]="i18n.translate('analytics.from')">
+            <input type="date" [(ngModel)]="endDate" class="date-input-inline" [placeholder]="i18n.translate('analytics.to')">
             <button class="btn-primary" (click)="loadCustomRange()" [disabled]="isLoading">
               <i class="fa-solid fa-chart-line"></i>
-              Zeitraum-Analyse
+              {{ i18n.translate('analytics.time_range_analysis') }}
             </button>
           </div>
           
           <button class="btn-secondary" (click)="exportData()" [disabled]="isLoading">
             <i class="fa-solid fa-download"></i>
-            Export
+            {{ i18n.translate('analytics.export') }}
           </button>
         </div>
       </div>
@@ -51,13 +52,13 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
       <!-- Loading/Error States -->
       <div *ngIf="isLoading" class="loading-state">
         <i class="fa-solid fa-spinner fa-spin"></i>
-        <p>Analytics-Daten werden geladen...</p>
+        <p>{{ i18n.translate('analytics.loading_data') }}</p>
       </div>
 
       <div *ngIf="error && !isLoading" class="error-state">
         <i class="fa-solid fa-exclamation-triangle"></i>
         <p>{{ error }}</p>
-        <button class="btn-primary" (click)="loadAnalytics()">Erneut versuchen</button>
+        <button class="btn-primary" (click)="loadAnalytics()">{{ i18n.translate('analytics.try_again') }}</button>
       </div>
 
       <!-- Key Metrics -->
@@ -68,7 +69,7 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
           </div>
           <div class="metric-content">
             <h3>{{ getCurrentPeriodOrders() }}</h3>
-            <p>Bestellungen {{ getPeriodLabel() }}</p>
+            <p>{{ i18n.translate('analytics.orders') }} {{ getPeriodLabel() }}</p>
             <span class="change positive">+12.5%</span>
           </div>
         </div>
@@ -79,7 +80,7 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
           </div>
           <div class="metric-content">
             <h3>€{{ getCurrentPeriodRevenue().toFixed(2) }}</h3>
-            <p>Umsatz {{ getPeriodLabel() }}</p>
+            <p>{{ i18n.translate('analytics.revenue') }} {{ getPeriodLabel() }}</p>
             <span class="change positive">+8.2%</span>
           </div>
         </div>
@@ -90,7 +91,7 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
           </div>
           <div class="metric-content">
             <h3>{{ currentStats.average_order_value.toFixed(2) }}</h3>
-            <p>Ø Bestellwert</p>
+            <p>{{ i18n.translate('analytics.avg_order_value') }}</p>
             <span class="change positive">+5.1%</span>
           </div>
         </div>
@@ -101,7 +102,7 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
           </div>
           <div class="metric-content">
             <h3>{{ totalCustomers }}</h3>
-            <p>Kunden heute</p>
+            <p>{{ i18n.translate('analytics.customers_today') }}</p>
             <span class="change positive">+15.3%</span>
           </div>
         </div>
@@ -112,7 +113,7 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
         <!-- Revenue Chart -->
         <div class="chart-card">
           <div class="chart-header">
-            <h3>Umsatzentwicklung</h3>
+            <h3>{{ i18n.translate('analytics.revenue_development') }}</h3>
             <select [(ngModel)]="revenueChartPeriod" (change)="onRevenueChartPeriodChange()" class="chart-select">
               <option value="7d">7 Tage</option>
               <option value="30d">30 Tage</option>
@@ -131,7 +132,7 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
         <!-- Orders Chart -->
         <div class="chart-card">
           <div class="chart-header">
-            <h3>Bestellungen</h3>
+            <h3>{{ i18n.translate('analytics.orders_chart') }}</h3>
             <select [(ngModel)]="ordersChartPeriod" (change)="onOrdersChartPeriodChange()" class="chart-select">
               <option value="7d">7 Tage</option>
               <option value="30d">30 Tage</option>
@@ -150,14 +151,14 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
         <!-- Popular Items -->
         <div class="chart-card">
           <div class="chart-header">
-            <h3>Beliebteste Gerichte</h3>
+            <h3>{{ i18n.translate('analytics.popular_dishes') }}</h3>
           </div>
           <div class="popular-items-list">
             <div *ngFor="let item of currentStats?.popular_items || []; let i = index" class="popular-item">
               <div class="item-rank">#{{ i + 1 }}</div>
               <div class="item-info">
                 <div class="item-name">{{ item.name }}</div>
-                <div class="item-count">{{ item.order_count }} Bestellungen</div>
+                <div class="item-count">{{ item.order_count }} {{ i18n.translate('analytics.orders_count') }}</div>
               </div>
               <div class="item-bar">
                 <div class="bar-fill" [style.width.%]="getItemPercentage(item.order_count)"></div>
@@ -169,19 +170,19 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
         <!-- Peak Hours -->
         <div class="chart-card">
           <div class="chart-header">
-            <h3>Stoßzeiten</h3>
+            <h3>{{ i18n.translate('analytics.peak_hours') }}</h3>
             <div class="peak-hours-toggle">
               <button
                 [class.active]="!showPeakHoursByDay"
                 (click)="showPeakHoursByDay = false"
                 class="toggle-btn">
-                Nach Uhrzeit
+                {{ i18n.translate('analytics.by_time') }}
               </button>
               <button
                 [class.active]="showPeakHoursByDay"
                 (click)="showPeakHoursByDay = true"
                 class="toggle-btn">
-                Nach Wochentag
+                {{ i18n.translate('analytics.by_day') }}
               </button>
             </div>
           </div>
@@ -197,7 +198,7 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
             </div>
 
             <div *ngIf="peakHours.length === 0" class="no-data">
-              <p>Keine Bestellungsdaten für diesen Zeitraum verfügbar</p>
+              <p>{{ i18n.translate('analytics.no_order_data') }}</p>
             </div>
           </div>
 
@@ -214,13 +215,13 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
                   <div class="hour-count">{{ hour.orders }}</div>
                 </div>
                 <div *ngIf="dayData.hours.length === 0" class="no-hours">
-                  <p>Keine Bestellungen</p>
+                  <p>{{ i18n.translate('analytics.no_orders') }}</p>
                 </div>
               </div>
             </div>
 
             <div *ngIf="peakHoursByDay.length === 0" class="no-data">
-              <p>Keine Bestellungsdaten für diesen Zeitraum verfügbar</p>
+              <p>{{ i18n.translate('analytics.no_order_data') }}</p>
             </div>
           </div>
         </div>
@@ -228,16 +229,16 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
 
       <!-- Detailed Reports -->
       <div class="reports-section">
-        <h2>Detaillierte Berichte</h2>
+        <h2>{{ i18n.translate('analytics.detailed_reports') }}</h2>
         <div class="report-cards">
           <div class="report-card">
             <div class="report-icon">
               <i class="fa-solid fa-calendar-day"></i>
             </div>
             <div class="report-content">
-              <h4>Tagesbericht</h4>
-              <p>Detaillierte Übersicht aller Aktivitäten heute</p>
-              <button class="btn-link" (click)="generateDailyReport()">Generieren</button>
+              <h4>{{ i18n.translate('analytics.daily_report') }}</h4>
+              <p>{{ i18n.translate('analytics.daily_report_desc') }}</p>
+              <button class="btn-link" (click)="generateDailyReport()">{{ i18n.translate('analytics.generate') }}</button>
             </div>
           </div>
 
@@ -246,9 +247,9 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
               <i class="fa-solid fa-calendar-week"></i>
             </div>
             <div class="report-content">
-              <h4>Wochenbericht</h4>
-              <p>Wöchentliche Performance-Analyse</p>
-              <button class="btn-link" (click)="generateWeeklyReport()">Generieren</button>
+              <h4>{{ i18n.translate('analytics.weekly_report') }}</h4>
+              <p>{{ i18n.translate('analytics.weekly_report_desc') }}</p>
+              <button class="btn-link" (click)="generateWeeklyReport()">{{ i18n.translate('analytics.generate') }}</button>
             </div>
           </div>
 
@@ -257,9 +258,9 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
               <i class="fa-solid fa-calendar-alt"></i>
             </div>
             <div class="report-content">
-              <h4>Monatsbericht</h4>
-              <p>Monatliche Geschäftsentwicklung</p>
-              <button class="btn-link" (click)="generateMonthlyReport()">Generieren</button>
+              <h4>{{ i18n.translate('analytics.monthly_report') }}</h4>
+              <p>{{ i18n.translate('analytics.monthly_report_desc') }}</p>
+              <button class="btn-link" (click)="generateMonthlyReport()">{{ i18n.translate('analytics.generate') }}</button>
             </div>
           </div>
 
@@ -268,9 +269,9 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
               <i class="fa-solid fa-utensils"></i>
             </div>
             <div class="report-content">
-              <h4>Menü-Analyse</h4>
-              <p>Performance der einzelnen Gerichte</p>
-              <button class="btn-link" (click)="generateMenuReport()">Generieren</button>
+              <h4>{{ i18n.translate('analytics.menu_analysis') }}</h4>
+              <p>{{ i18n.translate('analytics.menu_analysis_desc') }}</p>
+              <button class="btn-link" (click)="generateMenuReport()">{{ i18n.translate('analytics.generate') }}</button>
             </div>
           </div>
         </div>
@@ -437,11 +438,11 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
           <div class="modal-footer">
             <button class="btn-secondary" (click)="closeReportModal()">
               <i class="fa-solid fa-times"></i>
-              Schließen
+              {{ i18n.translate('analytics.close') }}
             </button>
             <button class="btn-primary" (click)="exportReport()">
               <i class="fa-solid fa-download"></i>
-              Exportieren
+              {{ i18n.translate('analytics.export_report') }}
             </button>
           </div>
         </div>
@@ -1277,6 +1278,7 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private loadingService = inject(LoadingService);
   private toastService = inject(ToastService);
+  public i18n = inject(I18nService);
 
   currentStats: RestaurantStats = {
     total_orders_today: 0,
@@ -1300,7 +1302,7 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
     labels: [],
     datasets: [{
       data: [],
-      label: 'Umsatz (€)',
+      label: this.i18n.translate('analytics.revenue') + ' (€)',
       fill: true,
       tension: 0.4,
       borderColor: '#3b82f6',
@@ -1332,7 +1334,7 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
     labels: [],
     datasets: [{
       data: [],
-      label: 'Bestellungen',
+      label: this.i18n.translate('analytics.orders'),
       backgroundColor: '#10b981',
       borderColor: '#059669',
       borderWidth: 1
@@ -1413,7 +1415,7 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
             labels,
             datasets: [{
               data,
-              label: 'Umsatz (€)',
+              label: this.i18n.translate('analytics.revenue') + ' (€)',
               fill: true,
               tension: 0.4,
               borderColor: '#3b82f6',
@@ -1452,7 +1454,7 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
       labels,
       datasets: [{
         data,
-        label: 'Umsatz (€)',
+        label: this.i18n.translate('analytics.revenue') + ' (€)',
         fill: true,
         tension: 0.4,
         borderColor: '#3b82f6',
@@ -1479,7 +1481,7 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
             labels,
             datasets: [{
               data,
-              label: 'Bestellungen',
+              label: this.i18n.translate('analytics.orders'),
               backgroundColor: '#10b981',
               borderColor: '#059669',
               borderWidth: 1
@@ -1517,7 +1519,7 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
       labels,
       datasets: [{
         data,
-        label: 'Bestellungen',
+        label: this.i18n.translate('analytics.orders'),
         backgroundColor: '#10b981',
         borderColor: '#059669',
         borderWidth: 1
@@ -1557,14 +1559,14 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
           this.loadAnalytics();
         } else {
           this.isLoading = false;
-          this.error = 'Keine Restaurants gefunden, die Sie verwalten.';
+          this.error = this.i18n.translate('analytics.no_restaurants_found');
         }
       },
       error: (error: any) => {
         console.error('Error loading managed restaurants:', error);
         this.isLoading = false;
-        this.error = 'Fehler beim Laden der Restaurants.';
-        this.toastService.error('Fehler', 'Fehler beim Laden der Restaurants');
+        this.error = this.i18n.translate('analytics.error_loading_restaurants');
+        this.toastService.error(this.i18n.translate('common.error'), this.i18n.translate('analytics.error_loading_restaurants'));
       }
     });
   }
@@ -1591,8 +1593,8 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
       error: (error: any) => {
         console.error('Error loading analytics:', error);
         this.isLoading = false;
-        this.error = 'Fehler beim Laden der Analytics-Daten.';
-        this.toastService.error('Fehler', 'Fehler beim Laden der Analytics-Daten');
+        this.error = this.i18n.translate('analytics.error_loading_data');
+        this.toastService.error(this.i18n.translate('common.error'), this.i18n.translate('analytics.error_loading_data'));
       }
     });
   }
@@ -1611,7 +1613,7 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
 
   generateDailyReport() {
     if (!this.selectedRestaurantId) {
-      this.toastService.error('Fehler', 'Bitte wählen Sie ein Restaurant aus');
+      this.toastService.error(this.i18n.translate('common.error'), this.i18n.translate('analytics.select_restaurant'));
       return;
     }
 
@@ -1620,22 +1622,22 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
       next: (report) => {
         this.loadingService.stop('report-generation');
         if (report) {
-          this.showReportModal('Tagesbericht', report);
+          this.showReportModal(this.i18n.translate('analytics.daily_report'), report);
         } else {
-          this.toastService.error('Fehler', 'Fehler beim Generieren des Tagesberichts');
+          this.toastService.error(this.i18n.translate('common.error'), this.i18n.translate('analytics.error_daily_report'));
         }
       },
       error: (error) => {
         this.loadingService.stop('report-generation');
         console.error('Error generating daily report:', error);
-        this.toastService.error('Fehler', 'Fehler beim Generieren des Tagesberichts');
+        this.toastService.error(this.i18n.translate('common.error'), this.i18n.translate('analytics.error_daily_report'));
       }
     });
   }
 
   generateWeeklyReport() {
     if (!this.selectedRestaurantId) {
-      this.toastService.error('Fehler', 'Bitte wählen Sie ein Restaurant aus');
+      this.toastService.error(this.i18n.translate('common.error'), this.i18n.translate('analytics.select_restaurant'));
       return;
     }
 
@@ -1644,22 +1646,22 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
       next: (report) => {
         this.loadingService.stop('report-generation');
         if (report) {
-          this.showReportModal('Wochenbericht', report);
+          this.showReportModal(this.i18n.translate('analytics.weekly_report'), report);
         } else {
-          this.toastService.error('Fehler', 'Fehler beim Generieren des Wochenberichts');
+          this.toastService.error(this.i18n.translate('common.error'), this.i18n.translate('analytics.error_weekly_report'));
         }
       },
       error: (error) => {
         this.loadingService.stop('report-generation');
         console.error('Error generating weekly report:', error);
-        this.toastService.error('Fehler', 'Fehler beim Generieren des Wochenberichts');
+        this.toastService.error(this.i18n.translate('common.error'), this.i18n.translate('analytics.error_weekly_report'));
       }
     });
   }
 
   generateMonthlyReport() {
     if (!this.selectedRestaurantId) {
-      this.toastService.error('Fehler', 'Bitte wählen Sie ein Restaurant aus');
+      this.toastService.error(this.i18n.translate('common.error'), this.i18n.translate('analytics.select_restaurant'));
       return;
     }
 
@@ -1668,22 +1670,22 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
       next: (report) => {
         this.loadingService.stop('report-generation');
         if (report) {
-          this.showReportModal('Monatsbericht', report);
+          this.showReportModal(this.i18n.translate('analytics.monthly_report'), report);
         } else {
-          this.toastService.error('Fehler', 'Fehler beim Generieren des Monatsberichts');
+          this.toastService.error(this.i18n.translate('common.error'), this.i18n.translate('analytics.error_monthly_report'));
         }
       },
       error: (error) => {
         this.loadingService.stop('report-generation');
         console.error('Error generating monthly report:', error);
-        this.toastService.error('Fehler', 'Fehler beim Generieren des Monatsberichts');
+        this.toastService.error(this.i18n.translate('common.error'), this.i18n.translate('analytics.error_monthly_report'));
       }
     });
   }
 
   generateMenuReport() {
     if (!this.selectedRestaurantId) {
-      this.toastService.error('Fehler', 'Bitte wählen Sie ein Restaurant aus');
+      this.toastService.error(this.i18n.translate('common.error'), this.i18n.translate('analytics.select_restaurant'));
       return;
     }
 
@@ -1692,15 +1694,15 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
       next: (report) => {
         this.loadingService.stop('report-generation');
         if (report) {
-          this.showReportModal('Menü-Analyse', report);
+          this.showReportModal(this.i18n.translate('analytics.menu_analysis'), report);
         } else {
-          this.toastService.error('Fehler', 'Fehler beim Generieren der Menü-Analyse');
+          this.toastService.error(this.i18n.translate('common.error'), this.i18n.translate('analytics.error_menu_analysis'));
         }
       },
       error: (error) => {
         this.loadingService.stop('report-generation');
         console.error('Error generating menu analysis report:', error);
-        this.toastService.error('Fehler', 'Fehler beim Generieren der Menü-Analyse');
+        this.toastService.error(this.i18n.translate('common.error'), this.i18n.translate('analytics.error_menu_analysis'));
       }
     });
   }
@@ -1728,7 +1730,7 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
     };
     
     this.downloadReportCSV(reportData);
-    this.toastService.success('Erfolg', 'Bericht wurde erfolgreich exportiert');
+    this.toastService.success(this.i18n.translate('common.success'), this.i18n.translate('analytics.success_report_export'));
   }
 
   private downloadReportCSV(data: any) {
@@ -1790,13 +1792,13 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
 
   getStatusLabel(status: string): string {
     const statusLabels: Record<string, string> = {
-      'pending': 'Ausstehend',
-      'confirmed': 'Bestätigt',
-      'preparing': 'In Vorbereitung',
-      'ready': 'Bereit',
-      'picked_up': 'Abgeholt',
-      'delivered': 'Geliefert',
-      'cancelled': 'Storniert'
+      'pending': this.i18n.translate('analytics.pending'),
+      'confirmed': this.i18n.translate('analytics.confirmed'),
+      'preparing': this.i18n.translate('analytics.preparing'),
+      'ready': this.i18n.translate('analytics.ready'),
+      'picked_up': this.i18n.translate('analytics.picked_up'),
+      'delivered': this.i18n.translate('analytics.delivered'),
+      'cancelled': this.i18n.translate('analytics.cancelled')
     };
     return statusLabels[status] || status;
   }
@@ -1812,12 +1814,12 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
 
   loadCustomRange() {
     if (!this.selectedRestaurantId) {
-      this.toastService.error('Fehler', 'Bitte wählen Sie ein Restaurant aus');
+      this.toastService.error(this.i18n.translate('common.error'), this.i18n.translate('analytics.select_restaurant'));
       return;
     }
 
     if (!this.startDate || !this.endDate) {
-      this.toastService.error('Fehler', 'Bitte wählen Sie Start- und Enddatum aus');
+      this.toastService.error(this.i18n.translate('common.error'), this.i18n.translate('analytics.select_dates'));
       return;
     }
 
@@ -1826,14 +1828,14 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
     const end = new Date(this.endDate);
     
     if (start > end) {
-      this.toastService.error('Fehler', 'Das Startdatum muss vor dem Enddatum liegen');
+      this.toastService.error(this.i18n.translate('common.error'), this.i18n.translate('analytics.invalid_date_range'));
       return;
     }
 
     // Check if date range is not too large (max 1 year)
     const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
     if (daysDiff > 365) {
-      this.toastService.error('Fehler', 'Der Zeitraum darf maximal 365 Tage betragen');
+      this.toastService.error(this.i18n.translate('common.error'), this.i18n.translate('analytics.max_range_exceeded'));
       return;
     }
 
@@ -1868,14 +1870,14 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
         // Update period label to show custom range
         this.selectedPeriod = 'custom';
         
-        this.toastService.success('Erfolg', `Analytics für Zeitraum ${this.startDate} bis ${this.endDate} geladen`);
+        this.toastService.success(this.i18n.translate('common.success'), `Analytics für Zeitraum ${this.startDate} bis ${this.endDate} geladen`);
         console.log('Custom range analytics loaded:', customStats);
       },
       error: (error) => {
         this.isLoading = false;
-        this.error = 'Fehler beim Laden der benutzerdefinierten Analytics-Daten.';
+        this.error = this.i18n.translate('analytics.error_custom_range');
         console.error('Error loading custom range analytics:', error);
-        this.toastService.error('Fehler', 'Fehler beim Laden der benutzerdefinierten Analytics-Daten');
+        this.toastService.error(this.i18n.translate('common.error'), this.i18n.translate('analytics.error_custom_range'));
       }
     });
   }
@@ -1909,15 +1911,15 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
   getPeriodLabel(): string {
     switch (this.selectedPeriod) {
       case 'today':
-        return 'heute';
+        return this.i18n.translate('analytics.today_label');
       case 'week':
-        return 'diese Woche';
+        return this.i18n.translate('analytics.this_week_label');
       case 'month':
-        return 'dieser Monat';
+        return this.i18n.translate('analytics.this_month_label');
       case 'custom':
-        return `vom ${this.startDate} bis ${this.endDate}`;
+        return this.i18n.translate('analytics.custom_range_label', { startDate: this.startDate, endDate: this.endDate });
       default:
-        return 'heute';
+        return this.i18n.translate('analytics.today_label');
     }
   }
 
@@ -1937,7 +1939,7 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
       labels: revenueLabels,
       datasets: [{
         data: revenueData,
-        label: 'Umsatz (€)',
+        label: this.i18n.translate('analytics.revenue') + ' (€)',
         fill: true,
         tension: 0.4,
         borderColor: '#3b82f6',
@@ -1956,7 +1958,7 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
       labels: ordersLabels,
       datasets: [{
         data: ordersData,
-        label: 'Bestellungen',
+        label: this.i18n.translate('analytics.orders'),
         backgroundColor: '#10b981',
         borderColor: '#059669',
         borderWidth: 1
@@ -1987,7 +1989,7 @@ export class RestaurantManagerAnalyticsComponent implements OnInit, OnDestroy {
     this.downloadCSV(exportData);
     
     this.loadingService.stop('report-generation');
-    this.toastService.success('Erfolg', 'Daten wurden erfolgreich exportiert');
+    this.toastService.success(this.i18n.translate('common.success'), this.i18n.translate('analytics.success_export'));
   }
 
   private downloadCSV(data: any) {

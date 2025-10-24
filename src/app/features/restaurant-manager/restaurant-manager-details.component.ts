@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RestaurantsService, RestaurantDTO } from '../../core/services/restaurants.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AuthService } from '../../core/auth/auth.service';
+import { I18nService } from '../../core/services/i18n.service';
 
 type SectionType = 'text' | 'gallery' | 'video';
 
@@ -25,17 +26,17 @@ interface DetailsSection {
   template: `
     <div class="details-editor">
       <div class="header">
-        <h1>Restaurant-Details</h1>
-        <p>Erstellen und bearbeiten Sie Abschnitte für die Kunden-Detailseite.</p>
+        <h1>{{ i18n.translate('restaurant_details.title') }}</h1>
+        <p>{{ i18n.translate('restaurant_details.description') }}</p>
       </div>
 
-      <div *ngIf="!currentRestaurant" class="loading">Lade Restaurant...</div>
+      <div *ngIf="!currentRestaurant" class="loading">{{ i18n.translate('restaurant_details.loading') }}</div>
 
       <div *ngIf="currentRestaurant" class="content">
         <div class="toolbar">
-          <button class="btn" (click)="addSection('text')">Text-Abschnitt hinzufügen</button>
-          <button class="btn" (click)="addSection('gallery')">Galerie-Abschnitt hinzufügen</button>
-          <button class="btn" (click)="addSection('video')">Video-Abschnitt hinzufügen</button>
+          <button class="btn" (click)="addSection('text')">{{ i18n.translate('restaurant_details.add_text_section') }}</button>
+          <button class="btn" (click)="addSection('gallery')">{{ i18n.translate('restaurant_details.add_gallery_section') }}</button>
+          <button class="btn" (click)="addSection('video')">{{ i18n.translate('restaurant_details.add_video_section') }}</button>
         </div>
 
         <div class="sections-list" *ngIf="sections.length > 0; else empty">
@@ -43,51 +44,51 @@ interface DetailsSection {
             <div class="section-header">
               <div class="left">
                 <select [(ngModel)]="s.type">
-                  <option value="text">Text</option>
-                  <option value="gallery">Galerie</option>
-                  <option value="video">Video</option>
+                  <option value="text">{{ i18n.translate('restaurant_details.section_type_text') }}</option>
+                  <option value="gallery">{{ i18n.translate('restaurant_details.section_type_gallery') }}</option>
+                  <option value="video">{{ i18n.translate('restaurant_details.section_type_video') }}</option>
                 </select>
-                <input type="text" placeholder="Titel (optional)" [(ngModel)]="s.title">
+                <input type="text" [placeholder]="i18n.translate('restaurant_details.title_placeholder')" [(ngModel)]="s.title">
               </div>
               <div class="right">
                 <label class="visibility">
-                  <input type="checkbox" [(ngModel)]="s.visible"> Sichtbar
+                  <input type="checkbox" [(ngModel)]="s.visible"> {{ i18n.translate('restaurant_details.visible') }}
                 </label>
-                <input class="pos" type="number" [(ngModel)]="s.position" placeholder="#" min="0">
+                <input class="pos" type="number" [(ngModel)]="s.position" [placeholder]="i18n.translate('restaurant_details.position')" min="0">
                 <button class="icon" (click)="moveUp(i)" [disabled]="i===0">▲</button>
                 <button class="icon" (click)="moveDown(i)" [disabled]="i===sections.length-1">▼</button>
-                <button class="danger" (click)="removeSection(i)">Entfernen</button>
+                <button class="danger" (click)="removeSection(i)">{{ i18n.translate('restaurant_details.remove') }}</button>
               </div>
             </div>
 
             <div class="section-body">
               <ng-container [ngSwitch]="s.type">
                 <div *ngSwitchCase="'text'">
-                  <textarea rows="6" placeholder="Inhalt" [(ngModel)]="s.content"></textarea>
+                  <textarea rows="6" [placeholder]="i18n.translate('restaurant_details.content_placeholder')" [(ngModel)]="s.content"></textarea>
                 </div>
                 <div *ngSwitchCase="'gallery'">
                   <div class="chips">
                     <div class="chip" *ngFor="let img of (s.images||[]); let j = index">
-                      <input type="text" [(ngModel)]="s.images![j]" placeholder="Bild-URL">
+                      <input type="text" [(ngModel)]="s.images![j]" [placeholder]="i18n.translate('restaurant_details.image_url_placeholder')">
                       <button class="icon" (click)="removeImage(i, j)">✕</button>
                     </div>
                   </div>
-                  <button class="btn" (click)="addImage(i)">Bild-URL hinzufügen</button>
-                  <p class="hint">Tipp: Nutzen Sie bereits hochgeladene Galerie-URLs aus dem Bilder-Tab.</p>
+                  <button class="btn" (click)="addImage(i)">{{ i18n.translate('restaurant_details.add_image_url') }}</button>
+                  <p class="hint">{{ i18n.translate('restaurant_details.gallery_tip') }}</p>
                 </div>
                 <div *ngSwitchCase="'video'">
-                  <input type="text" [(ngModel)]="s.video_url" placeholder="Video-URL (YouTube/Vimeo)">
+                  <input type="text" [(ngModel)]="s.video_url" [placeholder]="i18n.translate('restaurant_details.video_url_placeholder')">
                 </div>
               </ng-container>
             </div>
           </div>
         </div>
         <ng-template #empty>
-          <div class="empty">Noch keine Abschnitte. Fügen Sie oben einen Abschnitt hinzu.</div>
+          <div class="empty">{{ i18n.translate('restaurant_details.no_sections') }}</div>
         </ng-template>
 
         <div class="actions">
-          <button class="primary" (click)="save()" [disabled]="saving">{{ saving ? 'Speichert...' : 'Speichern' }}</button>
+          <button class="primary" (click)="save()" [disabled]="saving">{{ saving ? i18n.translate('restaurant_details.saving') : i18n.translate('restaurant_details.save') }}</button>
         </div>
       </div>
     </div>
@@ -119,6 +120,7 @@ export class RestaurantManagerDetailsComponent implements OnInit {
   private restaurantsService = inject(RestaurantsService);
   private toast = inject(ToastService);
   private auth = inject(AuthService);
+  public i18n = inject(I18nService);
 
   currentRestaurant: RestaurantDTO | null = null;
   sections: DetailsSection[] = [];
@@ -182,12 +184,12 @@ export class RestaurantManagerDetailsComponent implements OnInit {
     this.restaurantsService.updateRestaurant(this.currentRestaurant.id, payload).subscribe({
       next: (updated) => {
         this.currentRestaurant = updated;
-        this.toast.success('Erfolg', 'Details gespeichert');
+        this.toast.success(this.i18n.translate('common.success'), this.i18n.translate('restaurant_details.save'));
         this.saving = false;
       },
       error: (err) => {
         console.error(err);
-        this.toast.error('Fehler', 'Details konnten nicht gespeichert werden');
+        this.toast.error(this.i18n.translate('common.error'), this.i18n.translate('restaurant_details.save'));
         this.saving = false;
       }
     });

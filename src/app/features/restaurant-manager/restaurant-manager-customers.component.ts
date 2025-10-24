@@ -5,6 +5,7 @@ import { RouterModule } from '@angular/router';
 import { RestaurantsService } from '../../core/services/restaurants.service';
 import { RestaurantManagerService } from '../../core/services/restaurant-manager.service';
 import { RestaurantCustomer } from '../../core/services/restaurants.service';
+import { I18nService } from '../../core/services/i18n.service';
 
 interface RestaurantCustomerStats {
   total_customers: number;
@@ -22,11 +23,11 @@ interface RestaurantCustomerStats {
       <!-- Header -->
       <div class="customers-header">
         <div class="header-main">
-          <h1>Kunden verwalten</h1>
+          <h1>{{ i18n.translate('customers.title') }}</h1>
           <button class="btn-primary mobile-add-btn" (click)="showAddCustomerModal = true">
             <i class="fa-solid fa-plus"></i>
-            <span class="btn-text-full">Neuen Kunden</span>
-            <span class="btn-text-mobile">Neu</span>
+            <span class="btn-text-full">{{ i18n.translate('customers.add_customer') }}</span>
+            <span class="btn-text-mobile">{{ i18n.translate('customers.add_customer_mobile') }}</span>
           </button>
         </div>
         <div class="header-actions">
@@ -35,7 +36,7 @@ interface RestaurantCustomerStats {
               type="text"
               [(ngModel)]="searchEmail"
               (keyup.enter)="searchCustomer()"
-              placeholder="Kunden suchen..."
+              [placeholder]="i18n.translate('customers.search_placeholder')"
               class="search-input">
             <button (click)="searchCustomer()" class="btn-secondary">
               <i class="fa-solid fa-search"></i>
@@ -43,7 +44,7 @@ interface RestaurantCustomerStats {
           </div>
           <button class="btn-primary desktop-add-btn" (click)="showAddCustomerModal = true">
             <i class="fa-solid fa-plus"></i>
-            Neuen Kunden
+            {{ i18n.translate('customers.add_customer') }}
           </button>
         </div>
       </div>
@@ -56,7 +57,7 @@ interface RestaurantCustomerStats {
           </div>
           <div class="stat-content">
             <div class="stat-value">{{ customerStats.total_customers }}</div>
-            <div class="stat-label">Gesamt Kunden</div>
+            <div class="stat-label">{{ i18n.translate('customers.total_customers') }}</div>
           </div>
         </div>
 
@@ -66,7 +67,7 @@ interface RestaurantCustomerStats {
           </div>
           <div class="stat-content">
             <div class="stat-value">{{ customerStats.active_customers }}</div>
-            <div class="stat-label">Aktive Kunden</div>
+            <div class="stat-label">{{ i18n.translate('customers.active_customers') }}</div>
           </div>
         </div>
 
@@ -76,7 +77,7 @@ interface RestaurantCustomerStats {
           </div>
           <div class="stat-content">
             <div class="stat-value">{{ customerStats.new_customers_this_month }}</div>
-            <div class="stat-label">Neue Kunden (diesen Monat)</div>
+            <div class="stat-label">{{ i18n.translate('customers.new_customers_month') }}</div>
           </div>
         </div>
 
@@ -86,7 +87,7 @@ interface RestaurantCustomerStats {
           </div>
           <div class="stat-content">
             <div class="stat-value">{{ customerStats.avg_orders_per_customer | number:'1.1-1' }}</div>
-            <div class="stat-label">Ø Bestellungen pro Kunde</div>
+            <div class="stat-label">{{ i18n.translate('customers.avg_orders_per_customer') }}</div>
           </div>
         </div>
       </div>
@@ -96,13 +97,13 @@ interface RestaurantCustomerStats {
         <table class="customers-table" *ngIf="customers.length > 0; else noCustomers">
           <thead>
             <tr>
-              <th>Kunde</th>
-              <th>Kontakt</th>
-              <th>Bestellungen</th>
-              <th>Gesamtausgaben</th>
-              <th>Letzte Bestellung</th>
-              <th>Status</th>
-              <th>Aktionen</th>
+              <th>{{ i18n.translate('customers.customer') }}</th>
+              <th>{{ i18n.translate('customers.contact') }}</th>
+              <th>{{ i18n.translate('customers.orders') }}</th>
+              <th>{{ i18n.translate('customers.total_spent') }}</th>
+              <th>{{ i18n.translate('customers.last_order') }}</th>
+              <th>{{ i18n.translate('customers.status') }}</th>
+              <th>{{ i18n.translate('customers.actions') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -120,7 +121,7 @@ interface RestaurantCustomerStats {
                     {{ customer.phone }}
                   </div>
                   <ng-template #noPhone>
-                    <span class="no-data">Keine Telefonnummer</span>
+                    <span class="no-data">{{ i18n.translate('customers.no_phone') }}</span>
                   </ng-template>
                 </div>
               </td>
@@ -138,21 +139,21 @@ interface RestaurantCustomerStats {
               </td>
               <td>
                 <span class="status-badge" [class.active]="customer.is_active" [class.inactive]="!customer.is_active">
-                  {{ customer.is_active ? 'Aktiv' : 'Inaktiv' }}
+                  {{ customer.is_active ? i18n.translate('customers.active') : i18n.translate('customers.inactive') }}
                 </span>
               </td>
               <td>
                 <div class="action-buttons">
-                  <button class="btn-sm" (click)="viewCustomerDetails(customer)" title="Details anzeigen">
+                  <button class="btn-sm" (click)="viewCustomerDetails(customer)" [title]="i18n.translate('customers.view_details')">
                     <i class="fa-solid fa-eye"></i>
                   </button>
-                  <button class="btn-sm" (click)="editCustomer(customer)" title="Bearbeiten">
+                  <button class="btn-sm" (click)="editCustomer(customer)" [title]="i18n.translate('customers.edit')">
                     <i class="fa-solid fa-edit"></i>
                   </button>
                   <button
                     class="btn-sm danger"
                     (click)="toggleCustomerStatus(customer)"
-                    [title]="customer.is_active ? 'Deaktivieren' : 'Aktivieren'">
+                    [title]="customer.is_active ? i18n.translate('customers.deactivate') : i18n.translate('customers.activate')">
                     <i class="fa-solid" [class]="customer.is_active ? 'fa-ban' : 'fa-check'"></i>
                   </button>
                 </div>
@@ -166,10 +167,10 @@ interface RestaurantCustomerStats {
             <div class="no-customers-icon">
               <i class="fa-solid fa-users"></i>
             </div>
-            <h3>Noch keine Kunden</h3>
-            <p>Hier werden Ihre Restaurant-Kunden angezeigt, sobald sie ihre erste Bestellung aufgeben.</p>
+            <h3>{{ i18n.translate('customers.no_customers_title') }}</h3>
+            <p>{{ i18n.translate('customers.no_customers_desc') }}</p>
             <button class="btn-primary" (click)="showAddCustomerModal = true">
-              Ersten Kunden manuell hinzufügen
+              {{ i18n.translate('customers.add_first_customer') }}
             </button>
           </div>
         </ng-template>
@@ -187,7 +188,7 @@ interface RestaurantCustomerStats {
               <div class="customer-email">{{ customer.email }}</div>
             </div>
             <span class="status-badge" [class.active]="customer.is_active" [class.inactive]="!customer.is_active">
-              {{ customer.is_active ? 'Aktiv' : 'Inaktiv' }}
+              {{ customer.is_active ? i18n.translate('customers.active') : i18n.translate('customers.inactive') }}
             </span>
           </div>
 
@@ -195,21 +196,21 @@ interface RestaurantCustomerStats {
             <div class="card-row">
               <div class="card-field">
                 <i class="fa-solid fa-phone"></i>
-                <span>{{ customer.phone || 'Keine Telefonnummer' }}</span>
+                <span>{{ customer.phone || i18n.translate('customers.no_phone') }}</span>
               </div>
             </div>
 
             <div class="card-stats">
               <div class="stat-item">
-                <div class="stat-label">Bestellungen</div>
+                <div class="stat-label">{{ i18n.translate('customers.orders') }}</div>
                 <div class="stat-value">{{ customer.total_orders }}</div>
               </div>
               <div class="stat-item">
-                <div class="stat-label">Gesamtausgaben</div>
+                <div class="stat-label">{{ i18n.translate('customers.total_spent') }}</div>
                 <div class="stat-value">€{{ (customer.total_spent_cents / 100) | number:'1.2-2' }}</div>
               </div>
               <div class="stat-item">
-                <div class="stat-label">Letzte Bestellung</div>
+                <div class="stat-label">{{ i18n.translate('customers.last_order') }}</div>
                 <div class="stat-value">{{ customer.last_order_at | date:'dd.MM.yyyy' }}</div>
               </div>
             </div>
@@ -218,17 +219,17 @@ interface RestaurantCustomerStats {
           <div class="card-actions">
             <button class="btn-outline" (click)="viewCustomerDetails(customer)">
               <i class="fa-solid fa-eye"></i>
-              Details
+              {{ i18n.translate('customers.details') }}
             </button>
             <button class="btn-outline" (click)="editCustomer(customer)">
               <i class="fa-solid fa-edit"></i>
-              Bearbeiten
+              {{ i18n.translate('customers.edit_button') }}
             </button>
             <button
               class="btn-outline danger"
               (click)="toggleCustomerStatus(customer)">
               <i class="fa-solid" [class]="customer.is_active ? 'fa-ban' : 'fa-check'"></i>
-              {{ customer.is_active ? 'Deaktivieren' : 'Aktivieren' }}
+              {{ customer.is_active ? i18n.translate('customers.deactivate_button') : i18n.translate('customers.activate_button') }}
             </button>
           </div>
         </div>
@@ -239,10 +240,10 @@ interface RestaurantCustomerStats {
         <div class="no-customers-icon">
           <i class="fa-solid fa-users"></i>
         </div>
-        <h3>Noch keine Kunden</h3>
-        <p>Hier werden Ihre Restaurant-Kunden angezeigt, sobald sie ihre erste Bestellung aufgeben.</p>
+        <h3>{{ i18n.translate('customers.no_customers_title') }}</h3>
+        <p>{{ i18n.translate('customers.no_customers_desc') }}</p>
         <button class="btn-primary" (click)="showAddCustomerModal = true">
-          Ersten Kunden manuell hinzufügen
+          {{ i18n.translate('customers.add_first_customer') }}
         </button>
       </div>
 
@@ -250,7 +251,7 @@ interface RestaurantCustomerStats {
       <div *ngIf="showCustomerDetailsModal" class="modal-overlay" (click)="showCustomerDetailsModal = false">
         <div class="modal-content" (click)="$event.stopPropagation()">
           <div class="modal-header">
-            <h3>Kunden-Details</h3>
+            <h3>{{ i18n.translate('customers.details_title') }}</h3>
             <button class="close-btn" (click)="showCustomerDetailsModal = false">
               <i class="fa-solid fa-times"></i>
             </button>
@@ -259,53 +260,53 @@ interface RestaurantCustomerStats {
           <div class="modal-body" *ngIf="selectedCustomer">
             <div class="customer-details-grid">
               <div class="detail-section">
-                <h4>Persönliche Informationen</h4>
+                <h4>{{ i18n.translate('customers.personal_info') }}</h4>
                 <div class="detail-row">
-                  <span class="detail-label">Name:</span>
+                  <span class="detail-label">{{ i18n.translate('customers.name') }}</span>
                   <span class="detail-value">{{ selectedCustomer.name }}</span>
                 </div>
                 <div class="detail-row">
-                  <span class="detail-label">E-Mail:</span>
+                  <span class="detail-label">{{ i18n.translate('customers.email') }}</span>
                   <span class="detail-value">{{ selectedCustomer.email }}</span>
                 </div>
                 <div class="detail-row">
-                  <span class="detail-label">Telefon:</span>
-                  <span class="detail-value">{{ selectedCustomer.phone || 'Nicht angegeben' }}</span>
+                  <span class="detail-label">{{ i18n.translate('customers.phone') }}</span>
+                  <span class="detail-value">{{ selectedCustomer.phone || i18n.translate('customers.not_provided') }}</span>
                 </div>
                 <div class="detail-row">
-                  <span class="detail-label">Erste Bestellung:</span>
+                  <span class="detail-label">{{ i18n.translate('customers.first_order') }}</span>
                   <span class="detail-value">{{ selectedCustomer.first_order_at | date:'dd.MM.yyyy HH:mm' }}</span>
                 </div>
               </div>
 
               <div class="detail-section">
-                <h4>Bestellstatistiken</h4>
+                <h4>{{ i18n.translate('customers.order_stats') }}</h4>
                 <div class="detail-row">
-                  <span class="detail-label">Gesamtbestellungen:</span>
+                  <span class="detail-label">{{ i18n.translate('customers.total_orders') }}</span>
                   <span class="detail-value">{{ selectedCustomer.total_orders }}</span>
                 </div>
                 <div class="detail-row">
-                  <span class="detail-label">Gesamtausgaben:</span>
+                  <span class="detail-label">{{ i18n.translate('customers.total_spent_label') }}</span>
                   <span class="detail-value">€{{ (selectedCustomer.total_spent_cents / 100) | number:'1.2-2' }}</span>
                 </div>
                 <div class="detail-row">
-                  <span class="detail-label">Durchschnitt pro Bestellung:</span>
+                  <span class="detail-label">{{ i18n.translate('customers.avg_per_order') }}</span>
                   <span class="detail-value">€{{ (selectedCustomer.total_spent_cents / selectedCustomer.total_orders / 100) | number:'1.2-2' }}</span>
                 </div>
                 <div class="detail-row">
-                  <span class="detail-label">Status:</span>
-                  <span class="detail-value">{{ selectedCustomer.is_active ? 'Aktiv' : 'Inaktiv' }}</span>
+                  <span class="detail-label">{{ i18n.translate('customers.status_label') }}</span>
+                  <span class="detail-value">{{ selectedCustomer.is_active ? i18n.translate('customers.active') : i18n.translate('customers.inactive') }}</span>
                 </div>
               </div>
 
               <div class="detail-section" *ngIf="selectedCustomer.preferences">
-                <h4>Kundenpräferenzen</h4>
+                <h4>{{ i18n.translate('customers.preferences') }}</h4>
                 <div *ngIf="selectedCustomer.preferences.allergies && selectedCustomer.preferences.allergies.length > 0" class="detail-row">
-                  <span class="detail-label">Allergien:</span>
+                  <span class="detail-label">{{ i18n.translate('customers.allergies') }}</span>
                   <span class="detail-value">{{ selectedCustomer.preferences.allergies.join(', ') }}</span>
                 </div>
                 <div *ngIf="selectedCustomer.preferences.delivery_notes" class="detail-row">
-                  <span class="detail-label">Lieferhinweise:</span>
+                  <span class="detail-label">{{ i18n.translate('customers.delivery_notes') }}</span>
                   <span class="detail-value">{{ selectedCustomer.preferences.delivery_notes }}</span>
                 </div>
               </div>
@@ -318,7 +319,7 @@ interface RestaurantCustomerStats {
       <div *ngIf="showAddCustomerModal" class="modal-overlay" (click)="showAddCustomerModal = false">
         <div class="modal-content" (click)="$event.stopPropagation()">
           <div class="modal-header">
-            <h3>{{ editingCustomer ? 'Kunden bearbeiten' : 'Neuen Kunden hinzufügen' }}</h3>
+            <h3>{{ editingCustomer ? i18n.translate('customers.edit_customer') : i18n.translate('customers.add_new_customer') }}</h3>
             <button class="close-btn" (click)="showAddCustomerModal = false">
               <i class="fa-solid fa-times"></i>
             </button>
@@ -326,7 +327,7 @@ interface RestaurantCustomerStats {
 
           <form class="modal-body" (ngSubmit)="saveCustomer()" #customerForm="ngForm">
             <div class="form-group">
-              <label for="customerName">Name *</label>
+              <label for="customerName">{{ i18n.translate('customers.name_required') }}</label>
               <input
                 type="text"
                 id="customerName"
@@ -334,11 +335,11 @@ interface RestaurantCustomerStats {
                 name="name"
                 required
                 class="form-input"
-                placeholder="Vorname Nachname">
+                [placeholder]="i18n.translate('customers.name_placeholder')">
             </div>
 
             <div class="form-group">
-              <label for="customerEmail">E-Mail *</label>
+              <label for="customerEmail">{{ i18n.translate('customers.email_required') }}</label>
               <input
                 type="email"
                 id="customerEmail"
@@ -347,18 +348,18 @@ interface RestaurantCustomerStats {
                 required
                 [disabled]="!!editingCustomer"
                 class="form-input"
-                placeholder="kunde@email.com">
+                [placeholder]="i18n.translate('customers.email_placeholder')">
             </div>
 
             <div class="form-group">
-              <label for="customerPhone">Telefon</label>
+              <label for="customerPhone">{{ i18n.translate('customers.phone_label') }}</label>
               <input
                 type="tel"
                 id="customerPhone"
                 [(ngModel)]="currentCustomer.phone"
                 name="phone"
                 class="form-input"
-                placeholder="+49 123 456789">
+                [placeholder]="i18n.translate('customers.phone_placeholder')">
             </div>
 
             <div class="form-group" *ngIf="editingCustomer">
@@ -367,16 +368,16 @@ interface RestaurantCustomerStats {
                   type="checkbox"
                   [(ngModel)]="currentCustomer.is_active"
                   name="is_active">
-                Kunde ist aktiv
+                {{ i18n.translate('customers.is_active') }}
               </label>
             </div>
 
             <div class="modal-actions">
               <button type="button" class="btn-secondary" (click)="showAddCustomerModal = false">
-                Abbrechen
+                {{ i18n.translate('customers.cancel') }}
               </button>
               <button type="submit" class="btn-primary" [disabled]="!customerForm.valid || isLoading">
-                {{ isLoading ? 'Speichern...' : (editingCustomer ? 'Aktualisieren' : 'Hinzufügen') }}
+                {{ isLoading ? i18n.translate('customers.saving') : (editingCustomer ? i18n.translate('customers.update') : i18n.translate('customers.add')) }}
               </button>
             </div>
           </form>
@@ -1101,6 +1102,7 @@ interface RestaurantCustomerStats {
 export class RestaurantManagerCustomersComponent implements OnInit {
   private restaurantsService = inject(RestaurantsService);
   private restaurantManagerService = inject(RestaurantManagerService);
+  public i18n = inject(I18nService); // Made public for template access
 
   customers: RestaurantCustomer[] = [];
   customerStats: RestaurantCustomerStats | null = null;
