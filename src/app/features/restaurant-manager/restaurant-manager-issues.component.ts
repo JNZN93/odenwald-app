@@ -39,13 +39,13 @@ interface OrderIssueVm {
       <!-- Header -->
       <div class="header">
         <div class="header-content">
-          <h1>Reklamationen</h1>
+          <h1>{{ 'issues.title_header' | translate }}</h1>
           <p>{{ 'issues.manage_complaints' | translate }}</p>
         </div>
         <div class="header-actions">
           <button class="refresh-btn" (click)="loadIssues()" [disabled]="isLoading">
             <i class="fa-solid fa-rotate-right" [class.spin]="isLoading"></i>
-            Aktualisieren
+            {{ 'issues.refresh' | translate }}
           </button>
         </div>
       </div>
@@ -53,7 +53,7 @@ interface OrderIssueVm {
       <!-- Issues List -->
       <div class="issues-section">
         <div class="issues-header">
-          <h2>{{ issues.length }} Reklamation{{ issues.length !== 1 ? 'en' : '' }}</h2>
+          <h2>{{ issues.length }} {{ issues.length !== 1 ? ('issues.complaints_count_plural' | translate) : ('issues.complaints_count' | translate) }}</h2>
         </div>
 
         <div class="issues-list">
@@ -79,7 +79,7 @@ interface OrderIssueVm {
 
             <div class="issue-details">
               <div class="order-info">
-                <div class="order-number">Bestellung #{{ issue.order_id }}</div>
+                <div class="order-number">{{ 'issues.order_number' | translate }}{{ issue.order_id }}</div>
               </div>
 
               <div class="issue-description-section">
@@ -97,16 +97,16 @@ interface OrderIssueVm {
 
               <div class="issue-actions">
                 <div class="action-group">
-                  <label class="action-label">Status:</label>
+                  <label class="action-label">{{ 'issues.labels.status' | translate }}</label>
                   <select [ngModel]="issue.status" (ngModelChange)="updateIssueStatus(issue, $event)" class="action-select" [disabled]="updatingIssueId === issue.id">
-                    <option value="open">Offen</option>
-                    <option value="in_progress">In Bearbeitung</option>
+                    <option value="open">{{ 'issues.status_open' | translate }}</option>
+                    <option value="in_progress">{{ 'issues.status_in_progress' | translate }}</option>
                     <option value="resolved">{{ 'issues.resolved' | translate }}</option>
                   </select>
                 </div>
 
                 <div class="action-group notes-group">
-                  <label class="action-label">Meine Notizen:</label>
+                  <label class="action-label">{{ 'issues.labels.my_notes' | translate }}</label>
                   <textarea
                     [ngModel]="issue.restaurant_manager_notes"
                     (ngModelChange)="updateNotes(issue, $event)"
@@ -126,7 +126,7 @@ interface OrderIssueVm {
                     *ngIf="canRefund(issue)"
                   >
                     <i class="fa-solid fa-money-bill-wave"></i>
-                    Geld zurück
+                    {{ 'issues.refund.money_back' | translate }}
                   </button>
                   <button 
                     class="btn-resolution" 
@@ -134,21 +134,21 @@ interface OrderIssueVm {
                     [disabled]="updatingIssueId === issue.id"
                   >
                     <i class="fa-solid fa-gift"></i>
-                    Andere Lösung
+                    {{ 'issues.refund.other_solution' | translate }}
                   </button>
                 </div>
               </div>
 
               <div class="loading-indicator" *ngIf="updatingIssueId === issue.id">
                 <i class="fa-solid fa-spinner fa-spin"></i>
-                Aktualisiere...
+                {{ 'issues.labels.updating' | translate }}
               </div>
             </div>
           </div>
 
           <div *ngIf="issues.length === 0 && !isLoading" class="empty-state">
             <i class="fa-solid fa-inbox"></i>
-            <h3>Keine Reklamationen</h3>
+            <h3>{{ 'issues.no_complaints_header' | translate }}</h3>
             <p>{{ 'issues.no_complaints' | translate }}</p>
           </div>
         </div>
@@ -167,7 +167,7 @@ interface OrderIssueVm {
 
         <div class="modal-body" *ngIf="!loadingRefundItems">
           <div class="order-info-box">
-            <h3>Bestellung #{{ selectedIssueForRefund?.order_id }}</h3>
+            <h3>{{ 'issues.refund_order_title' | translate }}{{ selectedIssueForRefund?.order_id }}</h3>
             <p class="issue-reason">{{ getReasonLabel(selectedIssueForRefund?.reason || '') }}</p>
           </div>
 
@@ -182,7 +182,7 @@ interface OrderIssueVm {
                 </div>
                 
                 <div class="item-controls">
-                  <label>Zurückerstatten:</label>
+                  <label>{{ 'issues.refund.refund_label' | translate }}</label>
                   <div class="quantity-selector">
                     <button 
                       class="qty-btn" 
@@ -213,7 +213,7 @@ interface OrderIssueVm {
 
             <div class="refund-total-box">
               <div class="total-row">
-                <span class="total-label">Rückerstattungsbetrag:</span>
+                <span class="total-label">{{ 'issues.labels.refund_amount' | translate }}</span>
                 <span class="total-amount">€{{ refundTotal.toFixed(2) }}</span>
               </div>
             </div>
@@ -222,26 +222,26 @@ interface OrderIssueVm {
 
         <div class="modal-body loading-state" *ngIf="loadingRefundItems">
           <i class="fa-solid fa-spinner fa-spin"></i>
-          <p>Lade Bestellpositionen...</p>
+          <p>{{ 'issues.labels.loading_items' | translate }}</p>
         </div>
 
         <div class="modal-footer">
           <button class="btn btn-secondary" (click)="closeRefundModal()">
-            Abbrechen
+            {{ 'issues.refund.cancel' | translate }}
           </button>
           <button 
             class="btn btn-warning" 
             (click)="processFullRefund()"
             [disabled]="loadingRefundItems">
             <i class="fa-solid fa-money-bill-wave"></i>
-            Vollständige Rückerstattung
+            {{ 'issues.refund.full_refund' | translate }}
           </button>
           <button 
             class="btn btn-primary" 
             (click)="processPartialRefund()"
             [disabled]="loadingRefundItems || refundTotal === 0">
             <i class="fa-solid fa-check"></i>
-            Teilrückerstattung (€{{ refundTotal.toFixed(2) }})
+            {{ 'issues.refund.partial_refund' | translate }} (€{{ refundTotal.toFixed(2) }})
           </button>
         </div>
       </div>
@@ -254,7 +254,7 @@ interface OrderIssueVm {
           <div class="result-icon">
             <i class="fa-solid" [class.fa-check-circle]="refundResultSuccess" [class.fa-exclamation-circle]="!refundResultSuccess"></i>
           </div>
-          <h2>{{ refundResultSuccess ? 'Rückerstattung erfolgreich' : 'Rückerstattung fehlgeschlagen' }}</h2>
+          <h2>{{ refundResultSuccess ? ('issues.refund.success_title' | translate) : ('issues.refund.failed_title' | translate) }}</h2>
         </div>
 
         <div class="modal-body">
@@ -264,26 +264,26 @@ interface OrderIssueVm {
 
           <div class="result-details" *ngIf="refundResultSuccess && refundResultDetails">
             <div class="detail-row highlight">
-              <span class="detail-label">Rückerstattungsbetrag:</span>
+              <span class="detail-label">{{ 'issues.labels.refund_amount' | translate }}</span>
               <span class="detail-value amount">€{{ refundResultDetails.amount.toFixed(2) }}</span>
             </div>
 
             <div class="detail-row">
-              <span class="detail-label">Art:</span>
+              <span class="detail-label">{{ 'issues.labels.type' | translate }}</span>
               <span class="detail-value">
-                {{ refundResultDetails.type === 'partial' ? 'Teilrückerstattung' : 
-                   refundResultDetails.type === 'full' ? 'Vollständige Rückerstattung' : 
-                   'Manuelle Rückerstattung' }}
+                {{ refundResultDetails.type === 'partial' ? ('issues.refund.partial_refund' | translate) : 
+                   refundResultDetails.type === 'full' ? ('issues.refund.full_refund' | translate) : 
+                   ('issues.refund.manual' | translate) }}
               </span>
             </div>
 
             <div class="detail-row" *ngIf="refundResultDetails.refund_id">
-              <span class="detail-label">Referenz-ID:</span>
+              <span class="detail-label">{{ 'issues.labels.reference_id' | translate }}</span>
               <span class="detail-value small">{{ refundResultDetails.refund_id }}</span>
             </div>
 
             <div class="refunded-items-list" *ngIf="refundResultDetails.items && refundResultDetails.items.length > 0">
-              <h4>Zurückerstattete Produkte:</h4>
+              <h4>{{ 'issues.labels.refunded_products' | translate }}</h4>
               <div class="refunded-item" *ngFor="let item of refundResultDetails.items">
                 <span class="item-quantity">{{ item.quantity }}x</span>
                 <span class="item-details">à €{{ item.unit_price }}</span>
@@ -295,7 +295,7 @@ interface OrderIssueVm {
           <div class="error-details" *ngIf="!refundResultSuccess">
             <div class="error-message">
               <i class="fa-solid fa-info-circle"></i>
-              <p>Bitte überprüfen Sie die Bestellung und versuchen Sie es erneut. Bei anhaltenden Problemen kontaktieren Sie bitte den Support.</p>
+              <p>{{ 'issues.support_message' | translate }}</p>
             </div>
           </div>
         </div>
@@ -303,7 +303,7 @@ interface OrderIssueVm {
         <div class="modal-footer">
           <button class="btn" [class.btn-primary]="refundResultSuccess" [class.btn-secondary]="!refundResultSuccess" (click)="closeRefundResultModal()">
             <i class="fa-solid fa-check"></i>
-            OK
+            {{ 'issues.refund.ok' | translate }}
           </button>
         </div>
       </div>
@@ -1319,7 +1319,7 @@ export class RestaurantManagerIssuesComponent implements OnInit {
             },
             error: (error: any) => {
               console.error('Error loading assigned issues:', error);
-              this.toastService.error('Reklamationen laden', `API-Fehler: ${error.message || 'Unbekannter Fehler'}`);
+              this.toastService.error(this.i18nService.translate('issues.load_error'), `${this.i18nService.translate('issues.errors.api_error')} ${error.message || this.i18nService.translate('issues.errors.unknown_error')}`);
               this.loadingService.stop('issues');
               this.isLoading = false;
             }
@@ -1332,7 +1332,7 @@ export class RestaurantManagerIssuesComponent implements OnInit {
       },
       error: (error: any) => {
         console.error('Error loading restaurants:', error);
-        this.toastService.error('Restaurant laden', `Fehler beim Laden des Restaurants: ${error.message || 'Unbekannter Fehler'}`);
+        this.toastService.error(this.i18nService.translate('issues.errors.restaurant_load'), `${this.i18nService.translate('issues.errors.restaurant_load_error')} ${error.message || this.i18nService.translate('issues.errors.unknown_error')}`);
         this.loadingService.stop('issues');
         this.isLoading = false;
       }
@@ -1348,7 +1348,7 @@ export class RestaurantManagerIssuesComponent implements OnInit {
     }).subscribe({
       next: (updated: OrderIssueVm) => {
         issue.status = updated.status;
-        this.toastService.success('Status aktualisiert', `Reklamation wurde als "${this.getStatusLabel(newStatus)}" markiert`);
+        this.toastService.success(this.i18nService.translate('issues.status_updated'), `${this.i18nService.translate('issues.toast.status_marked')} "${this.getStatusLabel(newStatus)}" ${this.i18nService.translate('issues.toast.marked')}`);
         this.updatingIssueId = null;
         
         // Trigger a page reload to update badge counts in the dashboard
@@ -1359,7 +1359,7 @@ export class RestaurantManagerIssuesComponent implements OnInit {
       },
       error: (error: any) => {
         console.error('Error updating issue status:', error);
-        this.toastService.error('Status aktualisieren', 'Fehler beim Aktualisieren des Status');
+        this.toastService.error(this.i18nService.translate('issues.status_update_error'), this.i18nService.translate('issues.toast.status_update_error'));
         this.updatingIssueId = null;
       }
     });
@@ -1393,7 +1393,7 @@ export class RestaurantManagerIssuesComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error loading order items:', error);
-        this.toastService.error('Fehler', 'Bestellpositionen konnten nicht geladen werden');
+        this.toastService.error(this.i18nService.translate('issues.errors.general'), this.i18nService.translate('issues.errors.load_order_items'));
         this.loadingRefundItems = false;
         this.showRefundModal = false;
       }
@@ -1430,11 +1430,11 @@ export class RestaurantManagerIssuesComponent implements OnInit {
       .map(item => ({
         order_item_id: item.id,
         quantity: item.refund_quantity,
-        reason: `Reklamation: ${this.getReasonLabel(issueReason)}`
+        reason: `${this.i18nService.translate('issues.complaint_reason')} ${this.getReasonLabel(issueReason)}`
       }));
 
     if (refundItems.length === 0) {
-      this.toastService.error('Fehler', 'Bitte wählen Sie mindestens ein Produkt aus');
+      this.toastService.error(this.i18nService.translate('issues.errors.general'), this.i18nService.translate('issues.errors.select_product'));
       return;
     }
 
@@ -1443,12 +1443,12 @@ export class RestaurantManagerIssuesComponent implements OnInit {
 
     this.http.post(`${environment.apiUrl}/order-issues/${issueId}/refund`, {
       refund_items: refundItems,
-      refund_reason: `Reklamation: ${this.getReasonLabel(issueReason)}`
+      refund_reason: `${this.i18nService.translate('issues.complaint_reason')} ${this.getReasonLabel(issueReason)}`
     }).subscribe({
       next: (response: any) => {
         this.showRefundResultModal = true;
         this.refundResultSuccess = true;
-        this.refundResultMessage = 'Teilrückerstattung erfolgreich verarbeitet';
+        this.refundResultMessage = this.i18nService.translate('issues.refund.partial_success');
         this.refundResultDetails = {
           amount: response.refund_amount,
           type: response.refund_type,
@@ -1462,7 +1462,7 @@ export class RestaurantManagerIssuesComponent implements OnInit {
         console.error('Error processing refund:', error);
         this.showRefundResultModal = true;
         this.refundResultSuccess = false;
-        this.refundResultMessage = error.error?.error || 'Fehler beim Verarbeiten der Rückerstattung';
+        this.refundResultMessage = error.error?.error || this.i18nService.translate('issues.errors.refund_processing');
         this.refundResultDetails = null;
         this.updatingIssueId = null;
       }
@@ -1480,12 +1480,12 @@ export class RestaurantManagerIssuesComponent implements OnInit {
     this.closeRefundModal();
 
     this.http.post(`${environment.apiUrl}/order-issues/${issueId}/refund`, {
-      refund_reason: `Reklamation: ${this.getReasonLabel(issueReason)}`
+      refund_reason: `${this.i18nService.translate('issues.complaint_reason')} ${this.getReasonLabel(issueReason)}`
     }).subscribe({
       next: (response: any) => {
         this.showRefundResultModal = true;
         this.refundResultSuccess = true;
-        this.refundResultMessage = 'Vollständige Rückerstattung erfolgreich verarbeitet';
+        this.refundResultMessage = this.i18nService.translate('issues.refund.full_success');
         this.refundResultDetails = {
           amount: response.refund_amount,
           type: response.refund_type,
@@ -1498,7 +1498,7 @@ export class RestaurantManagerIssuesComponent implements OnInit {
         console.error('Error processing refund:', error);
         this.showRefundResultModal = true;
         this.refundResultSuccess = false;
-        this.refundResultMessage = error.error?.error || 'Fehler beim Verarbeiten der Rückerstattung';
+        this.refundResultMessage = error.error?.error || this.i18nService.translate('issues.errors.refund_processing');
         this.refundResultDetails = null;
         this.updatingIssueId = null;
       }
@@ -1528,12 +1528,12 @@ export class RestaurantManagerIssuesComponent implements OnInit {
     }).subscribe({
       next: (updated: OrderIssueVm) => {
         issue.restaurant_manager_notes = updated.restaurant_manager_notes;
-        this.toastService.success('Notizen gespeichert', 'Ihre Notizen wurden erfolgreich gespeichert');
+        this.toastService.success(this.i18nService.translate('issues.success.notes_saved'), this.i18nService.translate('issues.success.notes_saved_message'));
         this.updatingIssueId = null;
       },
       error: (error: any) => {
         console.error('Error updating notes:', error);
-        this.toastService.error('Notizen speichern', 'Fehler beim Speichern der Notizen');
+        this.toastService.error(this.i18nService.translate('issues.errors.save_notes'), this.i18nService.translate('issues.errors.save_notes_error'));
         this.updatingIssueId = null;
       }
     });
@@ -1577,31 +1577,31 @@ export class RestaurantManagerIssuesComponent implements OnInit {
 
   getPriorityLabel(priority: string): string {
     const labels: { [key: string]: string } = {
-      low: 'Niedrig',
-      normal: 'Normal',
-      high: 'Hoch'
+      low: this.i18nService.translate('issues.priority.low'),
+      normal: this.i18nService.translate('issues.priority.normal'),
+      high: this.i18nService.translate('issues.priority.high')
     };
     return labels[priority] || priority;
   }
 
   getStatusLabel(status: string): string {
     const labels: { [key: string]: string } = {
-      open: 'Offen',
-      in_progress: 'In Bearbeitung',
-      resolved: 'Gelöst',
-      dismissed: 'Verworfen'
+      open: this.i18nService.translate('issues.status_open'),
+      in_progress: this.i18nService.translate('issues.status_in_progress'),
+      resolved: this.i18nService.translate('issues.status_resolved'),
+      dismissed: this.i18nService.translate('issues.status_dismissed')
     };
     return labels[status] || status;
   }
 
   getReasonLabel(reason: string): string {
     const labels: { [key: string]: string } = {
-      cold_food: '🥶 Kaltes Essen',
-      wrong_order: '❌ Falsche Bestellung',
-      missing_items: '📦 Fehlende Artikel',
-      late_delivery: '⏰ Zu späte Lieferung',
-      poor_quality: '👎 Schlechte Qualität',
-      other: '❓ Sonstiges'
+      cold_food: this.i18nService.translate('issues.reason.cold_food'),
+      wrong_order: this.i18nService.translate('issues.reason.wrong_order'),
+      missing_items: this.i18nService.translate('issues.reason.missing_items'),
+      late_delivery: this.i18nService.translate('issues.reason.late_delivery'),
+      poor_quality: this.i18nService.translate('issues.reason.poor_quality'),
+      other: this.i18nService.translate('issues.reason.other')
     };
     return labels[reason] || reason.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   }
@@ -1610,23 +1610,23 @@ export class RestaurantManagerIssuesComponent implements OnInit {
     // Priorität: payment_method > provider > order_type fallback
     if (issue.payment_method) {
       const method = issue.payment_method.toLowerCase();
-      if (method === 'cash') return 'Bar';
-      if (method === 'stripe') return 'Stripe';
-      if (method === 'paypal') return 'PayPal';
+      if (method === 'cash') return this.i18nService.translate('issues.payment.cash');
+      if (method === 'stripe') return this.i18nService.translate('issues.payment.stripe');
+      if (method === 'paypal') return this.i18nService.translate('issues.payment.paypal');
       return issue.payment_method;
     }
     
     if (issue.provider) {
       const provider = issue.provider.toLowerCase();
-      if (provider === 'cash') return 'Bar';
-      if (provider === 'stripe') return 'Stripe';
-      if (provider === 'paypal') return 'PayPal';
+      if (provider === 'cash') return this.i18nService.translate('issues.payment.cash');
+      if (provider === 'stripe') return this.i18nService.translate('issues.payment.stripe');
+      if (provider === 'paypal') return this.i18nService.translate('issues.payment.paypal');
       return issue.provider;
     }
 
     // Fallback: order_type
     if (issue.order_type === 'dine_in' && issue.order_payment_status === 'pending') {
-      return 'Bar (ausstehend)';
+      return this.i18nService.translate('issues.payment.cash') + ' (' + this.i18nService.translate('issues.payment.pending') + ')';
     }
 
     return '';
