@@ -640,6 +640,13 @@ export class I18nService {
 
       // Menu management
       'menu.manage_menu': 'Speisekarte verwalten',
+      'menu.new_dish': 'Neues Gericht',
+      'menu.new_category': 'Neue Kategorie',
+      'menu.available': 'Verfügbar',
+      'menu.description': 'Beschreibung',
+      'menu.image': 'Bild',
+      'menu.file_formats': 'JPEG, PNG, GIF oder WebP (max. 3MB)',
+      'menu.uploading': 'Hochladen...',
       
       // Orders management
       'orders.title': 'Bestellungen verwalten',
@@ -1474,6 +1481,13 @@ export class I18nService {
 
       // Menu management
       'menu.manage_menu': 'Menüyü yönet',
+      'menu.new_dish': 'Yeni Yemek',
+      'menu.new_category': 'Yeni Kategori',
+      'menu.available': 'Mevcut',
+      'menu.description': 'Açıklama',
+      'menu.image': 'Resim',
+      'menu.file_formats': 'JPEG, PNG, GIF veya WebP (maks. 3MB)',
+      'menu.uploading': 'Yükleniyor...',
       
       // Orders management
       'orders.title': 'Siparişleri yönet',
@@ -1652,6 +1666,7 @@ export class I18nService {
       'menu.category_optional': 'Kategori (isteğe bağlı)',
       'menu.no_category': 'Kategori yok',
       'menu.image_url': 'Resim URL',
+      'menu.upload_file': 'Dosya Yükle',
       'menu.enter_image_url': 'Bir resim URL\'si girin',
       'menu.select_image': 'Resim seç',
       'menu.allergens_comma_separated': 'Alerjenler (virgülle ayrılmış)',

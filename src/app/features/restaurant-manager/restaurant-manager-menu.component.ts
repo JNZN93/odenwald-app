@@ -257,7 +257,7 @@ interface CategoryFormData {
                     <i class="fa-solid fa-cloud-upload-alt upload-icon"></i>
                     <div class="upload-text">
                       <strong>{{ 'menu.select_image' | translate }}</strong>
-                      <span>JPEG, PNG, GIF oder WebP (max. 3MB)</span>
+                      <span>{{ 'menu.file_formats' | translate }}</span>
                     </div>
                   </div>
                 </div>
@@ -266,7 +266,7 @@ interface CategoryFormData {
                   <div class="progress-bar">
                     <div class="progress-fill" [style.width.%]="uploadProgress"></div>
                   </div>
-                  <span>Hochladen... {{ uploadProgress }}%</span>
+                  <span>{{ 'menu.uploading' | translate }} {{ uploadProgress }}%</span>
                 </div>
               </div>
             </div>
