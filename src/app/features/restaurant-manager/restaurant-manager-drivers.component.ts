@@ -11,6 +11,7 @@ import { Subscription, interval } from 'rxjs';
 import { DriversService } from '../../core/services/drivers.service';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { RestaurantsService } from '../../core/services/restaurants.service';
+import { I18nService } from '../../core/services/i18n.service';
 
 export interface Driver {
   id: string;
@@ -54,26 +55,26 @@ export interface Driver {
     <div class="drivers-management-container">
       <!-- Header -->
       <div class="page-header">
-        <h1><i class="fa-solid fa-truck"></i> Fahrer-Management</h1>
-        <p>Verwalten Sie Ihre Fahrer und weisen Sie Aufträge zu</p>
+        <h1><i class="fa-solid fa-truck"></i> {{ translate('drivers.management') }}</h1>
+        <p>{{ translate('drivers.manage_description') }}</p>
       </div>
 
       <!-- Quick Actions -->
       <div class="quick-actions">
         <button class="btn btn-primary" (click)="addDriver()">
           <i class="fa-solid fa-plus"></i>
-          <span class="btn-text-full">Neuen Fahrer hinzufügen</span>
-          <span class="btn-text-mobile">Neuer Fahrer</span>
+          <span class="btn-text-full">{{ translate('drivers.add_new') }}</span>
+          <span class="btn-text-mobile">{{ translate('drivers.add_new_mobile') }}</span>
         </button>
         <button class="btn btn-success" (click)="refreshData()">
           <i class="fa-solid fa-refresh"></i>
-          <span class="btn-text-full">Aktualisieren</span>
-          <span class="btn-text-mobile">Aktualisieren</span>
+          <span class="btn-text-full">{{ translate('drivers.refresh') }}</span>
+          <span class="btn-text-mobile">{{ translate('drivers.refresh') }}</span>
         </button>
         <button class="btn btn-primary" (click)="optimizeMultiDriverRoutes()" [disabled]="isBulkOptimizing">
           <i class="fa-solid fa-route"></i>
-          <span class="btn-text-full">Multi-Optimierung</span>
-          <span class="btn-text-mobile">Optimieren</span>
+          <span class="btn-text-full">{{ translate('drivers.multi_optimization') }}</span>
+          <span class="btn-text-mobile">{{ translate('drivers.optimize') }}</span>
         </button>
       </div>
 
@@ -84,7 +85,7 @@ export interface Driver {
             <i class="fa-solid fa-truck"></i>
           </div>
           <div class="stat-content">
-            <h3>Gesamt Fahrer</h3>
+            <h3>{{ translate('drivers.total_drivers') }}</h3>
             <div class="stat-value">{{ driverStats.total_drivers }}</div>
           </div>
         </div>
@@ -93,7 +94,7 @@ export interface Driver {
             <i class="fa-solid fa-check-circle"></i>
           </div>
           <div class="stat-content">
-            <h3>Verfügbar</h3>
+            <h3>{{ translate('drivers.available_drivers') }}</h3>
             <div class="stat-value">{{ driverStats.available_drivers }}</div>
           </div>
         </div>
@@ -102,7 +103,7 @@ export interface Driver {
             <i class="fa-solid fa-route"></i>
           </div>
           <div class="stat-content">
-            <h3>Unterwegs</h3>
+            <h3>{{ translate('drivers.delivering_drivers') }}</h3>
             <div class="stat-value">{{ driverStats?.delivering_drivers || 0 }}</div>
           </div>
         </div>
@@ -111,7 +112,7 @@ export interface Driver {
             <i class="fa-solid fa-star"></i>
           </div>
           <div class="stat-content">
-            <h3>Durchschnittsbewertung</h3>
+            <h3>{{ translate('drivers.average_rating') }}</h3>
             <div class="stat-value">{{ (driverStats?.average_rating || 5.0) | number:'1.1-1' }}/5</div>
           </div>
         </div>
@@ -121,8 +122,8 @@ export interface Driver {
       <div class="main-content-grid">
         <!-- Drivers List -->
         <div class="drivers-section">
-          <h2>1. Fahrer auswählen</h2>
-          <p class="section-description">Wählen Sie zuerst einen Fahrer aus, dem Sie Bestellungen zuweisen möchten. Nur verfügbare Fahrer können ausgewählt werden.</p>
+          <h2>{{ translate('drivers.select_driver') }}</h2>
+          <p class="section-description">{{ translate('drivers.select_description') }}</p>
 
           <div class="drivers-list" *ngIf="drivers.length > 0; else noDrivers">
             <div
@@ -142,12 +143,12 @@ export interface Driver {
               <!-- Selection badge for selected driver -->
               <div class="selection-badge" *ngIf="selectedDriver?.id === driver.id">
                 <i class="fa-solid fa-check"></i>
-                <span>Ausgewählt</span>
+                <span>{{ translate('drivers.selected') }}</span>
               </div>
 
               <div class="driver-header">
                 <div class="driver-info">
-                  <h4>{{ driver.name || 'Fahrer ' + driver.id }}</h4>
+                  <h4>{{ driver.name || translate('drivers.title') + ' ' + driver.id }}</h4>
                   <div class="vehicle-badge" [class]="driver.vehicle_type">
                     <i class="fa-solid" [ngClass]="getVehicleIcon(driver.vehicle_type)"></i>
                     {{ getVehicleTypeLabel(driver.vehicle_type) }}
@@ -157,7 +158,7 @@ export interface Driver {
                     <!-- Pending Activation Badge -->
                     <div class="pending-badge" *ngIf="driver.status === 'pending_activation' || driver.current_status === 'pending_activation'">
                       <i class="fa-solid fa-hourglass-half"></i>
-                      <span>Wartend auf Aktivierung</span>
+                      <span>{{ translate('drivers.waiting_activation') }}</span>
                     </div>
                     <!-- Delivery Status Badge for drivers who are busy (since there's no on_delivery status in DB) -->
                     <div class="delivery-status-badge" *ngIf="driver.status === 'busy' || driver.current_status === 'busy'" [class]="getDeliveryBadgeClass(driver)">
@@ -181,11 +182,11 @@ export interface Driver {
               <div class="driver-details">
                 <div class="detail-item">
                   <i class="fa-solid fa-star"></i>
-                  <span>{{ driver.rating }}/5 Bewertung</span>
+                  <span>{{ driver.rating }}/5 {{ translate('drivers.rating') }}</span>
                 </div>
                 <div class="detail-item">
                   <i class="fa-solid fa-truck"></i>
-                  <span>{{ driver.total_deliveries }} Lieferungen</span>
+                  <span>{{ driver.total_deliveries }} {{ translate('drivers.deliveries') }}</span>
                 </div>
                 <div class="detail-item" *ngIf="driver.current_location">
                   <i class="fa-solid fa-location-dot"></i>
@@ -197,7 +198,7 @@ export interface Driver {
                 <button
                   class="btn btn-ghost btn-sm"
                   (click)="viewDriverDetails(driver)"
-                  title="Details anzeigen"
+                  [title]="translate('drivers.view_details')"
                 >
                   <i class="fa-solid fa-eye"></i>
                 </button>
@@ -208,8 +209,8 @@ export interface Driver {
           <ng-template #noDrivers>
             <div class="empty-state">
               <i class="fa-solid fa-truck"></i>
-              <h3>Noch keine Fahrer</h3>
-              <p>Fügen Sie Ihren ersten Fahrer hinzu, um mit Lieferungen zu beginnen.</p>
+              <h3>{{ translate('drivers.no_drivers') }}</h3>
+              <p>{{ translate('drivers.no_drivers_description') }}</p>
             </div>
           </ng-template>
         </div>
@@ -217,7 +218,7 @@ export interface Driver {
         <!-- Pending Orders with Checkboxes -->
         <div class="orders-section">
           <div class="orders-header">
-            <h2>2. Bestellungen auswählen</h2>
+            <h2>{{ translate('drivers.select_orders') }}</h2>
             <div class="bulk-actions" *ngIf="selectedDriver && pendingOrders.length > 0">
               <button
                 class="btn btn-primary"
@@ -226,11 +227,11 @@ export interface Driver {
               >
                 <span *ngIf="!isBulkAssigning">
                   <i class="fa-solid fa-check"></i>
-                  {{ selectedOrders.length }} Bestellung{{ selectedOrders.length !== 1 ? 'en' : '' }} zuweisen
+                  {{ selectedOrders.length }} {{ translate('drivers.assign_selected') }}
                 </span>
                 <span *ngIf="isBulkAssigning">
                   <i class="fa-solid fa-spinner fa-spin"></i>
-                  Zuweisen...
+                  {{ translate('drivers.assigning') }}
                 </span>
               </button>
               <button
@@ -241,11 +242,11 @@ export interface Driver {
               >
                 <span *ngIf="!isOptimizing">
                   <i class="fa-solid fa-route"></i>
-                  Tour optimieren
+                  {{ translate('drivers.optimize_tour') }}
                 </span>
                 <span *ngIf="isOptimizing">
                   <i class="fa-solid fa-spinner fa-spin"></i>
-                  Optimieren...
+                  {{ translate('drivers.optimizing') }}
                 </span>
               </button>
               <button
@@ -254,7 +255,7 @@ export interface Driver {
                 (click)="saveManualTour()"
               >
                 <i class="fa-solid fa-save"></i>
-                Tour speichern
+                {{ translate('drivers.save_tour') }}
               </button>
             </div>
           </div>
@@ -263,9 +264,9 @@ export interface Driver {
             <div class="info-card">
               <i class="fa-solid fa-user-check"></i>
               <div class="info-content">
-                <strong>{{ selectedDriver.name || 'Fahrer ' + selectedDriver.id }}</strong> ausgewählt
+                <strong>{{ selectedDriver.name || translate('drivers.title') + ' ' + selectedDriver.id }}</strong> {{ translate('drivers.driver_selected') }}
                 <br>
-                <small>Wählen Sie die Bestellungen aus, die zugewiesen werden sollen</small>
+                <small>{{ translate('drivers.select_orders_description') }}</small>
               </div>
             </div>
           </div>
@@ -283,14 +284,14 @@ export interface Driver {
               </div>
 
               <div class="order-header">
-                <h4>Bestellung #{{ order.id }}</h4>
+                <h4>{{ translate('drivers.order') }} #{{ order.id }}</h4>
                 <div class="order-value">€{{ order.total_price | number:'1.2-2' }}</div>
               </div>
 
               <div class="order-details">
                 <div class="detail-item">
                   <i class="fa-solid fa-user"></i>
-                  <span>{{ order.customer_name || 'Kunde' }}</span>
+                  <span>{{ order.customer_name || translate('drivers.customer') }}</span>
                 </div>
                 <div class="detail-item">
                   <i class="fa-solid fa-map-marker-alt"></i>
@@ -307,8 +308,8 @@ export interface Driver {
           <ng-template #noOrders>
             <div class="empty-state">
               <i class="fa-solid fa-clipboard-list"></i>
-              <h3>Keine ausstehenden Aufträge</h3>
-              <p>Alle Bestellungen wurden bereits zugewiesen.</p>
+              <h3>{{ translate('drivers.no_pending_orders') }}</h3>
+              <p>{{ translate('drivers.no_pending_description') }}</p>
             </div>
           </ng-template>
         </div>
@@ -319,8 +320,8 @@ export interface Driver {
       <div class="modal" *ngIf="isBulkOptimizing" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; z-index: 9999;">
         <div class="loading-modal-content" style="background: white; border-radius: 12px; padding: 2rem; display: flex; flex-direction: column; align-items: center; gap: 1rem; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); max-width: 400px; width: 90%;">
           <div class="loading-spinner"></div>
-          <h3 style="margin: 0; color: #333; font-size: 1.25rem;">Multi-Optimierung läuft...</h3>
-          <p style="margin: 0; color: #666; text-align: center; font-size: 0.9rem;">Die besten Routen für alle verfügbaren Fahrer werden berechnet. Dies kann einen Moment dauern.</p>
+          <h3 style="margin: 0; color: #333; font-size: 1.25rem;">{{ translate('drivers.multi_optimization_running') }}</h3>
+          <p style="margin: 0; color: #666; text-align: center; font-size: 0.9rem;">{{ translate('drivers.multi_optimization_description') }}</p>
         </div>
       </div>
 
@@ -328,7 +329,7 @@ export interface Driver {
       <div class="modal" *ngIf="showAddDriverModal" (click)="closeAddDriverModal()">
         <div class="modal-content add-driver-modal" (click)="$event.stopPropagation()">
           <div class="modal-header">
-            <h3><i class="fa-solid fa-qrcode"></i> Neuen Fahrer hinzufügen</h3>
+            <h3><i class="fa-solid fa-qrcode"></i> {{ translate('drivers.add_driver_modal') }}</h3>
             <button class="close-btn" (click)="closeAddDriverModal()">
               <i class="fa-solid fa-times"></i>
             </button>
@@ -653,7 +654,7 @@ export interface Driver {
       <div class="modal" *ngIf="showDriverDetailsModal" (click)="closeDriverDetailsModal()">
         <div class="modal-content driver-details-modal" (click)="$event.stopPropagation()">
           <div class="modal-header">
-            <h3><i class="fa-solid fa-user"></i> Fahrer-Details</h3>
+            <h3><i class="fa-solid fa-user"></i> {{ translate('drivers.driver_details') }}</h3>
             <button class="close-btn" (click)="closeDriverDetailsModal()">
               <i class="fa-solid fa-times"></i>
             </button>
@@ -666,7 +667,7 @@ export interface Driver {
                   <i class="fa-solid fa-user-circle"></i>
                 </div>
                 <div class="driver-basic-info">
-                  <h4>{{ selectedDriverForDetails.name || 'Fahrer ' + selectedDriverForDetails.id }}</h4>
+                  <h4>{{ selectedDriverForDetails.name || translate('drivers.title') + ' ' + selectedDriverForDetails.id }}</h4>
                   <div class="driver-meta">
                     <span class="driver-email" *ngIf="selectedDriverForDetails.email">{{ selectedDriverForDetails.email }}</span>
                     <span class="driver-username" *ngIf="selectedDriverForDetails.username">{{ selectedDriverForDetails.username }}</span>
@@ -684,13 +685,13 @@ export interface Driver {
                 <div class="alert-content">
                   <i class="fa-solid fa-hourglass-half"></i>
                   <div>
-                    <strong>Fahrer wartet auf Aktivierung</strong>
-                    <p>Der Fahrer muss den QR-Code scannen und sein Passwort setzen, bevor er Aufträge annehmen kann.</p>
+                    <strong>{{ translate('drivers.driver_waiting_activation') }}</strong>
+                    <p>{{ translate('drivers.activation_description') }}</p>
                   </div>
                 </div>
                 <button class="btn btn-warning" (click)="showActivationQRCode(selectedDriverForDetails)">
                   <i class="fa-solid fa-qrcode"></i>
-                  QR-Code erneut anzeigen
+                  {{ translate('drivers.show_qr_code_again') }}
                 </button>
               </div>
 
@@ -699,34 +700,34 @@ export interface Driver {
                   <i class="fa-solid fa-star"></i>
                   <div class="stat-info">
                     <span class="stat-value">{{ selectedDriverForDetails.rating }}/5</span>
-                    <span class="stat-label">Bewertung</span>
+                    <span class="stat-label">{{ translate('drivers.rating') }}</span>
                   </div>
                 </div>
                 <div class="stat-item">
                   <i class="fa-solid fa-truck"></i>
                   <div class="stat-info">
                     <span class="stat-value">{{ selectedDriverForDetails.total_deliveries }}</span>
-                    <span class="stat-label">Lieferungen</span>
+                    <span class="stat-label">{{ translate('drivers.deliveries') }}</span>
                   </div>
                 </div>
                 <div class="stat-item">
                   <i class="fa-solid fa-euro-sign"></i>
                   <div class="stat-info">
                     <span class="stat-value">€{{ selectedDriverForDetails.total_earnings | number:'1.2-2' }}</span>
-                    <span class="stat-label">Verdienst</span>
+                    <span class="stat-label">{{ translate('drivers.earnings') }}</span>
                   </div>
                 </div>
                 <div class="stat-item">
                   <i class="fa-solid fa-calendar"></i>
                   <div class="stat-info">
                     <span class="stat-value">{{ selectedDriverForDetails.joined_date | date:'shortDate' }}</span>
-                    <span class="stat-label">Beigetreten</span>
+                    <span class="stat-label">{{ translate('drivers.joined') }}</span>
                   </div>
                 </div>
               </div>
 
               <div class="driver-vehicle-info" *ngIf="selectedDriverForDetails.vehicle_info">
-                <h5><i class="fa-solid fa-car"></i> Fahrzeug</h5>
+                <h5><i class="fa-solid fa-car"></i> {{ translate('drivers.vehicle') }}</h5>
                 <div class="vehicle-details">
                   <div class="vehicle-badge" [class]="selectedDriverForDetails.vehicle_type">
                     <i class="fa-solid" [ngClass]="getVehicleIcon(selectedDriverForDetails.vehicle_type)"></i>
@@ -753,8 +754,8 @@ export interface Driver {
                       <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                       </svg>
-                      <span class="tab-text-full">Aktive Tour ({{ activeOrdersCount }})</span>
-                      <span class="tab-text-mobile">Aktiv ({{ activeOrdersCount }})</span>
+                      <span class="tab-text-full">{{ translate('drivers.active_tour') }} ({{ activeOrdersCount }})</span>
+                      <span class="tab-text-mobile">{{ translate('drivers.active_tour_mobile') }} ({{ activeOrdersCount }})</span>
                     </div>
                   </button>
                   <button
@@ -766,20 +767,20 @@ export interface Driver {
                       <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                       </svg>
-                      <span class="tab-text-full">Alle Bestellungen ({{ allOrdersCount }})</span>
-                      <span class="tab-text-mobile">Alle ({{ allOrdersCount }})</span>
+                      <span class="tab-text-full">{{ translate('drivers.all_orders') }} ({{ allOrdersCount }})</span>
+                      <span class="tab-text-mobile">{{ translate('drivers.all_orders_mobile') }} ({{ allOrdersCount }})</span>
                     </div>
                   </button>
                 </div>
 
                 <div class="tab-info" *ngIf="activeTab === 'active'">
-                  <small><i class="fa-solid fa-info-circle"></i> Nur Bestellungen, die für Tour-Optimierung geeignet sind</small>
+                  <small><i class="fa-solid fa-info-circle"></i> {{ translate('drivers.tour_optimization_info') }}</small>
                 </div>
               </div>
 
               <div style="margin: 8px 0;" *ngIf="activeTab === 'active'">
                 <button class="btn btn-outline-primary" (click)="toggleMap()">
-                  <i class="fa-solid fa-map"></i> Karte {{ showMap ? 'ausblenden' : 'anzeigen' }}
+                  <i class="fa-solid fa-map"></i> {{ showMap ? translate('drivers.hide_map') : translate('drivers.show_map') }}
                 </button>
               </div>
               <div class="map-container" *ngIf="showMap && activeTab === 'active'" style="height: 300px; border: 1px solid var(--color-border); border-radius: 8px; margin-bottom: 12px;">
@@ -788,7 +789,7 @@ export interface Driver {
 
               <div class="orders-loading" *ngIf="isLoadingDriverOrders">
                 <i class="fa-solid fa-spinner fa-spin"></i>
-                <span>Lade Bestellungen...</span>
+                <span>{{ translate('drivers.loading_orders') }}</span>
               </div>
 
               <!-- Active Tour Tab Content -->
@@ -802,7 +803,7 @@ export interface Driver {
                     <div class="order-details">
                       <div class="order-customer">
                         <i class="fa-solid fa-user"></i>
-                        <span>{{ order.customer_name || 'Kunde' }}</span>
+                        <span>{{ order.customer_name || translate('drivers.customer') }}</span>
                       </div>
                       <div class="order-address">
                         <i class="fa-solid fa-map-marker-alt"></i>
@@ -820,15 +821,15 @@ export interface Driver {
                       </div>
                       <div class="order-assigned">
                         <i class="fa-solid fa-clock"></i>
-                        <span>Zugewiesen: {{ order.created_at | date:'short' }}</span>
+                        <span>{{ translate('drivers.assigned') }}: {{ order.created_at | date:'short' }}</span>
                       </div>
                     </div>
                   </div>
 
                   <div class="modal-actions" *ngIf="currentOrders.length > 0">
                     <button class="btn btn-outline-primary" (click)="optimizeTourForSelectedDriver()" [disabled]="isOptimizing">
-                      <span *ngIf="!isOptimizing"><i class="fa-solid fa-route"></i> Tour optimieren</span>
-                      <span *ngIf="isOptimizing"><i class="fa-solid fa-spinner fa-spin"></i> Optimieren...</span>
+                      <span *ngIf="!isOptimizing"><i class="fa-solid fa-route"></i> {{ translate('drivers.optimize_tour') }}</span>
+                      <span *ngIf="isOptimizing"><i class="fa-solid fa-spinner fa-spin"></i> {{ translate('drivers.optimizing') }}</span>
                     </button>
                     <button
                       *ngIf="activeTab === 'active'"
@@ -836,17 +837,17 @@ export interface Driver {
                       (click)="saveManualTour()"
                       [disabled]="!canSaveSequence || isSaving">
                       <span *ngIf="!isSaving">
-                        <i class="fa-solid fa-save"></i> Reihenfolge speichern
+                        <i class="fa-solid fa-save"></i> {{ translate('drivers.save_sequence') }}
                       </span>
                       <span *ngIf="isSaving">
-                        <i class="fa-solid fa-spinner fa-spin"></i> Speichere...
+                        <i class="fa-solid fa-spinner fa-spin"></i> {{ translate('drivers.saving') }}
                       </span>
                     </button>
                   </div>
 
                   <div class="no-orders" *ngIf="currentOrders.length === 0">
                     <i class="fa-solid fa-inbox"></i>
-                    <span>Keine aktiven Bestellungen für Tour-Optimierung</span>
+                    <span>{{ translate('drivers.no_active_orders') }}</span>
                   </div>
                 </div>
               </div>
@@ -862,7 +863,7 @@ export interface Driver {
                     <div class="order-details">
                       <div class="order-customer">
                         <i class="fa-solid fa-user"></i>
-                        <span>{{ order.customer_name || 'Kunde' }}</span>
+                        <span>{{ order.customer_name || translate('drivers.customer') }}</span>
                       </div>
                       <div class="order-address">
                         <i class="fa-solid fa-map-marker-alt"></i>
@@ -880,14 +881,14 @@ export interface Driver {
                       </div>
                       <div class="order-assigned">
                         <i class="fa-solid fa-clock"></i>
-                        <span>Zugewiesen: {{ order.created_at | date:'short' }}</span>
+                        <span>{{ translate('drivers.assigned') }}: {{ order.created_at | date:'short' }}</span>
                       </div>
                     </div>
                   </div>
 
                   <div class="no-orders" *ngIf="currentOrders.length === 0">
                     <i class="fa-solid fa-inbox"></i>
-                    <span>Keine Bestellungen gefunden</span>
+                    <span>{{ translate('drivers.no_orders_found') }}</span>
                   </div>
                 </div>
               </div>
@@ -2561,6 +2562,7 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
   private restaurantManagerService = inject(RestaurantManagerService);
   private driversService = inject(DriversService);
   private restaurantsService = inject(RestaurantsService);
+  private i18nService = inject(I18nService);
   private subscriptions: Subscription[] = [];
 
   drivers: Driver[] = [];
@@ -2619,6 +2621,10 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
   isAddingDriver = false;
   isCreatingPendingDriver = false;
   isBulkAssigning = false;
+
+  translate(key: string, params?: { [key: string]: string | number }): string {
+    return this.i18nService.translate(key, params);
+  }
 
   ngOnInit() {
     this.loadDrivers();
@@ -3042,22 +3048,22 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
 
   getStatusLabel(status: string): string {
     const labels: { [key: string]: string } = {
-      available: 'Verfügbar',
-      busy: 'Beschäftigt',
-      offline: 'Offline',
-      on_delivery: 'Unterwegs',
-      pending_activation: '⏳ Wartend auf Aktivierung',
-      on_break: 'Pause'
+      available: this.translate('drivers.available'),
+      busy: this.translate('drivers.busy'),
+      offline: this.translate('drivers.offline'),
+      on_delivery: this.translate('drivers.on_delivery'),
+      pending_activation: this.translate('drivers.waiting_activation'),
+      on_break: this.translate('drivers.break_status')
     };
     return labels[status] || status;
   }
 
   getVehicleTypeLabel(type: string): string {
     const labels: { [key: string]: string } = {
-      car: 'Auto',
-      motorcycle: 'Motorrad',
-      bicycle: 'Fahrrad',
-      scooter: 'Roller'
+      car: this.translate('drivers.vehicle_type.car'),
+      motorcycle: this.translate('drivers.vehicle_type.motorcycle'),
+      bicycle: this.translate('drivers.vehicle_type.bicycle'),
+      scooter: this.translate('drivers.vehicle_type.scooter')
     };
     return labels[type] || type;
   }
@@ -3109,9 +3115,9 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
     // Show delivery count if available, otherwise just "Unterwegs"
     const activeDeliveries = this.getActiveDeliveryCount(driver);
     if (activeDeliveries > 0) {
-      return `Unterwegs (${activeDeliveries})`;
+      return `${this.translate('drivers.on_delivery')} (${activeDeliveries})`;
     }
-    return 'Unterwegs';
+    return this.translate('drivers.on_delivery');
   }
 
   getActiveDeliveryCount(driver: Driver): number {
@@ -3129,13 +3135,13 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
   }
 
   getOfflineBadgeText(driver: Driver): string {
-    return 'Offline';
+    return this.translate('drivers.offline');
   }
 
   // New assignment workflow methods
   selectDriverForAssignment(driver: Driver) {
     if (!this.isDriverAvailable(driver)) {
-      this.toastService.info('Info', 'Dieser Fahrer ist bereits beschäftigt und kann keine neuen Bestellungen annehmen');
+      this.toastService.info(this.translate('common.info'), this.translate('drivers.driver_busy_message'));
       return;
     }
 
