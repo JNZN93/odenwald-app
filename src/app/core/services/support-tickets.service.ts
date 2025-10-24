@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { I18nService } from './i18n.service';
 
 export interface SupportTicket {
   id: string;
@@ -82,6 +83,7 @@ export interface SupportTicketStats {
 })
 export class SupportTicketsService {
   private http = inject(HttpClient);
+  private i18nService = inject(I18nService);
   private apiUrl = environment.apiUrl;
 
   // Ticket Management
@@ -183,39 +185,42 @@ export class SupportTicketsService {
 
   // Helper Methods
   getCategoryLabel(category: SupportTicket['category']): string {
-    const labels: { [key: string]: string } = {
-      technical_issue: '🔧 Technisches Problem',
-      payment_issue: '💳 Zahlungsproblem',
-      feature_request: '✨ Feature-Anfrage',
-      account_issue: '👤 Account-Problem',
-      menu_management: '📋 Speisekarten-Management',
-      order_management: '🛒 Bestellungs-Management',
-      driver_issue: '🚗 Fahrer-Problem',
-      platform_issue: '🌐 Plattform-Problem',
-      other: '❓ Sonstiges'
+    const translationKeys: { [key: string]: string } = {
+      technical_issue: 'support.category_technical',
+      payment_issue: 'support.category_payment',
+      feature_request: 'support.category_feature',
+      account_issue: 'support.category_account',
+      menu_management: 'support.category_menu',
+      order_management: 'support.category_order',
+      driver_issue: 'support.category_driver',
+      platform_issue: 'support.category_platform',
+      other: 'support.category_other'
     };
-    return labels[category] || category;
+    const key = translationKeys[category];
+    return key ? this.i18nService.translate(key) : category;
   }
 
   getPriorityLabel(priority: SupportTicket['priority']): string {
-    const labels: { [key: string]: string } = {
-      low: '🟢 Niedrig',
-      normal: '🟡 Normal',
-      high: '🟠 Hoch',
-      urgent: '🔴 Dringend'
+    const translationKeys: { [key: string]: string } = {
+      low: 'support.priority_low',
+      normal: 'support.priority_normal',
+      high: 'support.priority_high',
+      urgent: 'support.priority_urgent'
     };
-    return labels[priority] || priority;
+    const key = translationKeys[priority];
+    return key ? this.i18nService.translate(key) : priority;
   }
 
   getStatusLabel(status: SupportTicket['status']): string {
-    const labels: { [key: string]: string } = {
-      open: '🔴 Offen',
-      in_progress: '🟡 In Bearbeitung',
-      waiting_for_response: '⏳ Wartet auf Antwort',
-      resolved: '✅ Gelöst',
-      closed: '⚫ Geschlossen'
+    const translationKeys: { [key: string]: string } = {
+      open: 'support.status_open',
+      in_progress: 'support.status_in_progress',
+      waiting_for_response: 'support.status_waiting',
+      resolved: 'support.resolved',
+      closed: 'support.status_closed'
     };
-    return labels[status] || status;
+    const key = translationKeys[status];
+    return key ? this.i18nService.translate(key) : status;
   }
 
   getPriorityColor(priority: SupportTicket['priority']): string {

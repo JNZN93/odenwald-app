@@ -18,12 +18,12 @@ import { I18nService } from '../../core/services/i18n.service';
       <!-- Header -->
       <div class="header">
         <div class="header-content">
-          <h1><i class="fa-solid fa-headset"></i> Support & Hilfe</h1>
-          <p>Melden Sie Probleme direkt an unser Admin-Team</p>
+          <h1><i class="fa-solid fa-headset"></i> {{ 'support.header_title' | translate }}</h1>
+          <p>{{ 'support.header_description' | translate }}</p>
         </div>
         <button class="btn btn-primary" (click)="openCreateTicketModal()">
           <i class="fa-solid fa-plus"></i>
-          Neues Ticket erstellen
+          {{ 'support.new_ticket_button' | translate }}
         </button>
       </div>
 
@@ -34,7 +34,7 @@ import { I18nService } from '../../core/services/i18n.service';
             <i class="fa-solid fa-ticket"></i>
           </div>
           <div class="stat-content">
-            <h3>Gesamt Tickets</h3>
+            <h3>{{ 'support.total_tickets' | translate }}</h3>
             <div class="stat-value">{{ tickets.length }}</div>
           </div>
         </div>
@@ -43,7 +43,7 @@ import { I18nService } from '../../core/services/i18n.service';
             <i class="fa-solid fa-clock"></i>
           </div>
           <div class="stat-content">
-            <h3>Offen</h3>
+            <h3>{{ 'support.open_tickets' | translate }}</h3>
             <div class="stat-value">{{ getStatusCount('open') }}</div>
           </div>
         </div>
@@ -52,7 +52,7 @@ import { I18nService } from '../../core/services/i18n.service';
             <i class="fa-solid fa-spinner"></i>
           </div>
           <div class="stat-content">
-            <h3>In Bearbeitung</h3>
+            <h3>{{ 'support.in_progress_tickets' | translate }}</h3>
             <div class="stat-value">{{ getStatusCount('in_progress') }}</div>
           </div>
         </div>
@@ -70,25 +70,20 @@ import { I18nService } from '../../core/services/i18n.service';
       <!-- Tickets List -->
       <div class="tickets-section">
         <div class="tickets-header">
-          <h2>Meine Support-Tickets</h2>
+          <h2>{{ 'support.my_tickets' | translate }}</h2>
           <div class="filter-controls">
             <select [(ngModel)]="statusFilter" (ngModelChange)="applyFilters()" class="filter-select">
-              <option value="">Alle Status</option>
-              <option value="open">Offen</option>
-              <option value="in_progress">In Bearbeitung</option>
-              <option value="waiting_for_response">Wartet auf Antwort</option>
+              <option value="">{{ 'support.all_status' | translate }}</option>
+              <option value="open">{{ 'support.status_open' | translate }}</option>
+              <option value="in_progress">{{ 'support.status_in_progress' | translate }}</option>
+              <option value="waiting_for_response">{{ 'support.status_waiting' | translate }}</option>
               <option value="resolved">{{ 'support.resolved' | translate }}</option>
-              <option value="closed">Geschlossen</option>
+              <option value="closed">{{ 'support.status_closed' | translate }}</option>
             </select>
           </div>
         </div>
 
         <div class="tickets-list">
-          <!-- Debug: Show ticket count -->
-          <div style="background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; font-size: 12px;">
-            <strong>Debug:</strong> {{ filteredTickets.length }} tickets loaded
-          </div>
-          
           <div *ngFor="let ticket of filteredTickets" class="ticket-card" [class]="getPriorityClass(ticket.priority)">
             <div class="ticket-header">
               <div class="ticket-info">
@@ -116,14 +111,14 @@ import { I18nService } from '../../core/services/i18n.service';
               </div>
               <div *ngIf="ticket.assignee_name" class="ticket-assignee">
                 <i class="fa-solid fa-user-tie"></i>
-                Zugewiesen an: {{ ticket.assignee_name }}
+                {{ 'support.assigned_to' | translate }} {{ ticket.assignee_name }}
               </div>
             </div>
 
             <div class="ticket-actions">
               <button class="btn btn-sm btn-ghost" (click)="viewTicketDetails(ticket)">
                 <i class="fa-solid fa-eye"></i>
-                Details anzeigen
+                {{ 'support.view_details' | translate }}
               </button>
               <button 
                 *ngIf="ticket.status !== 'closed' && ticket.status !== 'resolved'" 
@@ -131,18 +126,18 @@ import { I18nService } from '../../core/services/i18n.service';
                 (click)="openMessageModal(ticket)"
               >
                 <i class="fa-solid fa-reply"></i>
-                Antworten
+                {{ 'support.reply' | translate }}
               </button>
             </div>
           </div>
 
           <div *ngIf="filteredTickets.length === 0 && !isLoading" class="empty-state">
             <i class="fa-solid fa-inbox"></i>
-            <h3>Keine Tickets gefunden</h3>
-            <p>Sie haben noch keine Support-Tickets erstellt oder es wurden keine Tickets gefunden, die Ihren Filterkriterien entsprechen.</p>
+            <h3>{{ 'support.no_tickets_found' | translate }}</h3>
+            <p>{{ 'support.no_tickets_description' | translate }}</p>
             <button class="btn btn-primary" (click)="openCreateTicketModal()">
               <i class="fa-solid fa-plus"></i>
-              Erstes Ticket erstellen
+              {{ 'support.create_first_ticket' | translate }}
             </button>
           </div>
         </div>
@@ -153,7 +148,7 @@ import { I18nService } from '../../core/services/i18n.service';
     <div class="modal-overlay" *ngIf="showCreateModal" (click)="closeCreateModal()">
       <div class="modal-content" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <h3>Neues Support-Ticket erstellen</h3>
+          <h3>{{ 'support.create_ticket_modal_title' | translate }}</h3>
           <button class="modal-close" (click)="closeCreateModal()">
             <i class="fa-solid fa-times"></i>
           </button>
@@ -161,51 +156,51 @@ import { I18nService } from '../../core/services/i18n.service';
         <div class="modal-body">
           <form (ngSubmit)="createTicket()" #ticketForm="ngForm">
             <div class="form-group">
-              <label class="form-label">Betreff *</label>
+              <label class="form-label">{{ 'support.subject_label' | translate }}</label>
               <input 
                 type="text" 
                 [(ngModel)]="newTicket.subject" 
                 name="subject"
                 class="form-input"
-                placeholder="Kurze Beschreibung des Problems"
+                [placeholder]="'support.subject_placeholder' | translate"
                 required
               >
             </div>
 
             <div class="form-group">
-              <label class="form-label">Kategorie *</label>
+              <label class="form-label">{{ 'support.category_label' | translate }}</label>
               <select [(ngModel)]="newTicket.category" name="category" class="form-select" required>
                 <option value="">{{ 'support.category_select' | translate }}</option>
-                <option value="technical_issue">🔧 Technisches Problem</option>
-                <option value="payment_issue">💳 Zahlungsproblem</option>
-                <option value="feature_request">✨ Feature-Anfrage</option>
-                <option value="account_issue">👤 Account-Problem</option>
-                <option value="menu_management">📋 Speisekarten-Management</option>
-                <option value="order_management">🛒 Bestellungs-Management</option>
-                <option value="driver_issue">🚗 Fahrer-Problem</option>
-                <option value="platform_issue">🌐 Plattform-Problem</option>
-                <option value="other">❓ Sonstiges</option>
+                <option value="technical_issue">{{ 'support.category_technical' | translate }}</option>
+                <option value="payment_issue">{{ 'support.category_payment' | translate }}</option>
+                <option value="feature_request">{{ 'support.category_feature' | translate }}</option>
+                <option value="account_issue">{{ 'support.category_account' | translate }}</option>
+                <option value="menu_management">{{ 'support.category_menu' | translate }}</option>
+                <option value="order_management">{{ 'support.category_order' | translate }}</option>
+                <option value="driver_issue">{{ 'support.category_driver' | translate }}</option>
+                <option value="platform_issue">{{ 'support.category_platform' | translate }}</option>
+                <option value="other">{{ 'support.category_other' | translate }}</option>
               </select>
             </div>
 
             <div class="form-group">
               <label class="form-label">{{ 'support.priority' | translate }}</label>
               <select [(ngModel)]="newTicket.priority" name="priority" class="form-select">
-                <option value="normal">🟡 Normal</option>
-                <option value="low">🟢 Niedrig</option>
-                <option value="high">🟠 Hoch</option>
-                <option value="urgent">🔴 Dringend</option>
+                <option value="normal">{{ 'support.priority_normal' | translate }}</option>
+                <option value="low">{{ 'support.priority_low' | translate }}</option>
+                <option value="high">{{ 'support.priority_high' | translate }}</option>
+                <option value="urgent">{{ 'support.priority_urgent' | translate }}</option>
               </select>
             </div>
 
             <div class="form-group">
-              <label class="form-label">Beschreibung *</label>
+              <label class="form-label">{{ 'support.description_label' | translate }}</label>
               <textarea 
                 [(ngModel)]="newTicket.description" 
                 name="description"
                 class="form-textarea"
                 rows="5"
-                placeholder="Beschreiben Sie Ihr Problem oder Ihre Anfrage detailliert..."
+                [placeholder]="'support.description_placeholder' | translate"
                 required
               ></textarea>
             </div>
@@ -216,7 +211,7 @@ import { I18nService } from '../../core/services/i18n.service';
                 <input #fileInput type="file" multiple accept="image/*,.pdf" (change)="onFileSelected($event)" style="display: none;">
                 <div class="upload-content" *ngIf="selectedFiles.length === 0">
                   <i class="fa-solid fa-cloud-upload-alt"></i>
-                  <p>Klicken Sie hier oder ziehen Sie Dateien hierher</p>
+                  <p>{{ 'support.upload_instruction' | translate }}</p>
                   <small>{{ 'support.supported_formats' | translate }}</small>
                 </div>
                 <div class="selected-files" *ngIf="selectedFiles.length > 0">
@@ -237,12 +232,12 @@ import { I18nService } from '../../core/services/i18n.service';
 
             <div class="form-actions">
               <button type="button" class="btn btn-ghost" (click)="closeCreateModal()">
-                Abbrechen
+                {{ 'support.cancel' | translate }}
               </button>
               <button type="submit" class="btn btn-primary" [disabled]="!ticketForm.form.valid || isCreating">
                 <i class="fa-solid fa-spinner fa-spin" *ngIf="isCreating"></i>
                 <i class="fa-solid fa-paper-plane" *ngIf="!isCreating"></i>
-                {{ isCreating ? 'Erstelle...' : 'Ticket erstellen' }}
+                {{ isCreating ? ('support.creating' | translate) : ('support.create_ticket_btn' | translate) }}
               </button>
             </div>
           </form>
@@ -254,7 +249,7 @@ import { I18nService } from '../../core/services/i18n.service';
     <div class="modal-overlay" *ngIf="showDetailsModal" (click)="closeDetailsModal()">
       <div class="modal-content large" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <h3>Ticket Details - #{{ selectedTicket?.id?.slice(-8) }}</h3>
+          <h3>{{ 'support.ticket_details_title' | translate }} - #{{ selectedTicket?.id?.slice(-8) }}</h3>
           <button class="modal-close" (click)="closeDetailsModal()">
             <i class="fa-solid fa-times"></i>
           </button>
@@ -263,13 +258,13 @@ import { I18nService } from '../../core/services/i18n.service';
           <div *ngIf="selectedTicket" class="ticket-details">
             <div class="ticket-meta">
               <div class="meta-item">
-                <strong>Betreff:</strong> {{ selectedTicket.subject }}
+                <strong>{{ 'support.subject_label_detail' | translate }}</strong> {{ selectedTicket.subject }}
               </div>
               <div class="meta-item">
-                <strong>Kategorie:</strong> {{ getCategoryLabel(selectedTicket.category) }}
+                <strong>{{ 'support.category_label_detail' | translate }}</strong> {{ getCategoryLabel(selectedTicket.category) }}
               </div>
               <div class="meta-item">
-                <strong>Status:</strong> 
+                <strong>{{ 'support.status_label_detail' | translate }}</strong> 
                 <span class="status-badge" [class]="'status-badge status-' + selectedTicket.status">
                   {{ getStatusLabel(selectedTicket.status) }}
                 </span>
@@ -281,29 +276,16 @@ import { I18nService } from '../../core/services/i18n.service';
                 </span>
               </div>
               <div class="meta-item">
-                <strong>Erstellt:</strong> {{ formatDate(selectedTicket.created_at) }}
+                <strong>{{ 'support.created_label' | translate }}</strong> {{ formatDate(selectedTicket.created_at) }}
               </div>
               <div class="meta-item" *ngIf="selectedTicket.assignee_name">
-                <strong>Zugewiesen an:</strong> {{ selectedTicket.assignee_name }}
+                <strong>{{ 'support.assigned_to' | translate }}</strong> {{ selectedTicket.assignee_name }}
               </div>
             </div>
 
             <div class="ticket-description-section">
-              <h4>Beschreibung</h4>
+              <h4>{{ 'support.description_section' | translate }}</h4>
               <div class="description-content">{{ selectedTicket.description }}</div>
-            </div>
-
-            <!-- Debug Info -->
-            <div class="debug-info" style="background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; font-size: 12px;">
-              <strong>Debug Info:</strong><br>
-              Ticket Attachments: {{ ticketAttachments.length }}<br>
-              Message Attachments: {{ getMessageAttachmentsCount() }}<br>
-              <div *ngIf="ticketAttachments.length > 0">
-                <strong>Ticket Attachments:</strong>
-                <ul>
-                  <li *ngFor="let att of ticketAttachments">{{ att.original_filename }} ({{ att.mime_type }})</li>
-                </ul>
-              </div>
             </div>
 
             <!-- Ticket Attachments -->
@@ -311,11 +293,6 @@ import { I18nService } from '../../core/services/i18n.service';
               <h4>{{ 'support.attached_files' | translate }} ({{ ticketAttachments.length }})</h4>
               <div class="attachments-grid">
                 <div *ngFor="let attachment of ticketAttachments" class="attachment-item">
-                  <!-- Debug: Show all attachment data -->
-                  <div style="background: #e0e0e0; padding: 5px; margin: 5px 0; font-size: 11px;">
-                    Debug: {{ attachment.original_filename }} | {{ attachment.mime_type }} | {{ attachment.file_path }}
-                  </div>
-                  
                   <div *ngIf="isImageFile(attachment.mime_type)" class="image-attachment">
                     <img [src]="getAttachmentUrl(attachment)" [alt]="attachment.original_filename" (click)="openImageModal(attachment)" style="border: 2px solid red;">
                     <div class="attachment-info">
@@ -339,20 +316,15 @@ import { I18nService } from '../../core/services/i18n.service';
             </div>
 
             <div class="messages-section">
-              <h4>Nachrichtenverlauf</h4>
+              <h4>{{ 'support.message_history' | translate }}</h4>
               <div class="messages-list">
                 <div *ngFor="let message of ticketMessages" class="message-item" [class]="message.sender_type">
                   <div class="message-header">
-                    <span class="sender-name">{{ message.sender_name || (message.sender_type === 'admin' ? 'Admin' : 'Sie') }}</span>
+                    <span class="sender-name">{{ message.sender_name || (message.sender_type === 'admin' ? ('support.admin' | translate) : ('support.you' | translate)) }}</span>
                     <span class="message-time">{{ formatDate(message.created_at) }}</span>
                   </div>
                   <div class="message-content">{{ message.message }}</div>
                   
-                  <!-- Debug Message Attachments -->
-                  <div class="debug-message-info" style="background: #e0e0e0; padding: 5px; margin: 5px 0; border-radius: 3px; font-size: 11px;" *ngIf="getMessageAttachments(message.id).length > 0">
-                    Message {{ message.id }} has {{ getMessageAttachments(message.id).length }} attachments
-                  </div>
-
                   <!-- Message Attachments -->
                   <div class="message-attachments" *ngIf="getMessageAttachments(message.id).length > 0">
                     <div class="attachments-grid small">
@@ -390,7 +362,7 @@ import { I18nService } from '../../core/services/i18n.service';
                   name="message"
                   class="form-textarea"
                   rows="4"
-                  placeholder="Ihre Antwort..."
+                  [placeholder]="'support.response_placeholder' | translate"
                   required
                 ></textarea>
                 
@@ -421,7 +393,7 @@ import { I18nService } from '../../core/services/i18n.service';
                   <button type="submit" class="btn btn-primary" [disabled]="!messageForm.form.valid || isSendingMessage">
                     <i class="fa-solid fa-spinner fa-spin" *ngIf="isSendingMessage"></i>
                     <i class="fa-solid fa-paper-plane" *ngIf="!isSendingMessage"></i>
-                    {{ isSendingMessage ? 'Sende...' : 'Nachricht senden' }}
+                    {{ isSendingMessage ? ('support.sending' | translate) : ('support.send_message' | translate) }}
                   </button>
                 </div>
               </form>
@@ -1368,7 +1340,7 @@ export class RestaurantManagerSupportComponent implements OnInit {
       }
     } catch (error) {
       console.error('Error loading support tickets:', error);
-      this.toastService.error('Tickets laden', 'Fehler beim Laden der Support-Tickets');
+      this.toastService.error(this.i18nService.translate('support.tickets_load_error'), this.i18nService.translate('support.tickets_load_error_message'));
       this.tickets = [];
     } finally {
       this.loadingService.stop('support-tickets');
@@ -1404,17 +1376,17 @@ export class RestaurantManagerSupportComponent implements OnInit {
           console.log('Upload result:', uploadResult);
         } catch (uploadError) {
           console.error('Error uploading attachments:', uploadError);
-          this.toastService.warning('Ticket erstellt', 'Ticket wurde erstellt, aber Dateien konnten nicht hochgeladen werden');
+          this.toastService.warning(this.i18nService.translate('support.upload_warning_title'), this.i18nService.translate('support.upload_warning_message'));
         }
       }
       
-      this.toastService.success('Ticket erstellt', 'Ihr Support-Ticket wurde erfolgreich erstellt');
+      this.toastService.success(this.i18nService.translate('support.ticket_created_success'), this.i18nService.translate('support.ticket_created_message'));
       this.closeCreateModal();
       this.selectedFiles = []; // Clear selected files
       this.loadTickets();
     } catch (error) {
       console.error('Error creating support ticket:', error);
-      this.toastService.error('Ticket erstellen', 'Fehler beim Erstellen des Support-Tickets');
+      this.toastService.error(this.i18nService.translate('support.ticket_create_error_title'), this.i18nService.translate('support.ticket_create_error_message'));
     } finally {
       this.isCreating = false;
     }
@@ -1456,7 +1428,7 @@ export class RestaurantManagerSupportComponent implements OnInit {
       console.log('Final message attachments:', this.messageAttachments);
     } catch (error) {
       console.error('Error loading ticket details:', error);
-      this.toastService.error('Ticket Details laden', 'Fehler beim Laden der Ticket-Details');
+      this.toastService.error(this.i18nService.translate('support.ticket_details_error'), this.i18nService.translate('support.ticket_details_error_message'));
     }
   }
 
@@ -1481,17 +1453,17 @@ export class RestaurantManagerSupportComponent implements OnInit {
           console.log('Message upload result:', uploadResult);
         } catch (uploadError) {
           console.error('Error uploading message attachments:', uploadError);
-          this.toastService.warning('Nachricht gesendet', 'Nachricht wurde gesendet, aber Dateien konnten nicht hochgeladen werden');
+          this.toastService.warning(this.i18nService.translate('support.message_upload_warning_title'), this.i18nService.translate('support.message_upload_warning_message'));
         }
       }
 
-      this.toastService.success('Nachricht gesendet', 'Ihre Nachricht wurde erfolgreich gesendet');
+      this.toastService.success(this.i18nService.translate('support.message_sent_success'), this.i18nService.translate('support.message_sent_message'));
       this.newMessage.message = '';
       this.messageFiles = []; // Clear message files
       this.viewTicketDetails(this.selectedTicket); // Reload messages
     } catch (error) {
       console.error('Error sending message:', error);
-      this.toastService.error('Nachricht senden', 'Fehler beim Senden der Nachricht');
+      this.toastService.error(this.i18nService.translate('support.message_send_error'), this.i18nService.translate('support.message_send_error_message'));
     } finally {
       this.isSendingMessage = false;
     }
@@ -1623,13 +1595,13 @@ export class RestaurantManagerSupportComponent implements OnInit {
       
       if (type === 'ticket') {
         if (this.selectedFiles.length >= 5) {
-          this.toastService.error('Zu viele Dateien', 'Maximal 5 Dateien pro Ticket erlaubt');
+          this.toastService.error(this.i18nService.translate('support.too_many_files'), this.i18nService.translate('support.max_files_ticket'));
           break;
         }
         this.selectedFiles.push(file);
       } else {
         if (this.messageFiles.length >= 5) {
-          this.toastService.error('Zu viele Dateien', 'Maximal 5 Dateien pro Nachricht erlaubt');
+          this.toastService.error(this.i18nService.translate('support.too_many_files'), this.i18nService.translate('support.max_files_message'));
           break;
         }
         this.messageFiles.push(file);
