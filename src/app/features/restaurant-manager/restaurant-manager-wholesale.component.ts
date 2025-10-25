@@ -2342,7 +2342,7 @@ interface OrderData {
 export class RestaurantManagerWholesaleComponent implements OnInit {
   private http = inject(HttpClient);
   private router = inject(Router);
-  private i18nService = inject(I18nService);
+  i18nService = inject(I18nService);
 
   suppliers: Supplier[] = [];
   loading = false;
