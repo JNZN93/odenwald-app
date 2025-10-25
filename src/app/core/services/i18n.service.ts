@@ -775,6 +775,8 @@ export class I18nService {
       'overview.invalid': 'Ungültig',
       'overview.minutes_ago': 'vor',
       'overview.hours_ago': 'vor',
+      'overview.vs_yesterday': 'vs gestern',
+      'overview.updated': 'Aktualisiert',
 
       // Order status
       'order.status.pending': 'Ausstehend',
@@ -1765,6 +1767,8 @@ export class I18nService {
       'overview.invalid': 'Geçersiz',
       'overview.minutes_ago': 'dakika önce',
       'overview.hours_ago': 'saat önce',
+      'overview.vs_yesterday': 'dün ile karşılaştırıldığında',
+      'overview.updated': 'Güncellendi',
 
       // Order status
       'order.status.pending': 'Beklemede',
