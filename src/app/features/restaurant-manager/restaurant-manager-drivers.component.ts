@@ -2694,9 +2694,12 @@ export class RestaurantManagerDriversComponent implements OnInit, OnDestroy {
             });
 
             // Filter for orders that need driver assignment (pending, ready, open, in_progress without driver)
+            // Only include delivery orders - pickup and dine_in orders are not assigned to drivers
             const pendingOrders = allOrders?.filter(order =>
               (order.status === 'pending' || order.status === 'ready' || order.status === 'open' || order.status === 'in_progress') &&
-              !order.driver_id
+              !order.driver_id &&
+              order.order_type !== 'pickup' &&
+              order.order_type !== 'dine_in'
             ) || [];
 
             console.log('Filtered pending orders:', {
