@@ -120,6 +120,15 @@ interface GridCell {
                     [title]="translate('table_grid.show_orders')">
                     <i class="fa-solid fa-receipt"></i>
                   </button>
+                  
+                  <!-- QR Code button (appears when selected) -->
+                  <button 
+                    class="action-btn qr" 
+                    *ngIf="selectedTable?.id === cell.table.id"
+                    (click)="showQRCode(cell.table!)" 
+                    [title]="translate('table_grid.show_qr_code')">
+                    <i class="fa-solid fa-qrcode"></i>
+                  </button>
                 </div>
               </div>
             </div>
@@ -136,29 +145,6 @@ interface GridCell {
           </div>
           
           <div class="modal-body">
-            <!-- QR Code Section -->
-            <div class="qr-code-section" *ngIf="selectedTableForOrders?.qr_code">
-              <h3>{{ translate('tables.qr_code_for_table') }} {{ selectedTableForOrders?.table_number }}</h3>
-              <div class="qr-code-container-grid">
-                <img 
-                  *ngIf="selectedTableForOrders && selectedTableForOrders.qr_code"
-                  [src]="selectedTableForOrders.qr_code ? generateQRCodeImage(selectedTableForOrders.qr_code) : ''"
-                  alt="QR Code"
-                  class="qr-code-image"
-                />
-                <div class="qr-actions">
-                  <button class="btn-qr" (click)="downloadTableQR()">
-                    <i class="fa-solid fa-download"></i>
-                    {{ translate('tables.download') }}
-                  </button>
-                  <button class="btn-qr" (click)="printTableQR()">
-                    <i class="fa-solid fa-print"></i>
-                    {{ translate('tables.print') }}
-                  </button>
-                </div>
-              </div>
-            </div>
-
             <div *ngIf="tableOrdersLoading" class="loading">
               <p>{{ translate('table_grid.loading_orders') }}</p>
             </div>
@@ -229,6 +215,42 @@ interface GridCell {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- QR Code Modal -->
+      <div class="modal-overlay" *ngIf="showQRModal" (click)="closeQRModal()">
+        <div class="modal-content qr-modal" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h2>{{ translate('table_grid.qr_code_for_table', {tableNumber: selectedTableForQR?.table_number || ''}) }}</h2>
+            <button class="close-btn" (click)="closeQRModal()">✕</button>
+          </div>
+          
+          <div class="modal-body" *ngIf="selectedTableForQR">
+            <div class="qr-code-container">
+              <div class="qr-placeholder">
+                <img
+                  *ngIf="selectedTableForQR.qr_code"
+                  [src]="generateQRCodeImage(selectedTableForQR.qr_code!)"
+                  alt="QR Code"
+                  class="qr-image"
+                />
+                <div class="qr-text">{{ selectedTableForQR.qr_code || translate('table_grid.qr_generating') }}</div>
+                <p class="qr-hint">{{ translate('table_grid.scan_for_table_order') }}</p>
+              </div>
+            </div>
+
+            <div class="qr-actions">
+              <button class="btn-secondary" (click)="downloadQR()">
+                <i class="fa-solid fa-download"></i>
+                {{ translate('table_grid.download') }}
+              </button>
+              <button class="btn-secondary" (click)="printQR()">
+                <i class="fa-solid fa-print"></i>
+                {{ translate('table_grid.print') }}
+              </button>
             </div>
           </div>
         </div>
@@ -570,6 +592,22 @@ interface GridCell {
       backdrop-filter: blur(6px);
     }
 
+    .action-btn.qr {
+      background: var(--color-primary-600);
+      color: white;
+      border-color: var(--color-primary-700);
+      top: -8px;
+      left: -8px;
+    }
+
+    .action-btn.qr:hover {
+      background: var(--color-primary-700);
+      border-color: var(--color-primary-800);
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(6px);
+    }
+
     .action-btn.remove {
       background: var(--color-danger);
       color: white;
@@ -771,61 +809,6 @@ interface GridCell {
       padding: var(--space-6);
       overflow-y: auto;
       flex: 1;
-    }
-
-    .qr-code-section {
-      margin-bottom: var(--space-6);
-      padding: var(--space-4);
-      background: var(--color-gray-50);
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--color-border);
-    }
-
-    .qr-code-section h3 {
-      margin: 0 0 var(--space-4) 0;
-      font-size: var(--text-lg);
-      font-weight: 600;
-      color: var(--color-text);
-    }
-
-    .qr-code-container-grid {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: var(--space-4);
-    }
-
-    .qr-code-image {
-      width: 200px;
-      height: 200px;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-      background: white;
-      padding: var(--space-2);
-    }
-
-    .qr-actions {
-      display: flex;
-      gap: var(--space-3);
-    }
-
-    .btn-qr {
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-      padding: var(--space-2) var(--space-4);
-      background: var(--color-primary-500);
-      color: white;
-      border: none;
-      border-radius: var(--radius-md);
-      font-size: var(--text-sm);
-      font-weight: 500;
-      cursor: pointer;
-      transition: background var(--transition);
-    }
-
-    .btn-qr:hover {
-      background: var(--color-primary-600);
     }
 
     .loading, .no-orders {
@@ -1059,6 +1042,63 @@ interface GridCell {
       border-radius: 4px;
       border: 1px solid #bbf7d0;
     }
+
+    /* QR Modal Styles */
+    .qr-modal {
+      max-width: 400px;
+    }
+
+    .qr-code-container {
+      text-align: center;
+      margin-bottom: var(--space-4);
+    }
+
+    .qr-placeholder {
+      padding: var(--space-6);
+      background: var(--color-gray-50);
+      border-radius: var(--radius-lg);
+      margin-bottom: var(--space-4);
+      text-align: center;
+    }
+
+    .qr-image {
+      max-width: 200px;
+      height: auto;
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-3);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .qr-text {
+      font-family: monospace;
+      font-size: var(--text-sm);
+      color: var(--color-text);
+      word-break: break-all;
+      margin-bottom: var(--space-2);
+    }
+
+    .qr-hint {
+      font-size: var(--text-sm);
+      color: var(--color-muted);
+    }
+
+    .qr-actions {
+      display: flex;
+      gap: var(--space-2);
+      justify-content: center;
+    }
+
+    .qr-actions .btn-secondary {
+      background: var(--color-primary-50);
+      color: var(--color-primary-700);
+      border-color: var(--color-primary-200);
+    }
+
+    .qr-actions .btn-secondary:hover {
+      background: var(--color-primary-100);
+      color: var(--color-primary-800);
+      border-color: var(--color-primary-300);
+    }
   `]
 })
 export class RestaurantTableGridComponent implements OnInit {
@@ -1091,9 +1131,12 @@ export class RestaurantTableGridComponent implements OnInit {
   tableOrdersLoading = false;
   currentRestaurantId: string | null = null;
   updatingOrderId: string | null = null;
+
+  // QR Code modal
+  showQRModal = false;
+  selectedTableForQR: RestaurantTable | null = null;
+  qrCodeCache = new Map<string, string>();
   
-  // QR Code cache
-  private qrCodeCache: Map<string, string> = new Map();
 
   ngOnInit() {
     this.initializeGrid();
@@ -1507,6 +1550,87 @@ export class RestaurantTableGridComponent implements OnInit {
   }
 
   // QR Code methods
+  showQRCode(table: RestaurantTable) {
+    this.selectedTableForQR = table;
+    this.showQRModal = true;
+  }
+
+  closeQRModal() {
+    this.showQRModal = false;
+    this.selectedTableForQR = null;
+  }
+
+  downloadQR() {
+    if (!this.selectedTableForQR?.qr_code) {
+      this.toastService.error('Fehler', 'QR-Code nicht verfügbar');
+      return;
+    }
+
+    try {
+      // Create QR code image
+      const qrImageUrl = this.generateQRCodeImage(this.selectedTableForQR.qr_code);
+
+      // Create download link
+      const link = document.createElement('a');
+      link.href = qrImageUrl;
+      link.download = `tisch-${this.selectedTableForQR.table_number}-qr.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      this.toastService.success('Erfolg', 'QR-Code wurde heruntergeladen');
+    } catch (error) {
+      console.error('QR download failed:', error);
+      this.toastService.error('Fehler', 'QR-Code konnte nicht heruntergeladen werden');
+    }
+  }
+
+  printQR() {
+    if (!this.selectedTableForQR?.qr_code) {
+      this.toastService.error('Fehler', 'QR-Code nicht verfügbar');
+      return;
+    }
+
+    try {
+      // Create QR code image
+      const qrImageUrl = this.generateQRCodeImage(this.selectedTableForQR.qr_code);
+
+      // Open print dialog
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>QR-Code für Tisch ${this.selectedTableForQR.table_number}</title>
+              <style>
+                body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+                h1 { color: #333; }
+                img { max-width: 300px; margin: 20px 0; }
+                .info { font-size: 14px; color: #666; margin-top: 20px; }
+              </style>
+            </head>
+            <body>
+              <h1>QR-Code für Tisch ${this.selectedTableForQR.table_number}</h1>
+              <img src="${qrImageUrl}" alt="QR Code" />
+              <div class="info">
+                <p>Scannen für Tischangebot</p>
+                <p>Restaurant: ${this.selectedTableForQR.restaurant_id}</p>
+                <p>Generiert am: ${new Date().toLocaleDateString('de-DE')}</p>
+              </div>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+      }
+
+      this.toastService.success('Erfolg', 'QR-Code wird gedruckt');
+    } catch (error) {
+      console.error('QR print failed:', error);
+      this.toastService.error('Fehler', 'QR-Code konnte nicht gedruckt werden');
+    }
+  }
+
   public generateQRCodeImage(qrData: string): string {
     // Check cache first
     if (this.qrCodeCache.has(qrData)) {
@@ -1527,7 +1651,7 @@ export class RestaurantTableGridComponent implements OnInit {
           dark: '#000000',
           light: '#FFFFFF'
         }
-      }, (error: any) => {
+      }, (error) => {
         if (error) {
           console.error('QR Code generation error:', error);
         }
@@ -1538,69 +1662,28 @@ export class RestaurantTableGridComponent implements OnInit {
       return qrCodeUrl;
     } catch (error) {
       console.error('QR Code generation failed:', error);
-      return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0id2hpdGUiLz48dGV4dCB4PSIxNTAiIHk9IjE1MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iYmxhY2siIGZvbnQtc2l6ZT0iMTQiPlFSIENvZGU8L3RleHQ+PC9zdmc+';
+      return this.createFallbackQRCodeImage(qrData);
     }
   }
 
-  downloadTableQR() {
-    if (!this.selectedTableForOrders?.qr_code) {
-      this.toastService.error(this.i18nService.translate('common.error'), this.i18nService.translate('tables.error_qr_unavailable'));
-      return;
-    }
+  private createFallbackQRCodeImage(text: string): string {
+    // Create a simple text-based fallback
+    const canvas = document.createElement('canvas');
+    canvas.width = 300;
+    canvas.height = 300;
+    const ctx = canvas.getContext('2d')!;
 
-    try {
-      const qrImageUrl = this.generateQRCodeImage(this.selectedTableForOrders.qr_code);
-      const link = document.createElement('a');
-      link.href = qrImageUrl;
-      link.download = `tisch-${this.selectedTableForOrders.table_number}-qr.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      this.toastService.success(this.i18nService.translate('common.success'), this.i18nService.translate('tables.success_qr_downloaded'));
-    } catch (error) {
-      console.error('QR download failed:', error);
-      this.toastService.error(this.i18nService.translate('common.error'), this.i18nService.translate('tables.error_qr_download'));
-    }
-  }
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, 300, 300);
 
-  printTableQR() {
-    if (!this.selectedTableForOrders?.qr_code) {
-      this.toastService.error(this.i18nService.translate('common.error'), this.i18nService.translate('tables.error_qr_unavailable'));
-      return;
-    }
+    ctx.fillStyle = 'black';
+    ctx.font = '12px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('QR Code', 150, 140);
+    ctx.fillText('Not Available', 150, 160);
+    ctx.fillText(text.substring(0, 20) + '...', 150, 180);
 
-    try {
-      const qrImageUrl = this.generateQRCodeImage(this.selectedTableForOrders.qr_code);
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(`
-          <html>
-            <head>
-              <title>QR-Code für Tisch ${this.selectedTableForOrders.table_number}</title>
-              <style>
-                body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-                h1 { color: #333; }
-                img { max-width: 300px; margin: 20px 0; }
-                .info { font-size: 14px; color: #666; margin-top: 20px; }
-              </style>
-            </head>
-            <body>
-              <h1>QR-Code für Tisch ${this.selectedTableForOrders.table_number}</h1>
-              <img src="${qrImageUrl}" alt="QR Code" />
-              <div class="info">
-                <p>Scannen für Tischangebot</p>
-              </div>
-            </body>
-          </html>
-        `);
-        printWindow.document.close();
-        printWindow.print();
-      }
-      this.toastService.success(this.i18nService.translate('common.info'), this.i18nService.translate('tables.info_print_dialog'));
-    } catch (error) {
-      console.error('QR print failed:', error);
-      this.toastService.error(this.i18nService.translate('common.error'), this.i18nService.translate('tables.error_qr_print'));
-    }
+    return canvas.toDataURL('image/png');
   }
 }
 
