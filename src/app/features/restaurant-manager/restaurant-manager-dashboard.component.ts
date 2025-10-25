@@ -818,10 +818,16 @@ export class RestaurantManagerDashboardComponent implements OnInit, OnDestroy {
 
     // Filter menu items based on user role
     if (isStaff) {
-      // Staff can only see orders and tables
+      // Staff can only see orders and tables (grid view only)
       this.managerMenuItems = this.managerMenuItems.filter(item => 
         item.id === 'orders' || item.id === 'tables'
       );
+      
+      // For staff users, redirect tables route to grid view
+      const tablesItem = this.managerMenuItems.find(item => item.id === 'tables');
+      if (tablesItem) {
+        tablesItem.route = '/restaurant-manager/tables/grid';
+      }
     }
   }
 

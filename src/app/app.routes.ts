@@ -13,7 +13,7 @@ import { AnalyticsAdminComponent } from './features/admin/analytics-admin.compon
 import { LoginComponent } from './features/auth/login.component';
 import { RegistrationComponent } from './features/auth/registration.component';
 import { GoogleCallbackComponent } from './features/auth/google-callback.component';
-import { authGuard, roleGuard, guestGuard } from './core/auth/auth.guard';
+import { authGuard, roleGuard, guestGuard, staffTablesRedirectGuard } from './core/auth/auth.guard';
 import { RestaurantManagerDashboardComponent } from './features/restaurant-manager/restaurant-manager-dashboard.component';
 import { WholesalerDashboardComponent } from './features/wholesaler/wholesaler-dashboard.component';
 import { WholesalerOverviewComponent } from './features/wholesaler/wholesaler-overview.component';
@@ -125,7 +125,7 @@ export const routes: Routes = [
       { path: 'payment-methods', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-payment-methods.component').then(m => m.RestaurantManagerPaymentMethodsComponent), canActivate: [roleGuard(['manager'])] },
       { path: 'wholesale', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-wholesale.component').then(m => m.RestaurantManagerWholesaleComponent), canActivate: [roleGuard(['manager'])] },
       { path: 'wholesale/:id', loadComponent: () => import('./features/restaurant-manager/wholesaler-detail.component').then(m => m.WholesalerDetailComponent), canActivate: [roleGuard(['manager'])] },
-      { path: 'tables', loadComponent: () => import('./features/restaurant-manager/restaurant-tables.component').then(m => m.RestaurantTablesComponent) },
+      { path: 'tables', loadComponent: () => import('./features/restaurant-manager/restaurant-tables.component').then(m => m.RestaurantTablesComponent), canActivate: [staffTablesRedirectGuard] },
       { path: 'tables/grid', loadComponent: () => import('./features/restaurant-manager/restaurant-table-grid.component').then(m => m.RestaurantTableGridComponent) },
       { path: 'invoices', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-invoices.component').then(m => m.RestaurantManagerInvoicesComponent), canActivate: [roleGuard(['manager'])] },
       { path: 'issues', loadComponent: () => import('./features/restaurant-manager/restaurant-manager-issues.component').then(m => m.RestaurantManagerIssuesComponent), canActivate: [roleGuard(['manager'])] },

@@ -9,6 +9,7 @@ import { LoadingService } from '../../core/services/loading.service';
 import { ToastService } from '../../core/services/toast.service';
 import { OrdersService, Order } from '../../core/services/orders.service';
 import { I18nService } from '../../core/services/i18n.service';
+import { AuthService } from '../../core/auth/auth.service';
 import * as QRCode from 'qrcode';
 
 interface GridCell {
@@ -31,7 +32,7 @@ interface GridCell {
         </div>
         <div class="header-actions">
           <button class="btn-secondary" (click)="goBack()">
-            {{ translate('table_grid.back_to_tables') }}
+            {{ getBackButtonText() }}
           </button>
           <button class="btn-primary" (click)="saveGridLayout()" [disabled]="isSaving || !hasChanges">
             {{ translate('table_grid.save_layout') }}
@@ -1109,6 +1110,7 @@ export class RestaurantTableGridComponent implements OnInit {
   private ordersService = inject(OrdersService);
   private router = inject(Router);
   private i18nService = inject(I18nService);
+  private authService = inject(AuthService);
 
   // Grid configuration
   gridSize = 10;
@@ -1324,7 +1326,25 @@ export class RestaurantTableGridComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/restaurant-manager/tables']);
+    const currentUser = this.authService.currentUserSubject.value;
+    
+    if (currentUser?.role === 'staff') {
+      // Staff users should go back to orders since they can't access regular tables view
+      this.router.navigate(['/restaurant-manager/orders']);
+    } else {
+      // Managers can go back to regular tables view
+      this.router.navigate(['/restaurant-manager/tables']);
+    }
+  }
+
+  getBackButtonText(): string {
+    const currentUser = this.authService.currentUserSubject.value;
+    
+    if (currentUser?.role === 'staff') {
+      return this.translate('table_grid.back_to_orders');
+    } else {
+      return this.translate('table_grid.back_to_tables');
+    }
   }
 
   trackByCell(index: number, cell: GridCell): string {

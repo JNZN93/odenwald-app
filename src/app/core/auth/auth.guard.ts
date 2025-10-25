@@ -83,3 +83,20 @@ export const roleGuard = (allowedRoles: string[]): CanActivateFn => {
     );
   };
 };
+
+export const staffTablesRedirectGuard: CanActivateFn = (route, state) => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  return authService.currentUser$.pipe(
+    take(1),
+    map(user => {
+      if (user && user.is_active && user.role === 'staff') {
+        // Redirect staff users from regular tables route to grid route
+        router.navigate(['/restaurant-manager/tables/grid'], { replaceUrl: true });
+        return false;
+      }
+      return true;
+    })
+  );
+};
