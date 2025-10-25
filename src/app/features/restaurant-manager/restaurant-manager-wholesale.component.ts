@@ -304,11 +304,8 @@ interface OrderData {
             </div>
 
             <div class="supplier-actions">
-              <button class="btn-secondary" (click)="viewCatalog(supplier)">
-                <span>Katalog</span>
-              </button>
               <button class="btn-primary" (click)="viewProducts(supplier)" [disabled]="!supplier.isOpen">
-                <span>Produkte</span>
+                <span>Produkte ansehen</span>
               </button>
             </div>
           </div>
@@ -897,11 +894,11 @@ interface OrderData {
     .supplier-actions {
       padding: 0 var(--space-4) var(--space-4) var(--space-4);
       display: flex;
-      gap: var(--space-2);
+      justify-content: center;
     }
 
-    .btn-secondary, .btn-primary {
-      flex: 1;
+    .btn-primary {
+      width: 100%;
       padding: var(--space-3) var(--space-4);
       border-radius: var(--radius-lg);
       font-weight: 500;
@@ -913,16 +910,6 @@ interface OrderData {
       align-items: center;
       justify-content: center;
       gap: var(--space-2);
-    }
-
-    .btn-secondary {
-      background: var(--bg-light);
-      color: var(--color-text);
-      border: 1px solid var(--color-border);
-    }
-
-    .btn-secondary:hover {
-      background: var(--color-border);
     }
 
     .btn-primary {
@@ -1003,58 +990,103 @@ interface OrderData {
 
     .tabs {
       display: flex;
-      background: var(--color-surface);
+      background: white;
       border-radius: var(--radius-xl);
-      padding: var(--space-1);
-      box-shadow: var(--shadow-sm);
-      border: 1px solid var(--color-border);
+      padding: var(--space-2);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      gap: var(--space-1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tabs::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(74, 169, 108, 0.3), transparent);
     }
 
     .tab-button {
       flex: 1;
-      padding: var(--space-3) var(--space-4);
+      padding: var(--space-4) var(--space-5);
       border: none;
       background: transparent;
       border-radius: var(--radius-lg);
       cursor: pointer;
-      transition: all var(--transition);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       position: relative;
-      min-height: 48px;
+      min-height: 56px;
       display: flex;
       align-items: center;
       justify-content: center;
+      font-weight: 500;
+      color: var(--color-muted);
+      overflow: hidden;
+    }
+
+    .tab-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(74, 169, 108, 0.05), rgba(74, 169, 108, 0.02));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      border-radius: var(--radius-lg);
     }
 
     .tab-content {
       display: flex;
       align-items: center;
-      gap: var(--space-2);
+      gap: var(--space-3);
       justify-content: center;
       width: 100%;
+      position: relative;
+      z-index: 1;
     }
 
     .tab-icon {
-      width: 20px;
-      height: 20px;
+      width: 22px;
+      height: 22px;
       flex-shrink: 0;
-      transition: transform var(--transition);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      stroke-width: 2;
     }
 
     .tab-button:hover {
-      background: var(--color-surface-2);
-      transform: translateY(-1px);
+      color: var(--color-primary);
+      transform: translateY(-2px);
+    }
+
+    .tab-button:hover::before {
+      opacity: 1;
+    }
+
+    .tab-button:hover .tab-icon {
+      transform: scale(1.1);
+      stroke: var(--color-primary);
     }
 
     .tab-button:active {
-      transform: translateY(0);
-      box-shadow: var(--shadow-sm);
+      transform: translateY(-1px);
     }
 
     .tab-button.active {
-      background: var(--gradient-primary);
+      background: linear-gradient(135deg, #4aa96c 0%, #2d5a47 100%);
       color: white;
-      box-shadow: var(--shadow-sm);
-      transform: translateY(-1px);
+      box-shadow: 0 8px 25px rgba(74, 169, 108, 0.3);
+      transform: translateY(-2px);
+      font-weight: 600;
+    }
+
+    .tab-button.active::before {
+      opacity: 0;
     }
 
     .tab-button.active svg {
@@ -1063,23 +1095,37 @@ interface OrderData {
     }
 
     .tab-button.active:hover {
-      background: var(--gradient-primary);
-      transform: translateY(-1px);
+      background: linear-gradient(135deg, #4aa96c 0%, #2d5a47 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(74, 169, 108, 0.4);
     }
 
     .tab-badge {
-      background: var(--color-danger);
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
       color: white;
       font-size: var(--text-xs);
-      font-weight: 600;
-      padding: 2px 6px;
-      border-radius: 10px;
-      margin-left: var(--space-1);
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 12px;
+      margin-left: var(--space-2);
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.05);
+      }
     }
 
     /* Responsive button text */
     .tab-text-full {
       display: inline;
+      font-size: var(--text-sm);
+      letter-spacing: 0.025em;
     }
 
     .tab-text-mobile {
@@ -1147,29 +1193,44 @@ interface OrderData {
       /* Mobile tabs */
       .tabs {
         flex-direction: column;
-        gap: var(--space-2);
-        padding: var(--space-2);
-        border-radius: var(--radius-lg);
+        gap: var(--space-3);
+        padding: var(--space-3);
+        border-radius: var(--radius-xl);
+        box-shadow: 0 6px 25px rgba(0, 0, 0, 0.1);
       }
 
       .tab-button {
         width: 100%;
-        padding: var(--space-4) var(--space-3);
-        min-height: 60px;
+        padding: var(--space-5) var(--space-4);
+        min-height: 64px;
         justify-content: flex-start;
-        border-radius: var(--radius-md);
-        margin-bottom: var(--space-1);
+        border-radius: var(--radius-lg);
+        margin-bottom: 0;
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+      }
+
+      .tab-button:hover {
+        background: rgba(74, 169, 108, 0.08);
+        transform: translateX(4px);
+      }
+
+      .tab-button.active {
+        background: linear-gradient(135deg, #4aa96c 0%, #2d5a47 100%);
+        transform: translateX(4px);
+        box-shadow: 0 8px 25px rgba(74, 169, 108, 0.3);
       }
 
       .tab-content {
         justify-content: flex-start;
-        gap: var(--space-3);
+        gap: var(--space-4);
         width: 100%;
       }
 
       .tab-icon {
-        width: 28px;
-        height: 28px;
+        width: 24px;
+        height: 24px;
         flex-shrink: 0;
       }
 
@@ -1180,11 +1241,15 @@ interface OrderData {
       .tab-text-mobile {
         display: inline;
         font-weight: 600;
+        font-size: var(--text-base);
+        letter-spacing: 0.025em;
       }
 
       .tab-badge {
         margin-left: auto;
         align-self: center;
+        padding: 6px 10px;
+        font-size: var(--text-xs);
       }
 
       /* Supplier cards mobile */
@@ -1208,8 +1273,6 @@ interface OrderData {
       }
 
       .supplier-actions {
-        flex-direction: column;
-        gap: var(--space-3);
         width: 100%;
         padding: var(--space-4);
         background: var(--color-surface-2);
@@ -1223,26 +1286,12 @@ interface OrderData {
         border-radius: var(--radius-lg);
         font-weight: 600;
         transition: all var(--transition);
-      }
-
-      .supplier-actions button:first-child {
-        background: var(--color-surface);
-        border: 2px solid var(--color-primary);
-        color: var(--color-primary);
-      }
-
-      .supplier-actions button:first-child:hover {
-        background: var(--color-primary);
-        color: white;
-      }
-
-      .supplier-actions button:last-child {
         background: var(--gradient-primary);
         border: none;
         color: white;
       }
 
-      .supplier-actions button:last-child:hover {
+      .supplier-actions button:hover:not(:disabled) {
         transform: translateY(-1px);
         box-shadow: var(--shadow-md);
       }
@@ -1388,19 +1437,20 @@ interface OrderData {
       }
 
       .tabs {
-        padding: var(--space-2);
-        gap: var(--space-1);
+        padding: var(--space-3);
+        gap: var(--space-2);
+        border-radius: var(--radius-lg);
       }
 
       .tab-button {
-        min-height: 56px;
-        padding: var(--space-3) var(--space-2);
-        margin-bottom: var(--space-1);
+        min-height: 60px;
+        padding: var(--space-4) var(--space-3);
+        margin-bottom: 0;
       }
 
       .tab-icon {
-        width: 24px;
-        height: 24px;
+        width: 22px;
+        height: 22px;
       }
 
       .tab-text-mobile {
@@ -1551,72 +1601,6 @@ interface OrderData {
     .empty-state p {
       margin: 0;
       color: var(--color-muted);
-    }
-
-    /* Tab Navigation */
-    .tabs-section {
-      margin-bottom: var(--space-6);
-    }
-
-    .tabs {
-      display: flex;
-      background: white;
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--color-border);
-      overflow: hidden;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .tab-button {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--space-2);
-      padding: var(--space-4) var(--space-6);
-      background: none;
-      border: none;
-      cursor: pointer;
-      transition: all var(--transition);
-      position: relative;
-      font-weight: 500;
-      color: var(--color-muted);
-    }
-
-    .tab-button:hover {
-      background: var(--bg-light);
-      color: var(--color-text);
-    }
-
-    .tab-button.active {
-      background: rgba(74, 169, 108, 0.1);
-      color: var(--color-text);
-      font-weight: 600;
-      border: 1px solid rgba(74, 169, 108, 0.2);
-    }
-
-    .tab-icon {
-      width: 20px;
-      height: 20px;
-    }
-
-    .tab-badge {
-      background: var(--color-danger);
-      color: white;
-      padding: var(--space-1) var(--space-2);
-      border-radius: var(--radius-full);
-      font-size: var(--text-xs);
-      font-weight: 600;
-      margin-left: var(--space-1);
-    }
-
-    /* Tab Content */
-    .tab-content {
-      background: white;
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--color-border);
-      box-shadow: var(--shadow-sm);
-      overflow: hidden;
     }
 
     /* Orders Section */
@@ -2421,11 +2405,6 @@ export class RestaurantManagerWholesaleComponent implements OnInit {
         specialOffer: Math.random() > 0.7 ? 'Sonderangebot verfügbar' : undefined
       };
     });
-  }
-
-  viewCatalog(supplier: Supplier) {
-    console.log('View catalog for:', supplier.name);
-    // TODO: Navigate to supplier catalog
   }
 
   viewProducts(supplier: Supplier) {
