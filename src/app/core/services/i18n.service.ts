@@ -337,7 +337,6 @@ export class I18nService {
 
       // Wholesale
       'wholesale.title': 'Großhandel Einkauf',
-      'wholesale.subtitle': 'Frische Zutaten und Waren für Ihr Restaurant',
       'wholesale.products': 'Produkte',
       'wholesale.orders': 'Bestellungen',
       'wholesale.suppliers': 'Lieferanten',
@@ -347,96 +346,6 @@ export class I18nService {
       'wholesale.total_price': 'Gesamtpreis',
       'wholesale.checkout': 'Zur Kasse',
       'wholesale.order_history': 'Bestellhistorie',
-      
-      // Wholesale Stats
-      'wholesale.stats.suppliers': 'Großhändler',
-      'wholesale.stats.my_orders': 'Meine Bestellungen',
-      'wholesale.stats.order_value': 'Bestellwert',
-      
-      // Wholesale Tabs
-      'wholesale.tabs.browse': 'Großhändler durchsuchen',
-      'wholesale.tabs.browse_mobile': 'Durchsuchen',
-      'wholesale.tabs.orders': 'Meine Bestellungen',
-      'wholesale.tabs.orders_mobile': 'Bestellungen',
-      'wholesale.tabs.invoices': 'Rechnungen',
-      
-      // Wholesale Loading & Error States
-      'wholesale.loading.suppliers': 'Großhändler werden geladen...',
-      'wholesale.loading.orders': 'Bestellungen werden geladen...',
-      'wholesale.error.loading': 'Fehler beim Laden',
-      'wholesale.error.retry': 'Erneut versuchen',
-      
-      // Wholesale Supplier Cards
-      'wholesale.supplier.open': 'Geöffnet',
-      'wholesale.supplier.closed': 'Geschlossen',
-      'wholesale.supplier.delivery': 'Lieferung',
-      'wholesale.supplier.min_order': 'Min.',
-      'wholesale.supplier.catalog': 'Katalog',
-      'wholesale.supplier.products': 'Produkte',
-      
-      // Wholesale Empty States
-      'wholesale.empty.suppliers_title': 'Keine Großhändler verfügbar',
-      'wholesale.empty.suppliers_description': 'Momentan sind keine Großhändler für den Einkauf verfügbar.',
-      'wholesale.empty.orders_title': 'Noch keine Bestellungen',
-      'wholesale.empty.orders_description': 'Sie haben noch keine Bestellungen bei Großhändlern aufgegeben.',
-      'wholesale.empty.browse_suppliers': 'Großhändler durchsuchen',
-      
-      // Wholesale Info Cards
-      'wholesale.info.how_it_works_title': 'Wie funktioniert der Einkauf?',
-      'wholesale.info.how_it_works.step1': 'Großhändler auswählen',
-      'wholesale.info.how_it_works.step2': 'Katalog durchsuchen',
-      'wholesale.info.how_it_works.step3': 'Warenkorb füllen',
-      'wholesale.info.how_it_works.step4': 'Bestellung abschließen',
-      'wholesale.info.delivery_title': 'Lieferzeiten & Konditionen',
-      'wholesale.info.delivery.step1': 'Lieferung in 24h',
-      'wholesale.info.delivery.step2': 'Mindestbestellung €50',
-      'wholesale.info.delivery.step3': 'Kostenlos ab €200',
-      'wholesale.info.delivery.step4': 'Qualitätsgarantie',
-      
-      // Wholesale Orders
-      'wholesale.orders.title': 'Meine Bestellungen',
-      'wholesale.orders.subtitle': 'Verfolgen Sie den Status Ihrer Großhandelsbestellungen',
-      'wholesale.orders.items': 'Artikel',
-      'wholesale.orders.total': 'Gesamt:',
-      'wholesale.orders.details': 'Details',
-      
-      // Wholesale Order Status
-      'wholesale.order.status.pending': 'Ausstehend',
-      'wholesale.order.status.confirmed': 'Bestätigt',
-      'wholesale.order.status.preparing': 'In Vorbereitung',
-      'wholesale.order.status.ready': 'Bereit zur Abholung',
-      'wholesale.order.status.delivered': 'Geliefert',
-      'wholesale.order.status.cancelled': 'Storniert',
-      
-      // Wholesale Order Details Modal
-      'wholesale.order.details.title': 'Bestellung Details',
-      'wholesale.order.details.items_title': 'Artikel in dieser Bestellung',
-      'wholesale.order.details.summary_title': 'Bestellübersicht',
-      'wholesale.order.details.item_count': 'Anzahl Artikel:',
-      'wholesale.order.details.total_price': 'Gesamtpreis:',
-      'wholesale.order.details.order_total': 'Gesamtbestellung:',
-      'wholesale.order.details.notes_title': 'Notizen',
-      'wholesale.order.details.per_unit': 'pro',
-      
-      // Wholesale Invoices
-      'wholesale.invoices.title': 'Rechnungen',
-      'wholesale.invoices.subtitle': 'Verwalten Sie Ihre Großhandelsrechnungen',
-      'wholesale.invoices.total_invoices': 'Gesamt Rechnungen',
-      'wholesale.invoices.pending': 'Ausstehend',
-      'wholesale.invoices.paid': 'Bezahlt',
-      'wholesale.invoices.order_number': 'Bestellung #',
-      'wholesale.invoices.due_date': 'Fällig:',
-      'wholesale.invoices.view_pdf': 'PDF anzeigen',
-      'wholesale.invoices.generate_pdf': 'PDF erstellen',
-      'wholesale.invoices.mark_paid': 'Bezahlt',
-      'wholesale.invoices.empty_title': 'Keine Rechnungen vorhanden',
-      'wholesale.invoices.empty_description': 'Nach Ihrer nächsten Bestellung wird automatisch eine Rechnung generiert.',
-      
-      // Wholesale Invoice Status
-      'wholesale.invoice.status.draft': 'Entwurf',
-      'wholesale.invoice.status.sent': 'Versendet',
-      'wholesale.invoice.status.paid': 'Bezahlt',
-      'wholesale.invoice.status.overdue': 'Überfällig',
 
       // Support
       'support.title': 'Support',
@@ -898,7 +807,6 @@ export class I18nService {
       'orders.completed_orders_found': 'abgeschlossene Bestellungen gefunden',
       'orders.order': 'Bestellung',
       'orders.customer': 'Kunde',
-      'orders.time': 'Zeit',
       'orders.order_status': 'Bestellstatus',
       'orders.payment': 'Zahlung',
       'orders.total': 'Gesamt',
@@ -1411,7 +1319,6 @@ export class I18nService {
 
       // Wholesale
       'wholesale.title': 'Toptan Alışveriş',
-      'wholesale.subtitle': 'Restoranınız için taze malzemeler ve ürünler',
       'wholesale.products': 'Ürünler',
       'wholesale.orders': 'Siparişler',
       'wholesale.suppliers': 'Tedarikçiler',
@@ -1421,96 +1328,6 @@ export class I18nService {
       'wholesale.total_price': 'Toplam Fiyat',
       'wholesale.checkout': 'Ödeme',
       'wholesale.order_history': 'Sipariş Geçmişi',
-      
-      // Wholesale Stats
-      'wholesale.stats.suppliers': 'Toptancılar',
-      'wholesale.stats.my_orders': 'Siparişlerim',
-      'wholesale.stats.order_value': 'Sipariş Değeri',
-      
-      // Wholesale Tabs
-      'wholesale.tabs.browse': 'Toptancıları Ara',
-      'wholesale.tabs.browse_mobile': 'Ara',
-      'wholesale.tabs.orders': 'Siparişlerim',
-      'wholesale.tabs.orders_mobile': 'Siparişler',
-      'wholesale.tabs.invoices': 'Faturalar',
-      
-      // Wholesale Loading & Error States
-      'wholesale.loading.suppliers': 'Toptancılar yükleniyor...',
-      'wholesale.loading.orders': 'Siparişler yükleniyor...',
-      'wholesale.error.loading': 'Yükleme Hatası',
-      'wholesale.error.retry': 'Tekrar Dene',
-      
-      // Wholesale Supplier Cards
-      'wholesale.supplier.open': 'Açık',
-      'wholesale.supplier.closed': 'Kapalı',
-      'wholesale.supplier.delivery': 'Teslimat',
-      'wholesale.supplier.min_order': 'Min.',
-      'wholesale.supplier.catalog': 'Katalog',
-      'wholesale.supplier.products': 'Ürünler',
-      
-      // Wholesale Empty States
-      'wholesale.empty.suppliers_title': 'Toptancı Mevcut Değil',
-      'wholesale.empty.suppliers_description': 'Şu anda alışveriş için toptancı mevcut değil.',
-      'wholesale.empty.orders_title': 'Henüz Sipariş Yok',
-      'wholesale.empty.orders_description': 'Henüz toptancılardan sipariş vermediniz.',
-      'wholesale.empty.browse_suppliers': 'Toptancıları Ara',
-      
-      // Wholesale Info Cards
-      'wholesale.info.how_it_works_title': 'Alışveriş Nasıl Çalışır?',
-      'wholesale.info.how_it_works.step1': 'Toptancı seçin',
-      'wholesale.info.how_it_works.step2': 'Katalogu inceleyin',
-      'wholesale.info.how_it_works.step3': 'Sepeti doldurun',
-      'wholesale.info.how_it_works.step4': 'Siparişi tamamlayın',
-      'wholesale.info.delivery_title': 'Teslimat Süreleri ve Koşulları',
-      'wholesale.info.delivery.step1': '24 saatte teslimat',
-      'wholesale.info.delivery.step2': 'Minimum sipariş €50',
-      'wholesale.info.delivery.step3': '€200 üzeri ücretsiz',
-      'wholesale.info.delivery.step4': 'Kalite garantisi',
-      
-      // Wholesale Orders
-      'wholesale.orders.title': 'Siparişlerim',
-      'wholesale.orders.subtitle': 'Toptan siparişlerinizin durumunu takip edin',
-      'wholesale.orders.items': 'Ürün',
-      'wholesale.orders.total': 'Toplam:',
-      'wholesale.orders.details': 'Detaylar',
-      
-      // Wholesale Order Status
-      'wholesale.order.status.pending': 'Beklemede',
-      'wholesale.order.status.confirmed': 'Onaylandı',
-      'wholesale.order.status.preparing': 'Hazırlanıyor',
-      'wholesale.order.status.ready': 'Teslim İçin Hazır',
-      'wholesale.order.status.delivered': 'Teslim Edildi',
-      'wholesale.order.status.cancelled': 'İptal Edildi',
-      
-      // Wholesale Order Details Modal
-      'wholesale.order.details.title': 'Sipariş Detayları',
-      'wholesale.order.details.items_title': 'Bu Siparişteki Ürünler',
-      'wholesale.order.details.summary_title': 'Sipariş Özeti',
-      'wholesale.order.details.item_count': 'Ürün Sayısı:',
-      'wholesale.order.details.total_price': 'Toplam Fiyat:',
-      'wholesale.order.details.order_total': 'Toplam Sipariş:',
-      'wholesale.order.details.notes_title': 'Notlar',
-      'wholesale.order.details.per_unit': 'birim başına',
-      
-      // Wholesale Invoices
-      'wholesale.invoices.title': 'Faturalar',
-      'wholesale.invoices.subtitle': 'Toptan faturalarınızı yönetin',
-      'wholesale.invoices.total_invoices': 'Toplam Fatura',
-      'wholesale.invoices.pending': 'Beklemede',
-      'wholesale.invoices.paid': 'Ödendi',
-      'wholesale.invoices.order_number': 'Sipariş #',
-      'wholesale.invoices.due_date': 'Vade:',
-      'wholesale.invoices.view_pdf': 'PDF Görüntüle',
-      'wholesale.invoices.generate_pdf': 'PDF Oluştur',
-      'wholesale.invoices.mark_paid': 'Ödendi',
-      'wholesale.invoices.empty_title': 'Fatura Mevcut Değil',
-      'wholesale.invoices.empty_description': 'Bir sonraki siparişinizden sonra otomatik olarak fatura oluşturulacak.',
-      
-      // Wholesale Invoice Status
-      'wholesale.invoice.status.draft': 'Taslak',
-      'wholesale.invoice.status.sent': 'Gönderildi',
-      'wholesale.invoice.status.paid': 'Ödendi',
-      'wholesale.invoice.status.overdue': 'Vadesi Geçmiş',
 
       // Support
       'support.title': 'Destek',
@@ -1972,7 +1789,6 @@ export class I18nService {
       'orders.completed_orders_found': 'tamamlanmış sipariş bulundu',
       'orders.order': 'Sipariş',
       'orders.customer': 'Müşteri',
-      'orders.time': 'Zaman',
       'orders.order_status': 'Sipariş durumu',
       'orders.payment': 'Ödeme',
       'orders.total': 'Toplam',

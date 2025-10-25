@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
-import { I18nService } from '../../core/services/i18n.service';
 
 interface WholesalerData {
   id: number;
@@ -115,8 +114,8 @@ interface OrderData {
       <div class="header-section">
         <div class="header-content">
           <div class="header-text">
-            <h1>{{ i18nService.translate('wholesale.title') }}</h1>
-            <p>{{ i18nService.translate('wholesale.subtitle') }}</p>
+            <h1>Großhandel Einkauf</h1>
+            <p>Frische Zutaten und Waren für Ihr Restaurant</p>
           </div>
           <div class="header-stats">
             <div class="stat">
@@ -131,7 +130,7 @@ interface OrderData {
               </div>
               <div class="stat-content">
                 <span class="stat-number">{{ suppliers.length }}</span>
-                <span class="stat-label">{{ i18nService.translate('wholesale.stats.suppliers') }}</span>
+                <span class="stat-label">Großhändler</span>
               </div>
             </div>
             <div class="stat">
@@ -143,7 +142,7 @@ interface OrderData {
               </div>
               <div class="stat-content">
                 <span class="stat-number">{{ myOrdersCount }}</span>
-                <span class="stat-label">{{ i18nService.translate('wholesale.stats.my_orders') }}</span>
+                <span class="stat-label">Meine Bestellungen</span>
               </div>
             </div>
             <div class="stat">
@@ -155,7 +154,7 @@ interface OrderData {
               </div>
               <div class="stat-content">
                 <span class="stat-number">€{{ (totalOrderValue || 0).toFixed(2) }}</span>
-                <span class="stat-label">{{ i18nService.translate('wholesale.stats.order_value') }}</span>
+                <span class="stat-label">Bestellwert</span>
               </div>
             </div>
           </div>
@@ -177,8 +176,8 @@ interface OrderData {
                 <rect x="7" y="14" width="3" height="3"/>
                 <rect x="14" y="14" width="3" height="3"/>
               </svg>
-              <span class="tab-text-full">{{ i18nService.translate('wholesale.tabs.browse') }}</span>
-              <span class="tab-text-mobile">{{ i18nService.translate('wholesale.tabs.browse_mobile') }}</span>
+              <span class="tab-text-full">Großhändler durchsuchen</span>
+              <span class="tab-text-mobile">Durchsuchen</span>
             </div>
           </button>
           <button
@@ -190,8 +189,8 @@ interface OrderData {
                 <path d="M9 12l2 2 4-4"/>
                 <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
               </svg>
-              <span class="tab-text-full">{{ i18nService.translate('wholesale.tabs.orders') }}</span>
-              <span class="tab-text-mobile">{{ i18nService.translate('wholesale.tabs.orders_mobile') }}</span>
+              <span class="tab-text-full">Meine Bestellungen</span>
+              <span class="tab-text-mobile">Bestellungen</span>
               <span *ngIf="pendingOrdersCount > 0" class="tab-badge">{{ pendingOrdersCount }}</span>
             </div>
           </button>
@@ -207,8 +206,8 @@ interface OrderData {
                 <line x1="16" y1="17" x2="8" y2="17"/>
                 <polyline points="10,9 9,9 8,9"/>
               </svg>
-              <span class="tab-text-full">{{ i18nService.translate('wholesale.tabs.invoices') }}</span>
-              <span class="tab-text-mobile">{{ i18nService.translate('wholesale.tabs.invoices') }}</span>
+              <span class="tab-text-full">Rechnungen</span>
+              <span class="tab-text-mobile">Rechnungen</span>
             </div>
           </button>
         </div>
@@ -227,7 +226,7 @@ interface OrderData {
             <path d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
         </div>
-        <p>{{ i18nService.translate('wholesale.loading.suppliers') }}</p>
+        <p>Großhändler werden geladen...</p>
       </div>
 
       <!-- Error State -->
@@ -239,14 +238,14 @@ interface OrderData {
             <line x1="9" y1="9" x2="15" y2="15"></line>
           </svg>
         </div>
-        <h3>{{ i18nService.translate('wholesale.error.loading') }}</h3>
+        <h3>Fehler beim Laden</h3>
         <p>{{ error }}</p>
-        <button class="btn-primary" (click)="loadWholesalers()">{{ i18nService.translate('wholesale.error.retry') }}</button>
+        <button class="btn-primary" (click)="loadWholesalers()">Erneut versuchen</button>
       </div>
 
       <!-- Suppliers Grid -->
       <div class="suppliers-section" *ngIf="!loading && !error">
-        <h2 class="section-title">{{ i18nService.translate('wholesale.suppliers') }}</h2>
+        <h2 class="section-title">Großhändler</h2>
         <div class="suppliers-grid" *ngIf="suppliers.length > 0">
           <div class="supplier-card" *ngFor="let supplier of suppliers">
             <div class="supplier-header">
@@ -264,7 +263,7 @@ interface OrderData {
                 </div>
               </div>
               <div class="status-badge" [class.open]="supplier.isOpen" [class.closed]="!supplier.isOpen">
-                {{ supplier.isOpen ? i18nService.translate('wholesale.supplier.open') : i18nService.translate('wholesale.supplier.closed') }}
+                {{ supplier.isOpen ? 'Geöffnet' : 'Geschlossen' }}
               </div>
             </div>
 
@@ -281,7 +280,7 @@ interface OrderData {
                       <circle cx="18.5" cy="18.5" r="2.5"/>
                     </svg>
                   </span>
-                  <span class="detail-text">{{ supplier.deliveryTime }} {{ i18nService.translate('wholesale.supplier.delivery') }}</span>
+                  <span class="detail-text">{{ supplier.deliveryTime }} Lieferung</span>
                 </div>
                 <div class="detail-item">
                   <span class="detail-icon">
@@ -290,7 +289,7 @@ interface OrderData {
                       <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
                     </svg>
                   </span>
-                  <span class="detail-text">{{ i18nService.translate('wholesale.supplier.min_order') }} €{{ supplier.minOrderValue }}</span>
+                  <span class="detail-text">Min. €{{ supplier.minOrderValue }}</span>
                 </div>
               </div>
 
@@ -306,10 +305,10 @@ interface OrderData {
 
             <div class="supplier-actions">
               <button class="btn-secondary" (click)="viewCatalog(supplier)">
-                <span>{{ i18nService.translate('wholesale.supplier.catalog') }}</span>
+                <span>Katalog</span>
               </button>
               <button class="btn-primary" (click)="viewProducts(supplier)" [disabled]="!supplier.isOpen">
-                <span>{{ i18nService.translate('wholesale.supplier.products') }}</span>
+                <span>Produkte</span>
               </button>
             </div>
           </div>
@@ -323,8 +322,8 @@ interface OrderData {
               <path d="M9 9h6v6H9z"/>
             </svg>
           </div>
-          <h3>{{ i18nService.translate('wholesale.empty.suppliers_title') }}</h3>
-          <p>{{ i18nService.translate('wholesale.empty.suppliers_description') }}</p>
+          <h3>Keine Großhändler verfügbar</h3>
+          <p>Momentan sind keine Großhändler für den Einkauf verfügbar.</p>
         </div>
       </div>
 
@@ -341,12 +340,12 @@ interface OrderData {
               <polyline points="10,9 9,9 8,9"/>
             </svg>
           </div>
-          <h3>{{ i18nService.translate('wholesale.info.how_it_works_title') }}</h3>
+          <h3>Wie funktioniert der Einkauf?</h3>
           <ul>
-            <li>{{ i18nService.translate('wholesale.info.how_it_works.step1') }}</li>
-            <li>{{ i18nService.translate('wholesale.info.how_it_works.step2') }}</li>
-            <li>{{ i18nService.translate('wholesale.info.how_it_works.step3') }}</li>
-            <li>{{ i18nService.translate('wholesale.info.how_it_works.step4') }}</li>
+            <li>Großhändler auswählen</li>
+            <li>Katalog durchsuchen</li>
+            <li>Warenkorb füllen</li>
+            <li>Bestellung abschließen</li>
           </ul>
         </div>
         <div class="info-card">
@@ -358,12 +357,12 @@ interface OrderData {
               <circle cx="18.5" cy="18.5" r="2.5"/>
             </svg>
           </div>
-          <h3>{{ i18nService.translate('wholesale.info.delivery_title') }}</h3>
+          <h3>Lieferzeiten & Konditionen</h3>
           <ul>
-            <li>{{ i18nService.translate('wholesale.info.delivery.step1') }}</li>
-            <li>{{ i18nService.translate('wholesale.info.delivery.step2') }}</li>
-            <li>{{ i18nService.translate('wholesale.info.delivery.step3') }}</li>
-            <li>{{ i18nService.translate('wholesale.info.delivery.step4') }}</li>
+            <li>Lieferung in 24h</li>
+            <li>Mindestbestellung €50</li>
+            <li>Kostenlos ab €200</li>
+            <li>Qualitätsgarantie</li>
           </ul>
         </div>
       </div>
@@ -373,8 +372,8 @@ interface OrderData {
         <div *ngIf="activeTab === 'orders'">
           <div class="orders-section">
             <div class="orders-header">
-              <h2>{{ i18nService.translate('wholesale.orders.title') }}</h2>
-              <p>{{ i18nService.translate('wholesale.orders.subtitle') }}</p>
+              <h2>Meine Bestellungen</h2>
+              <p>Verfolgen Sie den Status Ihrer Großhandelsbestellungen</p>
             </div>
 
             <!-- Orders Loading -->
@@ -385,7 +384,7 @@ interface OrderData {
                   <path d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
               </div>
-              <p>{{ i18nService.translate('wholesale.loading.orders') }}</p>
+              <p>Bestellungen werden geladen...</p>
             </div>
 
             <!-- Orders List -->
@@ -396,7 +395,7 @@ interface OrderData {
                     <h3>{{ order.wholesaler_name }}</h3>
                     <div class="order-meta">
                       <span class="order-date">{{ order.created_at | date:'dd.MM.yyyy HH:mm' }}</span>
-                      <span class="order-items-count">{{ order.items ? order.items.length : 0 }} {{ i18nService.translate('wholesale.orders.items') }}</span>
+                      <span class="order-items-count">{{ order.items ? order.items.length : 0 }} Artikel</span>
                     </div>
                   </div>
                   <div class="order-actions">
@@ -408,14 +407,14 @@ interface OrderData {
                         <path d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/>
                         <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                       </svg>
-                      {{ i18nService.translate('wholesale.orders.details') }}
+                      Details
                     </button>
                   </div>
                 </div>
 
                 <div class="order-summary">
                   <div class="summary-row">
-                    <span>{{ i18nService.translate('wholesale.orders.total') }}</span>
+                    <span>Gesamt:</span>
                     <span class="total-amount">€{{ (order.total_amount || 0).toFixed(2) }}</span>
                   </div>
                 </div>
@@ -433,10 +432,10 @@ interface OrderData {
                   <rect x="14" y="14" width="3" height="3"/>
                 </svg>
               </div>
-              <h3>{{ i18nService.translate('wholesale.empty.orders_title') }}</h3>
-              <p>{{ i18nService.translate('wholesale.empty.orders_description') }}</p>
+              <h3>Noch keine Bestellungen</h3>
+              <p>Sie haben noch keine Bestellungen bei Großhändlern aufgegeben.</p>
               <button class="btn-primary" (click)="setActiveTab('browse')">
-                {{ i18nService.translate('wholesale.empty.browse_suppliers') }}
+                Großhändler durchsuchen
               </button>
             </div>
           </div>
@@ -446,7 +445,7 @@ interface OrderData {
             <div class="modal-content order-detail-modal" (click)="$event.stopPropagation()">
               <div class="modal-header">
                 <div class="modal-title-section">
-                  <h2>{{ i18nService.translate('wholesale.order.details.title') }}</h2>
+                  <h2>Bestellung Details</h2>
                   <div class="order-meta-header">
                     <span class="wholesaler-name">{{ selectedOrder?.wholesaler_name }}</span>
                     <span class="order-date">{{ selectedOrder?.created_at | date:'dd.MM.yyyy HH:mm' }}</span>
@@ -468,14 +467,14 @@ interface OrderData {
                       {{ getStatusText(selectedOrder.status) }}
                     </div>
                     <div class="order-total">
-                      <span class="total-label">{{ i18nService.translate('wholesale.order.details.order_total') }}</span>
+                      <span class="total-label">Gesamtbestellung:</span>
                       <span class="total-amount">€{{ (selectedOrder.total_amount || 0).toFixed(2) }}</span>
                     </div>
                   </div>
 
                   <!-- Order Items -->
                   <div class="order-items-section">
-                    <h3>{{ i18nService.translate('wholesale.order.details.items_title') }}</h3>
+                    <h3>Artikel in dieser Bestellung</h3>
                     <div class="items-list">
                       <div *ngFor="let item of selectedOrder.items; let i = index" class="item-card">
                         <div class="item-main">
@@ -498,7 +497,7 @@ interface OrderData {
                             <h4 class="item-name">{{ item.product_name }}</h4>
                             <div class="item-details">
                               <span class="quantity">{{ item.quantity }} × €{{ (item.unit_price || 0).toFixed(2) }}</span>
-                              <span class="unit" *ngIf="item.product_unit">{{ i18nService.translate('wholesale.order.details.per_unit') }} {{ item.product_unit }}</span>
+                              <span class="unit" *ngIf="item.product_unit">pro {{ item.product_unit }}</span>
                             </div>
                             <div class="item-category" *ngIf="item.product_category">
                               <span class="category-tag">{{ item.product_category }}</span>
@@ -515,14 +514,14 @@ interface OrderData {
 
                   <!-- Order Summary -->
                   <div class="order-summary-section">
-                    <h3>{{ i18nService.translate('wholesale.order.details.summary_title') }}</h3>
+                    <h3>Bestellübersicht</h3>
                     <div class="summary-details">
                       <div class="summary-row">
-                        <span>{{ i18nService.translate('wholesale.order.details.item_count') }}</span>
+                        <span>Anzahl Artikel:</span>
                         <span>{{ selectedOrder.items?.length || 0 }}</span>
                       </div>
                       <div class="summary-row total-row">
-                        <span>{{ i18nService.translate('wholesale.order.details.total_price') }}</span>
+                        <span>Gesamtpreis:</span>
                         <span class="total-price">€{{ (selectedOrder.total_amount || 0).toFixed(2) }}</span>
                       </div>
                     </div>
@@ -530,7 +529,7 @@ interface OrderData {
 
                   <!-- Additional Information -->
                   <div class="additional-info-section" *ngIf="selectedOrder.notes">
-                    <h3>{{ i18nService.translate('wholesale.order.details.notes_title') }}</h3>
+                    <h3>Notizen</h3>
                     <p class="order-notes">{{ selectedOrder.notes }}</p>
                   </div>
                 </div>
@@ -543,22 +542,22 @@ interface OrderData {
         <div *ngIf="activeTab === 'invoices'">
           <div class="invoices-section">
             <div class="section-header">
-              <h2>{{ i18nService.translate('wholesale.invoices.title') }}</h2>
-              <p>{{ i18nService.translate('wholesale.invoices.subtitle') }}</p>
+              <h2>Rechnungen</h2>
+              <p>Verwalten Sie Ihre Großhandelsrechnungen</p>
             </div>
 
             <div class="invoices-stats">
               <div class="stat-card">
                 <div class="stat-number">{{ invoices.length }}</div>
-                <div class="stat-label">{{ i18nService.translate('wholesale.invoices.total_invoices') }}</div>
+                <div class="stat-label">Gesamt Rechnungen</div>
               </div>
               <div class="stat-card">
                 <div class="stat-number">€{{ getTotalPendingAmount() }}</div>
-                <div class="stat-label">{{ i18nService.translate('wholesale.invoices.pending') }}</div>
+                <div class="stat-label">Ausstehend</div>
               </div>
               <div class="stat-card">
                 <div class="stat-number">€{{ getTotalPaidAmount() }}</div>
-                <div class="stat-label">{{ i18nService.translate('wholesale.invoices.paid') }}</div>
+                <div class="stat-label">Bezahlt</div>
               </div>
             </div>
 
@@ -568,7 +567,7 @@ interface OrderData {
                   <div class="invoice-info">
                     <h4>{{ invoice.invoice_number }}</h4>
                     <div class="invoice-meta">
-                      <span>{{ i18nService.translate('wholesale.invoices.order_number') }}{{ invoice.order_id }}</span>
+                      <span>Bestellung #{{ invoice.order_id }}</span>
                       <span>{{ invoice.issued_at | date:'dd.MM.yyyy' }}</span>
                     </div>
                   </div>
@@ -580,19 +579,19 @@ interface OrderData {
                 <div class="invoice-amount">
                   <span class="amount">€{{ formatAmount(invoice.total_amount) }}</span>
                   <span class="due-date" [class.overdue]="isOverdue(invoice)">
-                    {{ i18nService.translate('wholesale.invoices.due_date') }} {{ invoice.due_date | date:'dd.MM.yyyy' }}
+                    Fällig: {{ invoice.due_date | date:'dd.MM.yyyy' }}
                   </span>
                 </div>
 
                 <div class="invoice-actions">
                   <button *ngIf="invoice.pdf_path" class="btn-secondary" (click)="downloadInvoice(invoice)">
-                    <i class="fa-solid fa-eye"></i> {{ i18nService.translate('wholesale.invoices.view_pdf') }}
+                    <i class="fa-solid fa-eye"></i> PDF anzeigen
                   </button>
                   <button *ngIf="!invoice.pdf_path" class="btn-primary" (click)="generatePdf(invoice)">
-                    <i class="fa-solid fa-file-pdf"></i> {{ i18nService.translate('wholesale.invoices.generate_pdf') }}
+                    <i class="fa-solid fa-file-pdf"></i> PDF erstellen
                   </button>
                   <button *ngIf="invoice.status === 'sent'" class="btn-success" (click)="markAsPaid(invoice)">
-                    <i class="fa-solid fa-check"></i> {{ i18nService.translate('wholesale.invoices.mark_paid') }}
+                    <i class="fa-solid fa-check"></i> Bezahlt
                   </button>
                 </div>
               </div>
@@ -602,8 +601,8 @@ interface OrderData {
               <div class="empty-icon">
                 <i class="fa-solid fa-file-invoice-dollar"></i>
               </div>
-              <h3>{{ i18nService.translate('wholesale.invoices.empty_title') }}</h3>
-              <p>{{ i18nService.translate('wholesale.invoices.empty_description') }}</p>
+              <h3>Keine Rechnungen vorhanden</h3>
+              <p>Nach Ihrer nächsten Bestellung wird automatisch eine Rechnung generiert.</p>
             </div>
           </div>
         </div>
@@ -2342,7 +2341,6 @@ interface OrderData {
 export class RestaurantManagerWholesaleComponent implements OnInit {
   private http = inject(HttpClient);
   private router = inject(Router);
-  i18nService = inject(I18nService);
 
   suppliers: Supplier[] = [];
   loading = false;
@@ -2389,7 +2387,7 @@ export class RestaurantManagerWholesaleComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error loading wholesalers:', error);
-        this.error = this.i18nService.translate('wholesale.error.loading') + '. ' + this.i18nService.translate('wholesale.error.retry') + '.';
+        this.error = 'Fehler beim Laden der Großhändler. Bitte versuchen Sie es später erneut.';
         this.loading = false;
       }
     });
@@ -2482,16 +2480,12 @@ export class RestaurantManagerWholesaleComponent implements OnInit {
 
   getStatusText(status: string): string {
     switch (status) {
-      case 'pending': return this.i18nService.translate('wholesale.order.status.pending');
-      case 'confirmed': return this.i18nService.translate('wholesale.order.status.confirmed');
-      case 'preparing': return this.i18nService.translate('wholesale.order.status.preparing');
-      case 'ready': return this.i18nService.translate('wholesale.order.status.ready');
-      case 'delivered': return this.i18nService.translate('wholesale.order.status.delivered');
-      case 'cancelled': return this.i18nService.translate('wholesale.order.status.cancelled');
-      case 'draft': return this.i18nService.translate('wholesale.invoice.status.draft');
-      case 'sent': return this.i18nService.translate('wholesale.invoice.status.sent');
-      case 'paid': return this.i18nService.translate('wholesale.invoice.status.paid');
-      case 'overdue': return this.i18nService.translate('wholesale.invoice.status.overdue');
+      case 'pending': return 'Ausstehend';
+      case 'confirmed': return 'Bestätigt';
+      case 'preparing': return 'In Vorbereitung';
+      case 'ready': return 'Bereit zur Abholung';
+      case 'delivered': return 'Geliefert';
+      case 'cancelled': return 'Storniert';
       default: return status;
     }
   }
@@ -2559,26 +2553,26 @@ export class RestaurantManagerWholesaleComponent implements OnInit {
       .subscribe({
         next: () => {
           this.loadInvoices();
-          alert(this.i18nService.translate('wholesale.invoices.generate_pdf') + ' ' + this.i18nService.translate('common.success'));
+          alert('PDF wurde erfolgreich generiert!');
         },
         error: (error) => {
           console.error('Error generating PDF:', error);
-          alert(this.i18nService.translate('wholesale.error.loading') + ' ' + this.i18nService.translate('wholesale.invoices.generate_pdf') + '. ' + this.i18nService.translate('wholesale.error.retry') + '.');
+          alert('Fehler beim Generieren der PDF. Bitte versuchen Sie es erneut.');
         }
       });
   }
 
   markAsPaid(invoice: any) {
-    if (confirm(this.i18nService.translate('wholesale.invoices.mark_paid') + '?')) {
+    if (confirm('Möchten Sie diese Rechnung wirklich als bezahlt markieren?')) {
       this.http.patch(`${environment.apiUrl}/invoices/${invoice.id}/status`, { status: 'paid' })
         .subscribe({
           next: () => {
             this.loadInvoices();
-            alert(this.i18nService.translate('wholesale.invoices.mark_paid') + ' ' + this.i18nService.translate('common.success'));
+            alert('Rechnung wurde als bezahlt markiert!');
           },
           error: (error) => {
             console.error('Error updating invoice status:', error);
-            alert(this.i18nService.translate('wholesale.error.loading') + ' ' + this.i18nService.translate('wholesale.invoices.mark_paid') + '. ' + this.i18nService.translate('wholesale.error.retry') + '.');
+            alert('Fehler beim Aktualisieren des Rechnungsstatus. Bitte versuchen Sie es erneut.');
           }
         });
     }

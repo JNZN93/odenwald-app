@@ -9,6 +9,7 @@ import { LoadingService } from '../../core/services/loading.service';
 import { ToastService } from '../../core/services/toast.service';
 import { OrdersService, Order } from '../../core/services/orders.service';
 import { I18nService } from '../../core/services/i18n.service';
+import * as QRCode from 'qrcode';
 
 interface GridCell {
   row: number;
@@ -135,6 +136,29 @@ interface GridCell {
           </div>
           
           <div class="modal-body">
+            <!-- QR Code Section -->
+            <div class="qr-code-section" *ngIf="selectedTableForOrders?.qr_code">
+              <h3>{{ translate('tables.qr_code_for_table') }} {{ selectedTableForOrders?.table_number }}</h3>
+              <div class="qr-code-container-grid">
+                <img 
+                  *ngIf="selectedTableForOrders && selectedTableForOrders.qr_code"
+                  [src]="selectedTableForOrders.qr_code ? generateQRCodeImage(selectedTableForOrders.qr_code) : ''"
+                  alt="QR Code"
+                  class="qr-code-image"
+                />
+                <div class="qr-actions">
+                  <button class="btn-qr" (click)="downloadTableQR()">
+                    <i class="fa-solid fa-download"></i>
+                    {{ translate('tables.download') }}
+                  </button>
+                  <button class="btn-qr" (click)="printTableQR()">
+                    <i class="fa-solid fa-print"></i>
+                    {{ translate('tables.print') }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <div *ngIf="tableOrdersLoading" class="loading">
               <p>{{ translate('table_grid.loading_orders') }}</p>
             </div>
@@ -749,6 +773,61 @@ interface GridCell {
       flex: 1;
     }
 
+    .qr-code-section {
+      margin-bottom: var(--space-6);
+      padding: var(--space-4);
+      background: var(--color-gray-50);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-border);
+    }
+
+    .qr-code-section h3 {
+      margin: 0 0 var(--space-4) 0;
+      font-size: var(--text-lg);
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .qr-code-container-grid {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    .qr-code-image {
+      width: 200px;
+      height: 200px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: white;
+      padding: var(--space-2);
+    }
+
+    .qr-actions {
+      display: flex;
+      gap: var(--space-3);
+    }
+
+    .btn-qr {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      background: var(--color-primary-500);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+
+    .btn-qr:hover {
+      background: var(--color-primary-600);
+    }
+
     .loading, .no-orders {
       text-align: center;
       padding: var(--space-8);
@@ -1013,6 +1092,8 @@ export class RestaurantTableGridComponent implements OnInit {
   currentRestaurantId: string | null = null;
   updatingOrderId: string | null = null;
   
+  // QR Code cache
+  private qrCodeCache: Map<string, string> = new Map();
 
   ngOnInit() {
     this.initializeGrid();
@@ -1422,6 +1503,103 @@ export class RestaurantTableGridComponent implements OnInit {
           this.updatingOrderId = null;
         }
       });
+    }
+  }
+
+  // QR Code methods
+  public generateQRCodeImage(qrData: string): string {
+    // Check cache first
+    if (this.qrCodeCache.has(qrData)) {
+      return this.qrCodeCache.get(qrData)!;
+    }
+
+    try {
+      // Generate real QR code with proper URL
+      const fullUrl = `${window.location.origin}${qrData}`;
+      console.log('Generating QR code for URL:', fullUrl);
+      
+      // Create real QR code synchronously (using canvas)
+      const canvas = document.createElement('canvas');
+      QRCode.toCanvas(canvas, fullUrl, {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      }, (error: any) => {
+        if (error) {
+          console.error('QR Code generation error:', error);
+        }
+      });
+      
+      const qrCodeUrl = canvas.toDataURL('image/png');
+      this.qrCodeCache.set(qrData, qrCodeUrl);
+      return qrCodeUrl;
+    } catch (error) {
+      console.error('QR Code generation failed:', error);
+      return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0id2hpdGUiLz48dGV4dCB4PSIxNTAiIHk9IjE1MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iYmxhY2siIGZvbnQtc2l6ZT0iMTQiPlFSIENvZGU8L3RleHQ+PC9zdmc+';
+    }
+  }
+
+  downloadTableQR() {
+    if (!this.selectedTableForOrders?.qr_code) {
+      this.toastService.error(this.i18nService.translate('common.error'), this.i18nService.translate('tables.error_qr_unavailable'));
+      return;
+    }
+
+    try {
+      const qrImageUrl = this.generateQRCodeImage(this.selectedTableForOrders.qr_code);
+      const link = document.createElement('a');
+      link.href = qrImageUrl;
+      link.download = `tisch-${this.selectedTableForOrders.table_number}-qr.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      this.toastService.success(this.i18nService.translate('common.success'), this.i18nService.translate('tables.success_qr_downloaded'));
+    } catch (error) {
+      console.error('QR download failed:', error);
+      this.toastService.error(this.i18nService.translate('common.error'), this.i18nService.translate('tables.error_qr_download'));
+    }
+  }
+
+  printTableQR() {
+    if (!this.selectedTableForOrders?.qr_code) {
+      this.toastService.error(this.i18nService.translate('common.error'), this.i18nService.translate('tables.error_qr_unavailable'));
+      return;
+    }
+
+    try {
+      const qrImageUrl = this.generateQRCodeImage(this.selectedTableForOrders.qr_code);
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>QR-Code für Tisch ${this.selectedTableForOrders.table_number}</title>
+              <style>
+                body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+                h1 { color: #333; }
+                img { max-width: 300px; margin: 20px 0; }
+                .info { font-size: 14px; color: #666; margin-top: 20px; }
+              </style>
+            </head>
+            <body>
+              <h1>QR-Code für Tisch ${this.selectedTableForOrders.table_number}</h1>
+              <img src="${qrImageUrl}" alt="QR Code" />
+              <div class="info">
+                <p>Scannen für Tischangebot</p>
+              </div>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+      }
+      this.toastService.success(this.i18nService.translate('common.info'), this.i18nService.translate('tables.info_print_dialog'));
+    } catch (error) {
+      console.error('QR print failed:', error);
+      this.toastService.error(this.i18nService.translate('common.error'), this.i18nService.translate('tables.error_qr_print'));
     }
   }
 }
