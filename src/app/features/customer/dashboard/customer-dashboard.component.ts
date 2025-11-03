@@ -478,11 +478,6 @@ import { Observable, map, switchMap, of, startWith, catchError, first } from 'rx
       gap: var(--space-2);
     }
 
-    .dashboard-header h1::before {
-      content: '👋';
-      font-size: var(--text-base);
-    }
-
     .dashboard-header p {
       color: var(--color-primary-600);
       font-size: var(--text-sm);
