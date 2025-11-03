@@ -6,12 +6,13 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { OrdersService, Order } from '../../../core/services/orders.service';
 import { CartService } from '../../../core/services/supplier.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { RestaurantsService } from '../../../core/services/restaurants.service';
 import { ImageFallbackDirective } from '../../../core/image-fallback.directive';
 import { PasswordChangeComponent } from '../../../shared/components/password-change.component';
 import { LoyaltyCardsComponent } from '../../../shared/components/loyalty-cards.component';
 import { FavoritesSectionComponent } from '../../../shared/components/favorites-section.component';
 import { FavoritesService } from '../../../core/services/favorites.service';
-import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
+import { Observable, map, switchMap, of, startWith, catchError, first } from 'rxjs';
 
 @Component({
   selector: 'app-customer-dashboard',
@@ -74,6 +75,24 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
                   <button class="btn-primary" (click)="goToRestaurants()">Jetzt bestellen</button>
                 </div>
 
+                <!-- Quick Reorder Button for Last Order -->
+                <div class="quick-reorder-section" *ngIf="orders.length > 0">
+                  <div class="quick-reorder-card">
+                    <div class="quick-reorder-info">
+                      <i class="fa-solid fa-rotate-left"></i>
+                      <div>
+                        <h4>Letzte Bestellung erneut bestellen?</h4>
+                        <p>{{ orders[0].restaurant_name }} • {{ orders[0].total_price | currency:'EUR':'symbol':'1.2-2':'de' }}</p>
+                      </div>
+                    </div>
+                    <button class="btn-primary" (click)="reorderToCart(orders[0])" [disabled]="isReordering">
+                      <i class="fa-solid fa-shopping-cart"></i>
+                      <span *ngIf="!isReordering">Erneut bestellen</span>
+                      <span *ngIf="isReordering">Wird hinzugefügt...</span>
+                    </button>
+                  </div>
+                </div>
+
                 <div class="order-card" *ngFor="let order of orders.slice(0, 5)">
               <div class="order-header">
                 <div class="order-info">
@@ -99,7 +118,13 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
 
               <div class="order-footer">
                 <div class="order-total">{{ order.total_price | currency:'EUR':'symbol':'1.2-2':'de' }}</div>
-                <button class="btn-ghost" (click)="viewOrderDetails(order)">Details</button>
+                <div class="order-actions">
+                  <button class="btn-reorder" (click)="reorderToCart(order)" [disabled]="isReordering" title="Erneut bestellen">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    <span>Erneut bestellen</span>
+                  </button>
+                  <button class="btn-ghost" (click)="viewOrderDetails(order)">Details</button>
+                </div>
               </div>
             </div>
               </ng-container>
@@ -401,6 +426,11 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
               <!-- Action Buttons -->
               <div class="modal-actions">
                 <button class="btn-secondary" (click)="closeOrderDetailsModal()">Schließen</button>
+                <button class="btn-primary" (click)="reorderToCart(selectedOrder!)" *ngIf="selectedOrder" [disabled]="isReordering">
+                  <i class="fa-solid fa-rotate-left"></i>
+                  <span *ngIf="!isReordering">Erneut bestellen</span>
+                  <span *ngIf="isReordering">Wird hinzugefügt...</span>
+                </button>
                 <button class="btn-primary" (click)="saveOrderDetails()" *ngIf="selectedOrder && canEditOrderNotes(selectedOrder)">Änderungen speichern</button>
                 <button class="btn-outline" *ngIf="selectedOrder && canReportIssue(selectedOrder)" (click)="reportIssue(selectedOrder)">Problem melden</button>
                 <button class="btn-danger" *ngIf="selectedOrder && canCancelOrder(selectedOrder)" (click)="cancelOrder()">Bestellung stornieren</button>
@@ -646,12 +676,88 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: var(--space-2);
     }
 
     .order-total {
       font-weight: 700;
       color: var(--color-success);
       font-size: var(--text-lg);
+    }
+
+    .order-actions {
+      display: flex;
+      gap: var(--space-2);
+      align-items: center;
+    }
+
+    .quick-reorder-section {
+      margin-bottom: var(--space-4);
+    }
+
+    .quick-reorder-card {
+      background: linear-gradient(135deg, var(--color-primary-50), var(--color-primary-25));
+      border: 2px solid var(--color-primary-200);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    .quick-reorder-info {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      flex: 1;
+    }
+
+    .quick-reorder-info i {
+      font-size: var(--text-xl);
+      color: var(--color-primary);
+    }
+
+    .quick-reorder-info h4 {
+      margin: 0 0 var(--space-1) 0;
+      color: var(--color-heading);
+      font-size: var(--text-base);
+    }
+
+    .quick-reorder-info p {
+      margin: 0;
+      color: var(--color-muted);
+      font-size: var(--text-sm);
+    }
+
+    .btn-reorder {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      background: var(--color-primary);
+      border: none;
+      color: white;
+      padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      transition: all var(--transition);
+    }
+
+    .btn-reorder:hover:not(:disabled) {
+      background: var(--color-primary-700);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px color-mix(in oklab, var(--color-primary) 25%, transparent);
+    }
+
+    .btn-reorder:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-reorder i {
+      font-size: var(--text-sm);
     }
 
     .btn-ghost {
@@ -1147,6 +1253,21 @@ import { Observable, map, switchMap, of, startWith, catchError } from 'rxjs';
       .order-footer {
         flex-direction: column;
         gap: var(--space-2);
+        align-items: flex-start;
+      }
+
+      .order-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .quick-reorder-card {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .quick-reorder-info {
+        width: 100%;
       }
 
       .order-details-modal .modal-content {
@@ -1177,6 +1298,7 @@ export class CustomerDashboardComponent implements OnInit {
   private ordersService = inject(OrdersService);
   private cartService = inject(CartService);
   private toastService = inject(ToastService);
+  private restaurantsService = inject(RestaurantsService);
   private router = inject(Router);
   private favoritesService = inject(FavoritesService);
 
@@ -1195,6 +1317,7 @@ export class CustomerDashboardComponent implements OnInit {
   reviewText = '';
   orderNotes = '';
   orderSpecialRequests = '';
+  isReordering = false;
 
   // Mock featured restaurants - using real restaurant IDs from backend
   featuredRestaurants = [
@@ -1539,6 +1662,122 @@ export class CustomerDashboardComponent implements OnInit {
       error: (error) => {
         console.error('Error removing favorite:', error);
       }
+    });
+  }
+
+  reorderToCart(order: Order) {
+    if (this.isReordering || !order || !order.items || order.items.length === 0) {
+      return;
+    }
+
+    this.isReordering = true;
+
+    // Check if cart has items from different restaurant
+    const currentCart = this.cartService.getCurrentCart();
+    if (currentCart && currentCart.restaurant_id !== order.restaurant_id) {
+      const shouldClear = confirm(
+        `Sie haben bereits Artikel von ${currentCart.restaurant_name} im Warenkorb. ` +
+        `Möchten Sie den Warenkorb leeren und die Bestellung von ${order.restaurant_name} erneut bestellen?`
+      );
+      
+      if (!shouldClear) {
+        this.isReordering = false;
+        return;
+      }
+      
+      this.cartService.clearCart();
+    }
+
+    // Load restaurant details to get delivery_info
+    this.restaurantsService.getRestaurantById(order.restaurant_id).pipe(
+      first(),
+      catchError(error => {
+        console.error('Error loading restaurant:', error);
+        this.toastService.error(
+          'Fehler',
+          'Restaurant konnte nicht geladen werden. Bitte versuchen Sie es später erneut.',
+          5000
+        );
+        this.isReordering = false;
+        return of(null);
+      })
+    ).subscribe(restaurant => {
+      if (!restaurant) {
+        this.isReordering = false;
+        return;
+      }
+
+      // Clear cart if it's from the same restaurant or empty
+      if (!currentCart || currentCart.restaurant_id !== order.restaurant_id) {
+        this.cartService.clearCart();
+      }
+
+      // Add each item from the order to the cart
+      let itemsAdded = 0;
+      const totalItems = order.items.length;
+
+      order.items.forEach(item => {
+        // Convert selected_variant_options format if needed
+        let selectedVariantOptionIds: string[] | undefined;
+        let selectedVariantOptions: Array<{id: string, name: string, price_modifier_cents: number}> | undefined;
+
+        if (item.selected_variant_options && item.selected_variant_options.length > 0) {
+          selectedVariantOptionIds = item.selected_variant_options.map(opt => opt.variant_option_id);
+          selectedVariantOptions = item.selected_variant_options.map(opt => ({
+            id: opt.variant_option_id,
+            name: 'Option', // Name is not available in order item, will be loaded by cart service if needed
+            price_modifier_cents: opt.price_modifier_cents || 0
+          }));
+        }
+
+        // Create menu item object for cart service
+        const menuItem = {
+          id: item.menu_item_id,
+          name: item.name,
+          price_cents: Math.round(item.unit_price * 100), // Convert to cents
+          image_url: item.image_url
+        };
+
+        // Add item to cart with quantity
+        for (let i = 0; i < item.quantity; i++) {
+          this.cartService.addToCart(
+            menuItem,
+            {
+              id: restaurant.id,
+              name: restaurant.name,
+              delivery_info: {
+                delivery_fee: restaurant.delivery_info?.delivery_fee || 0,
+                minimum_order_amount: restaurant.delivery_info?.minimum_order_amount || 0
+              }
+            },
+            selectedVariantOptionIds,
+            selectedVariantOptions
+          );
+
+          // Update item notes if present
+          if (item.special_instructions && i === 0) {
+            this.cartService.updateItemNotes(item.menu_item_id, item.special_instructions);
+          }
+        }
+
+        itemsAdded++;
+      });
+
+      this.isReordering = false;
+
+      // Show success message
+      this.toastService.success(
+        'Bestellung hinzugefügt',
+        `${totalItems} Artikel${totalItems > 1 ? ' wurden' : ' wurde'} zu Ihrem Warenkorb hinzugefügt`,
+        4000
+      );
+
+      // Navigate to checkout if user wants
+      setTimeout(() => {
+        if (confirm('Möchten Sie jetzt zur Kasse gehen?')) {
+          this.router.navigate(['/checkout']);
+        }
+      }, 500);
     });
   }
 }
