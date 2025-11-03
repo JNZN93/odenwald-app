@@ -73,6 +73,10 @@ export const routes: Routes = [
   { path: 'restaurant/:id', loadComponent: () => import('./features/restaurants/restaurant-detail.component').then(m => m.RestaurantDetailComponent) },
   { path: 'restaurants', component: RestaurantsComponent },
   { path: 'checkout', loadComponent: () => import('./features/checkout/checkout.component').then(m => m.CheckoutComponent) },
+  // Legal pages
+  { path: 'impressum', loadComponent: () => import('./features/legal/impressum.component').then(m => m.ImpressumComponent) },
+  { path: 'datenschutz', loadComponent: () => import('./features/legal/datenschutz.component').then(m => m.DatenschutzComponent) },
+  { path: 'terms', loadComponent: () => import('./features/legal/terms.component').then(m => m.TermsComponent) },
   // Restaurant Onboarding
   { path: 'onboarding', loadComponent: () => import('./features/onboarding/onboarding.component').then(m => m.OnboardingComponent) },
   { path: 'onboarding/continue', loadComponent: () => import('./features/onboarding/onboarding.component').then(m => m.OnboardingComponent) },

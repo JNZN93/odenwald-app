@@ -11,6 +11,7 @@ import { AIChatWidgetComponent } from './shared/components/ai-chat-widget.compon
 import { LanguageSwitcherComponent } from './shared/components/language-switcher.component';
 import { TranslatePipe } from './shared/pipes/translate.pipe';
 import { LoadingService } from './core/services/loading.service';
+import { FooterComponent } from './shared/components/footer.component';
 import { environment } from '../environments/environment';
 
 @Component({
@@ -26,7 +27,8 @@ import { environment } from '../environments/environment';
     LoadingSpinnerComponent,
     AIChatWidgetComponent,
     LanguageSwitcherComponent,
-    TranslatePipe
+    TranslatePipe,
+    FooterComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
